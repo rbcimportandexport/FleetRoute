@@ -87,19 +87,22 @@ export default function App() {
         api.getDashboard().catch(() => ({}))
       ]);
 
-      setTrips(tripsData);
-      setDrivers(driversData);
-      setVehicles(vehiclesData);
-      setLocations(locationsData);
-      setProducts(productsData);
-      setSafetyEvents(safetyData);
-      setStats(dashStats);
+      setTrips(Array.isArray(tripsData) ? tripsData : (tripsData?.trips || []));
+      setDrivers(Array.isArray(driversData) ? driversData : (driversData?.drivers || []));
+      setVehicles(Array.isArray(vehiclesData) ? vehiclesData : (vehiclesData?.vehicles || []));
+      setLocations(Array.isArray(locationsData) ? locationsData : (locationsData?.locations || []));
+      setProducts(Array.isArray(productsData) ? productsData : (productsData?.products || []));
+      setSafetyEvents(Array.isArray(safetyData) ? safetyData : (safetyData?.events || []));
+      setStats(dashStats && typeof dashStats === 'object' ? dashStats : {});
 
-      if (driversData.length > 0 && !activeDriverId) {
-        setActiveDriverId(driversData[0].id);
+      const safeDrivers = Array.isArray(driversData) ? driversData : (driversData?.drivers || []);
+      const safeTrips = Array.isArray(tripsData) ? tripsData : (tripsData?.trips || []);
+
+      if (safeDrivers.length > 0 && !activeDriverId) {
+        setActiveDriverId(safeDrivers[0].id);
       }
-      if (tripsData.length > 0 && !activeTripId) {
-        setActiveTripId(tripsData[0].id);
+      if (safeTrips.length > 0 && !activeTripId) {
+        setActiveTripId(safeTrips[0].id);
       }
     } catch (err) {
       console.error('Failed to load logistics operational data:', err);
@@ -150,7 +153,7 @@ export default function App() {
   // Handle Login Success
   const handleLoginSuccess = async (user) => {
     setCurrentUser(user);
-    if (user.driverId) {
+    if (user && user.driverId) {
       setActiveDriverId(user.driverId);
     }
     await loadInitialData();
@@ -164,22 +167,26 @@ export default function App() {
     soundEffects.playActionClick();
   };
 
+  // Safe Arrays
+  const tripsArray = Array.isArray(trips) ? trips : [];
+  const driversArray = Array.isArray(drivers) ? drivers : [];
+
   // Active Trip Object
-  const currentTrip = trips.find(t => t.id === activeTripId) || trips[0];
+  const currentTrip = tripsArray.find(t => t.id === activeTripId) || tripsArray[0];
   
   // In driver mode, identify driver entity
-  const currentDriver = drivers.find(d => 
+  const currentDriver = driversArray.find(d => 
     d.id === currentUser?.driverId || 
     d.userId === currentUser?.id || 
     d.email === currentUser?.email ||
     d.id === activeDriverId
-  ) || drivers[0];
+  ) || driversArray[0];
 
   // In driver mode, strictly display ONLY their assigned active trip
-  const driverTrip = trips.find(t => 
+  const driverTrip = tripsArray.find(t => 
     (t.driverId === currentDriver?.id || t.driverName === currentDriver?.name) && 
     t.status !== 'completed'
-  ) || trips.find(t => 
+  ) || tripsArray.find(t => 
     t.driverId === currentDriver?.id || t.driverName === currentDriver?.name
   ) || null;
 
@@ -347,14 +354,14 @@ export default function App() {
             activeTab={activeTab}
             onTabChange={setActiveTab}
             counts={{
-              activeTrips: stats.activeTrips,
-              liveDrivers: drivers.filter(d => d.lastLocation).length,
-              driversCount: drivers.length,
-              vehiclesCount: vehicles.length,
-              locationsCount: locations.length,
-              productsCount: products.length,
-              deliveriesCount: stats.completedDeliveriesToday,
-              safetyAlerts: safetyEvents.filter(e => e.reviewStatus === 'new').length,
+              activeTrips: stats?.activeTrips || 0,
+              liveDrivers: (Array.isArray(drivers) ? drivers : []).filter(d => d?.lastLocation).length,
+              driversCount: (Array.isArray(drivers) ? drivers : []).length,
+              vehiclesCount: (Array.isArray(vehicles) ? vehicles : []).length,
+              locationsCount: (Array.isArray(locations) ? locations : []).length,
+              productsCount: (Array.isArray(products) ? products : []).length,
+              deliveriesCount: stats?.completedDeliveriesToday || 0,
+              safetyAlerts: (Array.isArray(safetyEvents) ? safetyEvents : []).filter(e => e?.reviewStatus === 'new').length,
               emergencyIncidents: 0
             }}
             isMobileOpen={isMobileMenuOpen}
