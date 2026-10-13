@@ -138,12 +138,6 @@ class ApiService {
   }
 
   handleCloudFallback(endpoint, options = {}) {
-    const isVercelOrStatic = typeof window !== 'undefined' && 
-      (window.location.hostname.includes('vercel.app') || 
-       window.location.hostname.includes('github.io') ||
-       window.location.protocol === 'file:');
-
-    if (!isVercelOrStatic) return undefined;
 
     if (endpoint === '/auth/login' && options.method === 'POST') {
       try {
@@ -163,9 +157,11 @@ class ApiService {
       }
     }
 
-    if (endpoint === '/auth/me') return cloudFallbackData.users[0];
+    if (endpoint === '/auth/me') {
+      return { user: this.currentUser || cloudFallbackData.users[0] };
+    }
     if (endpoint === '/trips' || endpoint.startsWith('/trips?')) return cloudFallbackData.trips;
-    if (endpoint.startsWith('/trips/')) return cloudFallbackData.trips[0];
+    if (endpoint.startsWith('/trips/')) return { trip: cloudFallbackData.trips[0] };
     if (endpoint === '/drivers' || endpoint.startsWith('/drivers?')) return cloudFallbackData.drivers;
     if (endpoint === '/vehicles' || endpoint.startsWith('/vehicles?')) return cloudFallbackData.vehicles;
     if (endpoint === '/locations' || endpoint.startsWith('/locations?')) return cloudFallbackData.locations;

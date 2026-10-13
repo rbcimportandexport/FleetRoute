@@ -168,7 +168,9 @@ export const cloudFallbackData = {
       id: "TRIP-DEMO-01",
       title: "Delhi-NCR Multi-Customer Furniture & Appliance Run",
       driverId: "DRV-101",
+      driverName: "Rajesh Sharma",
       vehicleId: "VEH-201",
+      vehicleRegistration: "DL-1L-AA-2415",
       status: "IN_TRANSIT",
       currentStage: "DELIVERY_STOP_A",
       startedAt: new Date(Date.now() - 3600000).toISOString(),
@@ -244,7 +246,22 @@ export const cloudFallbackData = {
     }
   ],
 
-  safetyEvents: [],
+  safetyEvents: [
+    {
+      id: "SAFE-EVT-01",
+      tripId: "TRIP-DEMO-01",
+      driverId: "DRV-101",
+      driverName: "Rajesh Sharma",
+      vehicleRegistration: "DL-1L-AA-2415",
+      type: "SPEEDING",
+      severity: "low",
+      speedKmH: 58,
+      speedLimitKmH: 50,
+      timestamp: new Date().toISOString(),
+      location: { lat: 28.5355, lng: 77.2684, address: "Okhla Industrial Area" },
+      reviewStatus: "reviewed"
+    }
+  ],
   deliveryProofs: [],
   settings: {
     speedThresholdKmH: 80,
