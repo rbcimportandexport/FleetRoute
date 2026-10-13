@@ -1,0 +1,9 @@
+{
+  "appId": "com.fleetroute.transport",
+  "appName": "FleetRoute",
+  "webDir": "dist",
+  "server": {
+    "cleartext": true,
+    "androidScheme": "http"
+  }
+}

@@ -1,0 +1,113 @@
+// server/auth.js
+// Authentication & Role-Based Authorization Engine
+// STRICTLY ZERO EMOJIS. NO FIXED HARDCODED FALLBACK SECRETS.
+
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
+const db = require('./db');
+
+// Require configured JWT secret. Never use a fixed documented default secret.
+let JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  if (process.env.NODE_ENV === 'production') {
+    console.error('[FleetRoute Security CRITICAL] JWT_SECRET environment variable is missing.');
+    throw new Error('FATAL: JWT_SECRET environment variable is required in production.');
+  } else {
+    // Generate an ephemeral cryptographic secret for local dev/test if not provided in env.
+    JWT_SECRET = crypto.randomBytes(32).toString('hex');
+  }
+}
+
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
+
+// Hash password with salt
+async function hashPassword(plainPassword) {
+  const salt = await bcrypt.genSalt(10);
+  return bcrypt.hash(plainPassword, salt);
+}
+
+// Compare plain password with hash
+async function comparePassword(plainPassword, hash) {
+  return bcrypt.compare(plainPassword, hash);
+}
+
+// Generate JWT token
+function generateToken(user) {
+  return jwt.sign(
+    {
+      id: user.id,
+      email: user.email,
+      phone: user.phone,
+      role: user.role,
+      driverId: user.driverId || null,
+      name: user.name
+    },
+    JWT_SECRET,
+    { expiresIn: JWT_EXPIRES_IN }
+  );
+}
+
+// Authenticate token middleware
+async function requireAuth(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Authentication required. Please log in.' });
+  }
+
+  const token = authHeader.split(' ')[1];
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const user = await db.collection('users').findById(decoded.id);
+
+    if (!user) {
+      return res.status(401).json({ error: 'Session user account not found.' });
+    }
+
+    if (user.status === 'disabled') {
+      return res.status(403).json({ error: 'Account has been disabled by central administrator.' });
+    }
+
+    req.user = {
+      id: user.id,
+      email: user.email,
+      phone: user.phone,
+      role: user.role,
+      driverId: user.driverId,
+      name: user.name,
+      status: user.status
+    };
+    next();
+  } catch (err) {
+    if (err.name === 'TokenExpiredError') {
+      return res.status(401).json({ error: 'Session expired. Please log in again.' });
+    }
+    return res.status(401).json({ error: 'Invalid authentication token.' });
+  }
+}
+
+// Admin role check middleware
+function requireAdmin(req, res, next) {
+  if (!req.user || req.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Access denied. Administrator privileges required.' });
+  }
+  next();
+}
+
+// Driver role check middleware
+function requireDriver(req, res, next) {
+  if (!req.user || req.user.role !== 'driver') {
+    return res.status(403).json({ error: 'Access denied. Driver account privileges required.' });
+  }
+  next();
+}
+
+module.exports = {
+  hashPassword,
+  comparePassword,
+  generateToken,
+  requireAuth,
+  requireAdmin,
+  requireDriver,
+  getJWTSecret: () => JWT_SECRET
+};

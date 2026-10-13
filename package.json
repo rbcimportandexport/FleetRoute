@@ -1,0 +1,25 @@
+{
+  "name": "fleetroute",
+  "version": "1.0.0",
+  "description": "FleetRoute - Production Fleet, Driver, Cargo, and Multi-Stop Delivery Management Application",
+  "scripts": {
+    "server": "node server/server.js",
+    "client": "npm.cmd --prefix client run dev",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "build": "npm.cmd --prefix client run build",
+    "test": "node server/tests/logic.test.js",
+    "test:all": "node server/tests/comprehensive.test.js",
+    "bootstrap:admin": "node server/scripts/bootstrapAdmin.js",
+    "cleanup:demo": "node server/scripts/cleanupDemoData.js"
+  },
+  "keywords": [
+    "fleet",
+    "logistics",
+    "delivery",
+    "telematics",
+    "cargo",
+    "multi-stop"
+  ],
+  "author": "FleetRoute Engineering",
+  "license": "ISC"
+}
