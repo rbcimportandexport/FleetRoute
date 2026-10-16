@@ -21,6 +21,12 @@ export default function LoginPage({ onLoginSuccess }) {
   const handleLogin = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
     setErrorMessage('');
+
+    if (!identifier.trim() || !password) {
+      setErrorMessage('Enter both your email or mobile number and account password.');
+      return;
+    }
+
     setLoading(true);
     soundEffects.playActionClick();
 
@@ -142,7 +148,7 @@ export default function LoginPage({ onLoginSuccess }) {
           )}
 
           {/* Login Form */}
-          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <form noValidate onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div>
               <label style={{
                 display: 'block',
@@ -156,7 +162,6 @@ export default function LoginPage({ onLoginSuccess }) {
               <div style={{ position: 'relative' }}>
                 <input
                   type="text"
-                  required
                   placeholder="admin@fleetroute.com or +91 98210 44821"
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
@@ -201,7 +206,6 @@ export default function LoginPage({ onLoginSuccess }) {
               <div style={{ position: 'relative' }}>
                 <input
                   type={showPassword ? 'text' : 'password'}
-                  required
                   placeholder="Enter your account password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
