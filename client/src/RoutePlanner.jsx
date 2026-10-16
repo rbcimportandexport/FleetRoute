@@ -17,6 +17,7 @@ function MapIcon({ name, size = 18 }) {
     close: <path d="m6 6 12 12M18 6 6 18"/>,
     chevron: <path d="m9 18 6-6-6-6"/>,
     car: <><path d="m5 11 2-5h10l2 5M4 11h16v7H4z"/><circle cx="7" cy="18" r="1.5"/><circle cx="17" cy="18" r="1.5"/></>,
+    layers: <><path d="m12 3 9 5-9 5-9-5z"/><path d="m3 12 9 5 9-5M3 16l9 5 9-5"/></>,
   };
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
 }
@@ -83,6 +84,7 @@ export default function RoutePlanner() {
   const mapElement = useRef(null);
   const mapInstance = useRef(null);
   const routeLayers = useRef(null);
+  const baseLayers = useRef(null);
   const lastSearchAt = useRef(0);
   const [origin, setOrigin] = useState({ query: '', point: null });
   const [destination, setDestination] = useState({ query: '', point: null });
@@ -93,14 +95,25 @@ export default function RoutePlanner() {
   const [route, setRoute] = useState(null);
   const [error, setError] = useState('');
   const [directionsOpen, setDirectionsOpen] = useState(false);
+  const [mapStyle, setMapStyle] = useState('map');
 
   useEffect(() => {
     if (!mapElement.current || mapInstance.current) return undefined;
     const map = L.map(mapElement.current, { zoomControl: false, preferCanvas: true }).setView([22.9734, 78.6569], 5);
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    const streets = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    }).addTo(map);
+    });
+    const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 19,
+      attribution: 'Imagery &copy; Esri, Vantor, Earthstar Geographics, and the GIS User Community',
+    });
+    const satelliteLabels = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 19,
+      attribution: 'Labels &copy; Esri',
+    });
+    streets.addTo(map);
+    baseLayers.current = { streets, satellite, satelliteLabels };
     L.control.zoom({ position: 'bottomright' }).addTo(map);
     routeLayers.current = L.layerGroup().addTo(map);
     mapInstance.current = map;
@@ -110,6 +123,19 @@ export default function RoutePlanner() {
       mapInstance.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    const map = mapInstance.current;
+    const layers = baseLayers.current;
+    if (!map || !layers) return;
+    Object.values(layers).forEach((layer) => map.removeLayer(layer));
+    if (mapStyle === 'satellite') {
+      layers.satellite.addTo(map);
+      layers.satelliteLabels.addTo(map);
+    } else {
+      layers.streets.addTo(map);
+    }
+  }, [mapStyle]);
 
   useEffect(() => {
     const map = mapInstance.current;
@@ -321,6 +347,11 @@ export default function RoutePlanner() {
 
       <div className="map-stage">
         <div ref={mapElement} className="live-map" aria-label="Interactive route map" />
+        <div className="map-style-switch" role="group" aria-label="Map style">
+          <span><MapIcon name="layers" size={15} /></span>
+          <button type="button" className={mapStyle === 'map' ? 'active' : ''} aria-pressed={mapStyle === 'map'} onClick={() => setMapStyle('map')}>Map</button>
+          <button type="button" className={mapStyle === 'satellite' ? 'active' : ''} aria-pressed={mapStyle === 'satellite'} onClick={() => setMapStyle('satellite')}>Satellite</button>
+        </div>
         <div className="map-live-badge"><span /> Live map</div>
         {!route && <div className="map-hint"><MapIcon name="route" /><span>Select two locations to draw a route</span></div>}
       </div>
