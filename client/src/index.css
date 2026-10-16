@@ -98,17 +98,6 @@ button { color: inherit; }
 .setup-item p { margin: 0; color: #536177; font-size: 11px; font-weight: 500; }
 .setup-item .icon { color: #a3adbc; }
 
-.module-status { margin-top: 17px; }
-.outline-status { padding: 7px 10px; display: flex; align-items: center; gap: 7px; border: 1px solid #d8e2ef; border-radius: 20px; color: #77859a; font-size: 10px; }
-.outline-status > span { width: 6px; height: 6px; border-radius: 50%; background: #aeb9c8; }
-.workspace-canvas { height: 190px; position: relative; overflow: hidden; background: linear-gradient(#edf2f8 1px, transparent 1px), linear-gradient(90deg, #edf2f8 1px, transparent 1px), #f9fbfd; background-size: 30px 30px; }
-.workspace-canvas::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(249,251,253,.6), transparent 30%, transparent 70%, rgba(249,251,253,.7)); }
-.workspace-canvas svg { position: absolute; inset: 0; width: 100%; height: 100%; fill: #fff; stroke: #a9c8f4; stroke-width: 3; }
-.workspace-canvas path { fill: none; stroke-dasharray: 8 7; }
-.workspace-canvas circle { stroke: var(--blue); stroke-width: 4; }
-.workspace-canvas > div { position: absolute; z-index: 2; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-.workspace-canvas > div span { color: #2d4f7f; font-size: 13px; font-weight: 600; }
-.workspace-canvas > div p { margin: 6px 0 0; color: #8291a5; font-size: 11px; }
 
 .module-toolbar { min-height: 62px; margin-bottom: 15px; padding: 10px; display: flex; align-items: center; gap: 9px; background: #fff; border: 1px solid var(--line); border-radius: 10px; }
 .toolbar-search { height: 39px; min-width: 260px; margin-right: auto; padding: 0 11px; display: flex; align-items: center; gap: 9px; color: #9aa6b7; background: #f7f9fc; border: 1px solid #edf0f5; border-radius: 7px; font-size: 12px; }
@@ -146,8 +135,6 @@ button { color: inherit; }
   .summary-grid { grid-template-columns: 1fr; }
   .summary-card { min-height: 145px; }
   .panel-heading { align-items: flex-start; }
-  .outline-status { display: none; }
-  .workspace-canvas > div p { max-width: 250px; text-align: center; }
   .module-toolbar { flex-wrap: wrap; }
   .toolbar-search { width: 100%; min-width: 0; }
   .module-toolbar button { flex: 1; }

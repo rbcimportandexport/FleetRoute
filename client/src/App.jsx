@@ -9,7 +9,6 @@ const modules = [
   { id: 'maintenance', label: 'Maintenance', icon: 'tool', group: 'Management' },
   { id: 'alerts', label: 'Alerts', icon: 'bell', group: 'Management' },
   { id: 'reports', label: 'Reports', icon: 'chart', group: 'Management' },
-  { id: 'settings', label: 'Settings', icon: 'settings', group: 'System' },
 ];
 
 const moduleCopy = {
@@ -20,7 +19,6 @@ const moduleCopy = {
   maintenance: ['Maintenance', 'Service management', 'Maintenance schedules and service records will appear here after integration.'],
   alerts: ['Alerts', 'Operations alerts', 'Fleet alerts and notification rules will appear here after integration.'],
   reports: ['Reports', 'Performance reporting', 'Operational reports and export tools will appear here after integration.'],
-  settings: ['Settings', 'Workspace settings', 'Organization, access, and application settings will appear here after integration.'],
 };
 
 function Icon({ name, size = 19 }) {
@@ -33,7 +31,6 @@ function Icon({ name, size = 19 }) {
     tool: <><path d="M14.7 6.3a4 4 0 0 0-5-5L12 3.6 9.6 6 7.3 3.7a4 4 0 0 0 5 5l-8.6 8.6a2.1 2.1 0 0 0 3 3z"/></>,
     bell: <><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></>,
     chart: <><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></>,
-    settings: <><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6 1.7 1.7 0 0 0 10 3V2.8h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z"/></>,
     search: <><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></>,
     menu: <><path d="M4 7h16M4 12h16M4 17h16"/></>,
     close: <><path d="m6 6 12 12M18 6 6 18"/></>,
@@ -117,19 +114,6 @@ function Overview() {
         </article>
       </section>
 
-      <section className="panel module-status">
-        <div className="panel-heading">
-          <div><h2>Operations workspace</h2><p>Connected modules will be visible in this area.</p></div>
-          <span className="outline-status"><span /> Awaiting integration</span>
-        </div>
-        <div className="workspace-canvas">
-          <svg viewBox="0 0 720 180" aria-hidden="true">
-            <path d="M-20 136C95 136 90 75 188 75h124c75 0 84 57 171 57h257" />
-            <circle cx="188" cy="75" r="7"/><circle cx="484" cy="132" r="7"/>
-          </svg>
-          <div><span>FleetRoute workspace</span><p>Ready for your components and integrations</p></div>
-        </div>
-      </section>
     </>
   );
 }
