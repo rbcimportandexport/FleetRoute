@@ -3,10 +3,6 @@ import Navbar from './components/layout/Navbar';
 import Sidebar from './components/layout/Sidebar';
 import ErrorBoundary from './components/common/ErrorBoundary';
 
-// Auth Components
-import LoginPage from './components/auth/LoginPage';
-import UserProfileModal from './components/auth/UserProfileModal';
-
 // Admin Components
 const AdminDashboard = React.lazy(() => import('./components/admin/AdminDashboard'));
 const LiveTrackingView = React.lazy(() => import('./components/admin/LiveTrackingView'));
@@ -47,7 +43,7 @@ export default function App() {
   // Authentication State
   const [currentUser, setCurrentUser] = useState(api.currentUser);
   const [isAuthChecking, setIsAuthChecking] = useState(true);
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [authError, setAuthError] = useState('');
 
   // App Layout State
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -118,23 +114,29 @@ export default function App() {
   useEffect(() => {
     const verifyAuth = async () => {
       try {
+        setAuthError('');
         if (api.token) {
-          const res = await api.getProfile();
-          if (res && res.user) {
-            setCurrentUser(res.user);
-            if (res.user.mustChangePassword) setIsProfileOpen(true);
-            await loadInitialData();
-          } else {
+          try {
+            const res = await api.getProfile();
+            if (res && res.user) {
+              setCurrentUser(res.user);
+              await loadInitialData();
+              return;
+            }
+          } catch (sessionError) {
+            console.warn('Stored session could not be restored:', sessionError.message);
             api.clearSession();
-            setCurrentUser(null);
           }
-        } else {
-          setCurrentUser(null);
         }
+
+        const res = await api.startEmbeddedSession();
+        setCurrentUser(res.user);
+        await loadInitialData();
       } catch (err) {
-        console.warn('Session verification notice:', err.message);
+        console.error('Direct access initialization failed:', err);
         api.clearSession();
         setCurrentUser(null);
+        setAuthError(err.message || 'FleetRoute could not connect to its live service.');
       } finally {
         setIsAuthChecking(false);
       }
@@ -146,6 +148,7 @@ export default function App() {
     const handleUnauthorized = () => {
       setCurrentUser(null);
       api.clearSession();
+      setAuthError('The live access session expired. Retry to reconnect.');
     };
 
     window.addEventListener('fleetroute:unauthorized', handleUnauthorized);
@@ -153,24 +156,6 @@ export default function App() {
       window.removeEventListener('fleetroute:unauthorized', handleUnauthorized);
     };
   }, [loadInitialData]);
-
-  // Handle Login Success
-  const handleLoginSuccess = async (user) => {
-    setCurrentUser(user);
-    if (user?.mustChangePassword) setIsProfileOpen(true);
-    if (user && user.driverId) {
-      setActiveDriverId(user.driverId);
-    }
-    await loadInitialData();
-    soundEffects.playSuccessChime();
-  };
-
-  // Handle Logout
-  const handleLogout = () => {
-    api.logout();
-    setCurrentUser(null);
-    soundEffects.playActionClick();
-  };
 
   // Safe Arrays
   const tripsArray = Array.isArray(trips) ? trips : [];
@@ -321,17 +306,45 @@ export default function App() {
         fontSize: '14px',
         fontWeight: 600
       }}>
-        Initializing FleetRoute Authentication Engine...
+        Connecting FleetRoute to live operations...
       </div>
     );
   }
 
-  // If user is not authenticated, present the professional login page
+  // The embedded build intentionally has no login screen. If the live API or
+  // database is unavailable, show an honest retry state instead of mock data.
   if (!currentUser) {
     return (
-      <LoginPage 
-        onLoginSuccess={handleLoginSuccess}
-      />
+      <div style={{
+        minHeight: '100vh',
+        background: '#f1f5f9',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '24px'
+      }}>
+        <div role="alert" style={{
+          width: 'min(460px, 100%)',
+          background: '#fff',
+          border: '1px solid #fecaca',
+          borderRadius: '16px',
+          padding: '28px',
+          boxShadow: '0 18px 45px rgba(15, 23, 42, 0.08)',
+          textAlign: 'center'
+        }}>
+          <h1 style={{ margin: '0 0 10px', color: '#0f172a', fontSize: '22px' }}>Live service unavailable</h1>
+          <p style={{ margin: '0 0 20px', color: '#64748b', lineHeight: 1.6 }}>
+            {authError || 'FleetRoute could not connect to its live database. No placeholder data has been loaded.'}
+          </p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            style={{ border: 0, borderRadius: '10px', background: '#0284c7', color: '#fff', padding: '11px 18px', fontWeight: 700, cursor: 'pointer' }}
+          >
+            Retry live connection
+          </button>
+        </div>
+      </div>
     );
   }
 
@@ -343,8 +356,6 @@ export default function App() {
       {/* Top Navigation */}
       <Navbar
         currentUser={currentUser}
-        onOpenProfile={() => setIsProfileOpen(true)}
-        onLogout={handleLogout}
         isOnline={isOnline}
         onSimulateOffline={handleSimulateOffline}
         onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -615,19 +626,6 @@ export default function App() {
         />
       </ErrorBoundary>
 
-      {/* User Profile & Password Change Modal */}
-      <UserProfileModal
-        isOpen={isProfileOpen}
-        onClose={() => {
-          if (!currentUser?.mustChangePassword) setIsProfileOpen(false);
-        }}
-        currentUser={currentUser}
-        driver={currentDriver}
-        driverTrip={driverTrip}
-        assignedVehicle={vehicles.find(v => v.id === currentDriver?.assignedVehicleId || v.id === driverTrip?.vehicleId)}
-        onLogout={handleLogout}
-        onProfileUpdated={(updatedUser) => setCurrentUser(updatedUser)}
-      />
     </div>
     </React.Suspense>
   );

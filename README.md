@@ -131,6 +131,8 @@ npm run build
 | `CORS_ORIGINS` | **Mandatory in production** | Comma-separated exact web origins allowed to call the API. |
 | `IOT_DEVICE_AUTH_SECRET` | Required to enable IoT ingestion | Distinct 32+ character key used for exact token and HMAC verification. |
 | `JWT_EXPIRES_IN` | Optional (default: `24h`) | Session token expiration duration. |
+| `PUBLIC_EMBEDDED_ACCESS` | Optional (default: `false`) | Enables the API's short-lived direct-open signed principal. Use only for a dedicated public presentation deployment. It inserts no placeholder records. |
+| `VITE_EMBEDDED_ACCESS` | Optional (default: `false`) | Removes the client login gate and requests direct embedded access from the API. |
 | `DEFAULT_ARRIVAL_RADIUS_METERS` | Optional (default: `150`) | Arrival geofence radius in meters for driver check-in. |
 | `OVERSPEED_THRESHOLD_KMH` | Optional (default: `80`) | Speed threshold that generates an overspeed safety alert from real telemetry. |
 | `LOCATION_UPDATE_INTERVAL_MS` | Optional (default: `5000`) | Client-side geolocation transmission interval in milliseconds. |
@@ -141,11 +143,12 @@ npm run build
 
 ## 6. Functional Capabilities & Production Upgrades
 
-### 1. Clean Light Theme Authentication Portal
-- Streamlined light-themed authentication card with smooth background orbs.
-- Zero demo buttons or prefilled credentials on the login screen.
-- Secure authentication via Bcrypt password hashing and JWT sessions.
-- Role-based authorization: Drivers access only their assigned trips; administrators manage fleet operations. Public registration never grants admin permissions.
+### 1. Direct-Open Embedded Operations Workspace
+- The embedded presentation opens directly into FleetRoute without rendering a login screen.
+- Access uses a short-lived signed JWT principal and is enabled independently on the client and API.
+- No dummy administrator, sample trip, vehicle, driver, product, or location is inserted into MongoDB.
+- Dashboard values and module records always come from the configured persistent MongoDB database; an empty database produces honest zero and empty states.
+- Standard password authentication and role-based API controls remain available for non-embedded deployments.
 
 ### 2. Interactive Map Visualizer & Dual-Pin Route Geofence
 - **Google Satellite Hybrid Imagery**: Real-time high-resolution satellite tiles (`mt{s}.google.com/vt/lyrs=y`) and standard OpenStreetMap road layers.

@@ -10,6 +10,7 @@ const parsePositiveInteger = (name, fallback) => {
 
 const nodeEnv = process.env.NODE_ENV || 'development';
 const isProduction = nodeEnv === 'production';
+const publicEmbeddedAccess = process.env.PUBLIC_EMBEDDED_ACCESS === 'true';
 const corsOrigins = (process.env.CORS_ORIGINS || '')
   .split(',')
   .map(origin => origin.trim().replace(/\/$/, ''))
@@ -53,6 +54,7 @@ module.exports = Object.freeze({
   authRateLimitWindowMs: parsePositiveInteger('AUTH_RATE_LIMIT_WINDOW_MS', 15 * 60 * 1000),
   authRateLimitMax: parsePositiveInteger('AUTH_RATE_LIMIT_MAX', 10),
   trustProxy: process.env.TRUST_PROXY === 'true' ? 1 : false,
+  publicEmbeddedAccess,
   corsOrigins,
   corsOptions
 });

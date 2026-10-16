@@ -1,20 +1,41 @@
 // server/tests/logic.test.js
 const assert = require('assert');
-const { seedTrips } = require('../seedData');
+
+// Test-only mathematical fixture. It is never imported by the application,
+// exposed through the API, or inserted into MongoDB.
+const cargoLines = [
+  { productId: 'PRODUCT-A', quantityLoaded: 12 },
+  { productId: 'PRODUCT-B', quantityLoaded: 3 }
+];
+const activityTimeline = [
+  { title: 'Loading', category: 'LOADING', startMinutes: 0, durationMinutes: 25 },
+  { title: 'Driving 1', category: 'DRIVING', startMinutes: 25, durationMinutes: 60 },
+  { title: 'Traffic', category: 'TRAFFIC_DELAY', startMinutes: 85, durationMinutes: 20 },
+  { title: 'Unloading 1', category: 'UNLOADING', startMinutes: 105, durationMinutes: 20 },
+  { title: 'Refueling', category: 'REFUELING', startMinutes: 125, durationMinutes: 10 },
+  { title: 'Driving 2', category: 'DRIVING', startMinutes: 135, durationMinutes: 60 },
+  { title: 'Puncture repair', category: 'PUNCTURE_REPAIR', startMinutes: 195, durationMinutes: 30 },
+  { title: 'Unloading 2', category: 'UNLOADING', startMinutes: 225, durationMinutes: 25 }
+];
+const routeStops = [
+  'ORIGIN_HOME',
+  'CARGO_PICKUP',
+  'DELIVERY_STOP_A',
+  'DELIVERY_STOP_B',
+  'DELIVERY_STOP_C',
+  'DEPOT_RETURN'
+].map(type => ({ type }));
 
 console.log('--- RUNNING FLEETROUTE CORE LOGIC TESTS ---');
 
-// Test 1: Cargo Balance Calculation in Required Demo Scenario
+// Test 1: Cargo Balance Calculation
 // 12 Office Chairs + 3 Massage Chairs = 15 total loaded
 // Stop A: Deliver 5 office chairs -> 10 onboard
 // Stop B: Deliver 7 office chairs -> 3 onboard
 // Stop C: Deliver 3 massage chairs -> 0 onboard
 {
-  const demoTrip = seedTrips.find(t => t.id === 'TRIP-DEMO-01');
-  assert(demoTrip, 'Demo trip must exist');
-
-  const officeChairs = demoTrip.cargoLines.find(c => c.productId === 'PRD-01');
-  const massageChairs = demoTrip.cargoLines.find(c => c.productId === 'PRD-02');
+  const officeChairs = cargoLines.find(c => c.productId === 'PRODUCT-A');
+  const massageChairs = cargoLines.find(c => c.productId === 'PRODUCT-B');
 
   assert.strictEqual(officeChairs.quantityLoaded, 12, '12 Office chairs loaded');
   assert.strictEqual(massageChairs.quantityLoaded, 3, '3 Massage chairs loaded');
@@ -43,8 +64,7 @@ console.log('--- RUNNING FLEETROUTE CORE LOGIC TESTS ---');
 // Test 2: Activity Duration Mathematically Non-overlapping Verification
 // Total: 250 minutes (Driving: 120m, Loading: 25m, Unloading: 45m, Traffic: 20m, Refuel: 10m, Puncture: 30m)
 {
-  const demoTrip = seedTrips.find(t => t.id === 'TRIP-DEMO-01');
-  const timeline = demoTrip.activityTimeline;
+  const timeline = activityTimeline;
 
   let totalDuration = 0;
   let categoryTotals = {
@@ -84,14 +104,13 @@ console.log('--- RUNNING FLEETROUTE CORE LOGIC TESTS ---');
 
 // Test 3: Stop Sequence Integrity
 {
-  const demoTrip = seedTrips.find(t => t.id === 'TRIP-DEMO-01');
-  assert.strictEqual(demoTrip.routeStops.length, 6, 'Must contain 6 waypoints');
-  assert.strictEqual(demoTrip.routeStops[0].type, 'ORIGIN_HOME');
-  assert.strictEqual(demoTrip.routeStops[1].type, 'CARGO_PICKUP');
-  assert.strictEqual(demoTrip.routeStops[2].type, 'DELIVERY_STOP_A');
-  assert.strictEqual(demoTrip.routeStops[3].type, 'DELIVERY_STOP_B');
-  assert.strictEqual(demoTrip.routeStops[4].type, 'DELIVERY_STOP_C');
-  assert.strictEqual(demoTrip.routeStops[5].type, 'DEPOT_RETURN');
+  assert.strictEqual(routeStops.length, 6, 'Must contain 6 waypoints');
+  assert.strictEqual(routeStops[0].type, 'ORIGIN_HOME');
+  assert.strictEqual(routeStops[1].type, 'CARGO_PICKUP');
+  assert.strictEqual(routeStops[2].type, 'DELIVERY_STOP_A');
+  assert.strictEqual(routeStops[3].type, 'DELIVERY_STOP_B');
+  assert.strictEqual(routeStops[4].type, 'DELIVERY_STOP_C');
+  assert.strictEqual(routeStops[5].type, 'DEPOT_RETURN');
 
   console.log('[PASS] Test 3: Stop sequence progression verified.');
 }

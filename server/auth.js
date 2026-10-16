@@ -6,6 +6,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const db = require('./db');
+const config = require('./config');
 
 // Require configured JWT secret. Never use a fixed documented default secret.
 let JWT_SECRET = process.env.JWT_SECRET;
@@ -49,6 +50,21 @@ function generateToken(user) {
   );
 }
 
+// Create a short-lived, signed principal for an explicitly enabled embedded
+// presentation. This principal is not persisted as a fake user record.
+function generateEmbeddedAccessToken() {
+  return jwt.sign(
+    {
+      id: 'fleetroute-embedded-access',
+      name: 'FleetRoute Operations',
+      role: 'admin',
+      accessMode: 'embedded'
+    },
+    JWT_SECRET,
+    { expiresIn: '2h' }
+  );
+}
+
 // Authenticate token middleware
 async function requireAuth(req, res, next) {
   const authHeader = req.headers.authorization;
@@ -59,6 +75,23 @@ async function requireAuth(req, res, next) {
   const token = authHeader.split(' ')[1];
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
+
+    if (
+      config.publicEmbeddedAccess &&
+      decoded.accessMode === 'embedded' &&
+      decoded.id === 'fleetroute-embedded-access'
+    ) {
+      req.user = {
+        id: decoded.id,
+        name: decoded.name,
+        role: 'admin',
+        status: 'active',
+        accessMode: 'embedded',
+        mustChangePassword: false
+      };
+      return next();
+    }
+
     const user = await db.collection('users').findById(decoded.id);
 
     if (!user) {
@@ -118,6 +151,7 @@ module.exports = {
   hashPassword,
   comparePassword,
   generateToken,
+  generateEmbeddedAccessToken,
   requireAuth,
   requireAdmin,
   requireDriver,

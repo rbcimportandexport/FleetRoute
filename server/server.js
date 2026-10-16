@@ -15,6 +15,7 @@ const {
   hashPassword,
   comparePassword,
   generateToken,
+  generateEmbeddedAccessToken,
   requireAuth,
   requireAdmin,
   requireDriver
@@ -221,6 +222,28 @@ app.initDbPromise = initDbPromise;
 // =========================================================================
 // 2. AUTHENTICATION & ACCESS CONTROL
 // =========================================================================
+
+// Direct-open session for an explicitly configured embedded/showcase build.
+// It creates no user, fleet, trip, or other sample record in MongoDB.
+app.post('/api/auth/embedded-session', authRateLimiter, async (req, res) => {
+  if (!config.publicEmbeddedAccess) {
+    return res.status(404).json({ error: 'Embedded access is not enabled.', code: 'EMBEDDED_ACCESS_DISABLED' });
+  }
+
+  const user = {
+    id: 'fleetroute-embedded-access',
+    name: 'FleetRoute Operations',
+    role: 'admin',
+    accessMode: 'embedded',
+    mustChangePassword: false
+  };
+
+  res.setHeader('Cache-Control', 'no-store');
+  return res.json({
+    token: generateEmbeddedAccessToken(),
+    user
+  });
+});
 
 // Login with Email or Phone Number + Password
 app.post('/api/auth/login', authRateLimiter, async (req, res) => {

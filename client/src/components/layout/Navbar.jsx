@@ -469,7 +469,7 @@ export default function Navbar({
         )}
 
         {/* Authenticated User Profile Pill */}
-        {currentUser && (
+        {currentUser && onOpenProfile && (
           <button
             onClick={onOpenProfile}
             title={`${currentUser.name || currentUser.username} (${currentUser.role}) - Open Profile & Settings`}
@@ -485,7 +485,7 @@ export default function Navbar({
         )}
 
         {/* Logout Button */}
-        {currentUser && (
+        {currentUser && onLogout && (
           <button
             onClick={onLogout}
             title="Sign out of FleetRoute"

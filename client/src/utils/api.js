@@ -14,6 +14,7 @@ const getApiBase = () => {
 };
 
 const API_BASE = getApiBase();
+const EMBEDDED_ACCESS = import.meta.env.VITE_EMBEDDED_ACCESS === 'true';
 
 // Collection endpoints have historically been returned both as a bare array and
 // inside an object (for example, `{ trips: [...] }`).  Normalize those shapes at
@@ -212,6 +213,22 @@ class ApiService {
   }
 
   // --- Auth & Profile ---
+  get isEmbeddedAccess() {
+    return EMBEDDED_ACCESS;
+  }
+
+  async startEmbeddedSession() {
+    if (!EMBEDDED_ACCESS) {
+      throw new Error('Direct embedded access is not configured for this deployment.');
+    }
+    const data = await this.request('/auth/embedded-session', { method: 'POST' });
+    if (!data.token || !data.user) {
+      throw new Error('The server did not create an embedded access session.');
+    }
+    this.setSession(data.token, data.user);
+    return data;
+  }
+
   async login(identifier, password) {
     const data = await this.request('/auth/login', {
       method: 'POST',

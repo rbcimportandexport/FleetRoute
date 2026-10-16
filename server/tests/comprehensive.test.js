@@ -10,6 +10,7 @@ const mongoose = require('mongoose');
 // Configure isolated test environment variables before loading server modules
 process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET = 'isolated-test-jwt-secret-fleetroute-2026-audit';
+process.env.PUBLIC_EMBEDDED_ACCESS = 'true';
 
 let mongoServer;
 let server;
@@ -102,6 +103,18 @@ async function runComprehensiveTests() {
     });
     assert.strictEqual(fakeDemoLogin.status, 401, 'Former demo accounts must return 401 on clean database');
     console.log('[PASS] 1.2 No demo accounts exist: unbootstrapped login rejected with 401.');
+
+    // Direct-open access must use a signed transient principal and must not
+    // insert a placeholder administrator or any operational data.
+    const embeddedSession = await apiRequest('/api/auth/embedded-session', { method: 'POST' });
+    assert.strictEqual(embeddedSession.status, 200, 'Embedded session must be issued when explicitly enabled');
+    assert(embeddedSession.data.token, 'Embedded session must return a signed JWT');
+    assert.strictEqual(embeddedSession.data.user.accessMode, 'embedded');
+    assert.strictEqual(await models.User.countDocuments(), 0, 'Embedded access must not create a dummy user');
+    const embeddedDashboard = await apiRequest('/api/dashboard', { token: embeddedSession.data.token });
+    assert.strictEqual(embeddedDashboard.status, 200, 'Embedded principal must access the real dashboard');
+    assert.strictEqual(embeddedDashboard.data.activeTrips, 0, 'Embedded dashboard must report authentic empty state');
+    console.log('[PASS] 1.3 Direct-open session uses real storage and creates zero placeholder records.');
 
     // -------------------------------------------------------------------------
     // TEST 2: Administrator Bootstrap Tool
