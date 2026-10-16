@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import RoutePlanner from './RoutePlanner';
 
 const modules = [
   { id: 'overview', label: 'Overview', icon: 'grid', group: 'Workspace' },
@@ -196,7 +197,7 @@ export default function App() {
         </header>
 
         <main className="content">
-          {active === 'overview' ? <Overview /> : <ModulePage moduleId={active} />}
+          {active === 'overview' ? <Overview /> : active === 'routes' ? <RoutePlanner /> : <ModulePage moduleId={active} />}
         </main>
       </div>
     </div>
