@@ -87,16 +87,16 @@ export default function App() {
         api.getDashboard().catch(() => ({}))
       ]);
 
-      setTrips(Array.isArray(tripsData) ? tripsData : (tripsData?.trips || []));
-      setDrivers(Array.isArray(driversData) ? driversData : (driversData?.drivers || []));
-      setVehicles(Array.isArray(vehiclesData) ? vehiclesData : (vehiclesData?.vehicles || []));
-      setLocations(Array.isArray(locationsData) ? locationsData : (locationsData?.locations || []));
-      setProducts(Array.isArray(productsData) ? productsData : (productsData?.products || []));
-      setSafetyEvents(Array.isArray(safetyData) ? safetyData : (safetyData?.events || []));
+      setTrips(Array.isArray(tripsData) ? tripsData : []);
+      setDrivers(Array.isArray(driversData) ? driversData : []);
+      setVehicles(Array.isArray(vehiclesData) ? vehiclesData : []);
+      setLocations(Array.isArray(locationsData) ? locationsData : []);
+      setProducts(Array.isArray(productsData) ? productsData : []);
+      setSafetyEvents(Array.isArray(safetyData) ? safetyData : []);
       setStats(dashStats && typeof dashStats === 'object' ? dashStats : {});
 
-      const safeDrivers = Array.isArray(driversData) ? driversData : (driversData?.drivers || []);
-      const safeTrips = Array.isArray(tripsData) ? tripsData : (tripsData?.trips || []);
+      const safeDrivers = Array.isArray(driversData) ? driversData : [];
+      const safeTrips = Array.isArray(tripsData) ? tripsData : [];
 
       if (safeDrivers.length > 0 && !activeDriverId) {
         setActiveDriverId(safeDrivers[0].id);

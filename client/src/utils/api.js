@@ -14,6 +14,23 @@ const getApiBase = () => {
 
 const API_BASE = getApiBase();
 
+// Collection endpoints have historically been returned both as a bare array and
+// inside an object (for example, `{ trips: [...] }`).  Normalize those shapes at
+// the API boundary so view components never receive an object and then fail on
+// array operations such as `.filter()` or `.map()`.
+const normalizeCollection = (payload, collectionKeys) => {
+  if (Array.isArray(payload)) return payload;
+  const keys = Array.isArray(collectionKeys) ? collectionKeys : [collectionKeys];
+  for (const key of keys) {
+    if (Array.isArray(payload?.[key])) return payload[key];
+  }
+  if (Array.isArray(payload?.data)) return payload.data;
+  for (const key of keys) {
+    if (Array.isArray(payload?.data?.[key])) return payload.data[key];
+  }
+  return [];
+};
+
 class ApiService {
   constructor() {
     this.token = this.loadToken();
@@ -258,8 +275,8 @@ class ApiService {
     });
   }
 
-  getUsers() {
-    return this.request('/auth/users');
+  async getUsers() {
+    return normalizeCollection(await this.request('/auth/users'), ['users', 'accounts']);
   }
 
   createUser(payload) {
@@ -290,8 +307,11 @@ class ApiService {
   }
 
   // --- Locations & Geocoding ---
-  getLocations(activeOnly = false) {
-    return this.request(`/locations${activeOnly ? '?activeOnly=true' : ''}`);
+  async getLocations(activeOnly = false) {
+    return normalizeCollection(
+      await this.request(`/locations${activeOnly ? '?activeOnly=true' : ''}`),
+      'locations'
+    );
   }
 
   createLocation(payload) {
@@ -330,13 +350,13 @@ class ApiService {
     });
   }
 
-  getFleetTelemetry() {
-    return this.request('/telemetry/drivers');
+  async getFleetTelemetry() {
+    return normalizeCollection(await this.request('/telemetry/drivers'), ['drivers', 'fleet']);
   }
 
   // --- Trips & Multi-Stop Dispatch ---
-  getTrips() {
-    return this.request('/trips');
+  async getTrips() {
+    return normalizeCollection(await this.request('/trips'), 'trips');
   }
 
   getTrip(id) {
@@ -393,8 +413,8 @@ class ApiService {
   }
 
   // --- Entities: Drivers, Vehicles, Products ---
-  getDrivers() {
-    return this.request('/drivers');
+  async getDrivers() {
+    return normalizeCollection(await this.request('/drivers'), 'drivers');
   }
 
   createDriver(payload) {
@@ -417,8 +437,8 @@ class ApiService {
     });
   }
 
-  getVehicles() {
-    return this.request('/vehicles');
+  async getVehicles() {
+    return normalizeCollection(await this.request('/vehicles'), 'vehicles');
   }
 
   createVehicle(payload) {
@@ -441,8 +461,8 @@ class ApiService {
     });
   }
 
-  getProducts() {
-    return this.request('/products');
+  async getProducts() {
+    return normalizeCollection(await this.request('/products'), 'products');
   }
 
   createProduct(payload) {
@@ -466,8 +486,8 @@ class ApiService {
   }
 
   // --- Safety Events & Deliveries ---
-  getSafetyEvents() {
-    return this.request('/safety-events');
+  async getSafetyEvents() {
+    return normalizeCollection(await this.request('/safety-events'), ['events', 'safetyEvents']);
   }
 
   updateSafetyEvent(id, payload) {
@@ -477,8 +497,8 @@ class ApiService {
     });
   }
 
-  getDeliveryProofs() {
-    return this.request('/delivery-proofs');
+  async getDeliveryProofs() {
+    return normalizeCollection(await this.request('/delivery-proofs'), ['proofs', 'deliveryProofs']);
   }
 
   // --- Dashboard, Settings, Reset ---

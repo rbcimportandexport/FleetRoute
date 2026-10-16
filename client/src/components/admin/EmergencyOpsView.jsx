@@ -43,7 +43,7 @@ export default function EmergencyOpsView() {
   const fetchEmergencies = async () => {
     try {
       const data = await api.getEmergencies();
-      const list = data?.incidents || [];
+      const list = Array.isArray(data?.incidents) ? data.incidents : [];
       setIncidents(list);
       if (list.length > 0 && !selectedIncident) {
         selectIncident(list[0]);
@@ -84,8 +84,8 @@ export default function EmergencyOpsView() {
         api.getEmergencyTimeline(incident.incidentId).catch(() => ({ timeline: [] })),
         api.getEmergencyDeliveryAttempts(incident.incidentId).catch(() => ({ deliveryAttempts: [] }))
       ]);
-      setTimeline(tlRes?.timeline || []);
-      setDeliveryAttempts(daRes?.deliveryAttempts || []);
+      setTimeline(Array.isArray(tlRes?.timeline) ? tlRes.timeline : []);
+      setDeliveryAttempts(Array.isArray(daRes?.deliveryAttempts) ? daRes.deliveryAttempts : []);
     } catch {}
 
     if (incident.coordinates && incident.coordinates.lat && incident.coordinates.lng) {
