@@ -28,6 +28,13 @@ import { api } from './utils/api';
 import { soundEffects } from './utils/soundEffects';
 import { useTranslation } from './hooks/useTranslation';
 
+const UI_ONLY_PRINCIPAL = Object.freeze({
+  id: 'fleetroute-ui-only',
+  name: 'FleetRoute',
+  role: 'admin',
+  accessMode: 'ui-only'
+});
+
 // Mobile Bottom Nav Icons
 import { 
   LayoutDashboard, 
@@ -41,7 +48,7 @@ import {
 export default function App() {
   const { t } = useTranslation();
   // Authentication State
-  const [currentUser, setCurrentUser] = useState(api.currentUser);
+  const [currentUser, setCurrentUser] = useState(api.isUiOnlyMode ? UI_ONLY_PRINCIPAL : api.currentUser);
   const [isAuthChecking, setIsAuthChecking] = useState(true);
   const [authError, setAuthError] = useState('');
 
@@ -72,6 +79,24 @@ export default function App() {
 
   // Data Loading Function
   const loadInitialData = useCallback(async () => {
+    if (api.isUiOnlyMode) {
+      setTrips([]);
+      setDrivers([]);
+      setVehicles([]);
+      setLocations([]);
+      setProducts([]);
+      setSafetyEvents([]);
+      setStats({
+        activeTrips: 0,
+        driversOnDuty: 0,
+        completedDeliveriesToday: 0,
+        pendingDeliveries: 0,
+        safetyAlerts: 0
+      });
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       setOperationError('');
@@ -112,6 +137,13 @@ export default function App() {
 
   // Auth & Session Verification on Mount
   useEffect(() => {
+    if (api.isUiOnlyMode) {
+      setCurrentUser(UI_ONLY_PRINCIPAL);
+      loadInitialData();
+      setIsAuthChecking(false);
+      return undefined;
+    }
+
     const verifyAuth = async () => {
       try {
         setAuthError('');

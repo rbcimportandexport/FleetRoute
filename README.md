@@ -134,6 +134,7 @@ npm run build
 | `JWT_EXPIRES_IN` | Optional (default: `24h`) | Session token expiration duration. |
 | `PUBLIC_EMBEDDED_ACCESS` | Optional (default: `false`) | Enables the API's short-lived direct-open signed principal. Use only for a dedicated public presentation deployment. It inserts no placeholder records. |
 | `VITE_EMBEDDED_ACCESS` | Optional (default: `false`) | Removes the client login gate and requests direct embedded access from the API. |
+| `VITE_UI_ONLY_MODE` | Optional (default: `false`) | Opens every frontend module with empty states and disables all API/database persistence. No fake records are generated. |
 | `DEFAULT_ARRIVAL_RADIUS_METERS` | Optional (default: `150`) | Arrival geofence radius in meters for driver check-in. |
 | `OVERSPEED_THRESHOLD_KMH` | Optional (default: `80`) | Speed threshold that generates an overspeed safety alert from real telemetry. |
 | `LOCATION_UPDATE_INTERVAL_MS` | Optional (default: `5000`) | Client-side geolocation transmission interval in milliseconds. |

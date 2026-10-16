@@ -15,6 +15,7 @@ const getApiBase = () => {
 
 const API_BASE = getApiBase();
 const EMBEDDED_ACCESS = import.meta.env.VITE_EMBEDDED_ACCESS === 'true';
+const UI_ONLY_MODE = import.meta.env.VITE_UI_ONLY_MODE === 'true';
 
 // Collection endpoints have historically been returned both as a bare array and
 // inside an object (for example, `{ trips: [...] }`).  Normalize those shapes at
@@ -121,6 +122,30 @@ class ApiService {
   }
 
   async request(endpoint, options = {}) {
+    if (UI_ONLY_MODE) {
+      const method = (options.method || 'GET').toUpperCase();
+      if (method === 'GET') {
+        if (endpoint === '/dashboard') {
+          return {
+            activeTrips: 0,
+            driversOnDuty: 0,
+            completedDeliveriesToday: 0,
+            pendingDeliveries: 0,
+            safetyAlerts: 0
+          };
+        }
+        if (endpoint === '/settings' || endpoint === '/reports') return {};
+        if (endpoint.startsWith('/v1/emergencies')) return { incidents: [], timeline: [], deliveryAttempts: [], total: 0 };
+        if (endpoint.startsWith('/v1/responders/nearby')) return { ambulances: [], hospitals: [] };
+        if (endpoint.startsWith('/v1/safety-service/health')) return { healthRecords: [], total: 0 };
+        return [];
+      }
+
+      const error = new Error('UI-only showcase: database operations are intentionally disabled.');
+      error.code = 'UI_ONLY_MODE';
+      throw error;
+    }
+
     if (!API_BASE) {
       throw new Error('API endpoint is not configured for this device. Set VITE_API_BASE_URL to the production HTTPS /api URL.');
     }
@@ -213,6 +238,10 @@ class ApiService {
   }
 
   // --- Auth & Profile ---
+  get isUiOnlyMode() {
+    return UI_ONLY_MODE;
+  }
+
   get isEmbeddedAccess() {
     return EMBEDDED_ACCESS;
   }

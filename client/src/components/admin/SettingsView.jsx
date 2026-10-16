@@ -57,10 +57,10 @@ export default function SettingsView() {
   const [maxDailyShiftHours, setMaxDailyShiftHours] = useState(10);
 
   // 5. Company & Localization
-  const [companyName, setCompanyName] = useState('FleetRoute Freight & Supply Chain Logistics Pvt Ltd');
-  const [headquartersAddress, setHeadquartersAddress] = useState('Transport Hub Bay 4, Okhla Phase-III, New Delhi 110020');
-  const [dispatchHelpline, setDispatchHelpline] = useState('+91 1800 200 4455 (24x7 Control Desk)');
-  const [emergencyEmail, setEmergencyEmail] = useState('dispatch.safety@fleetroute.com');
+  const [companyName, setCompanyName] = useState('');
+  const [headquartersAddress, setHeadquartersAddress] = useState('');
+  const [dispatchHelpline, setDispatchHelpline] = useState('');
+  const [emergencyEmail, setEmergencyEmail] = useState('');
   const [currencySymbol, setCurrencySymbol] = useState('INR (₹)');
   const [timezone, setTimezone] = useState('Asia/Kolkata (IST, UTC+05:30)');
   const [defaultLanguage, setDefaultLanguage] = useState('en');

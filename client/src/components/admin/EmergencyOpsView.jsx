@@ -10,12 +10,10 @@ import {
   VolumeX, 
   Check, 
   UserCheck,
-  Play,
   Siren,
   Activity,
   AlertTriangle,
   RotateCcw,
-  Trash2
 } from 'lucide-react';
 import { api } from '../../utils/api';
 import { soundEffects } from '../../utils/soundEffects';
@@ -37,7 +35,6 @@ export default function EmergencyOpsView() {
   const [selectedHospitalId, setSelectedHospitalId] = useState('');
   const [dispatchNotes, setDispatchNotes] = useState('');
   const [actionSuccessMsg, setActionSuccessMsg] = useState('');
-  const [isSimulating, setIsSimulating] = useState(false);
 
   // 1. Fetch emergencies list
   const fetchEmergencies = async () => {
@@ -156,62 +153,6 @@ export default function EmergencyOpsView() {
     }
   };
 
-  // 6. Admin 1-Click Simulation Trigger
-  const handleSimulateCrash = async () => {
-    try {
-      setIsSimulating(true);
-      const testCoordinates = {
-        lat: 21.17024 + (Math.random() - 0.5) * 0.04,
-        lng: 72.83106 + (Math.random() - 0.5) * 0.04,
-        accuracy: 4.5
-      };
-      
-      const payload = {
-        coordinates: testCoordinates,
-        speedBeforeImpact: 64.5,
-        gForcePeak: 5.2,
-        severity: 'CRITICAL',
-        triggerSource: 'sensor_fusion',
-        vehiclePlate: 'MH-12-TR-9941',
-        driverName: 'Ramesh Kumar (Simulation)',
-        driverPhone: '+91 98765 43210'
-      };
-
-      const res = await api.detectEmergency(payload);
-      setActionSuccessMsg(`Emergency Incident Created: ${res?.incident?.incidentId || 'Done'}`);
-      if (soundEffects?.speakEmergencyVoice) {
-        soundEffects.speakEmergencyVoice(lang);
-      } else if (soundEffects?.playSOSAlert) {
-        soundEffects.playSOSAlert();
-      }
-      await fetchEmergencies();
-      if (res?.incident) {
-        selectIncident(res.incident);
-      }
-    } catch (err) {
-      alert('Simulation failed: ' + err.message);
-    } finally {
-      setIsSimulating(false);
-    }
-  };
-
-  // 7. Clear All Test Incidents
-  const [isClearing, setIsClearing] = useState(false);
-  const handleClearAllIncidents = async () => {
-    if (!window.confirm('Clear all test emergency incidents and reset ambulance units?')) return;
-    try {
-      setIsClearing(true);
-      const res = await api.clearEmergencies();
-      setActionSuccessMsg(res.message || 'All incidents cleared.');
-      setSelectedIncident(null);
-      await fetchEmergencies();
-    } catch (err) {
-      alert('Failed to clear incidents: ' + err.message);
-    } finally {
-      setIsClearing(false);
-    }
-  };
-
   const unacknowledgedCount = incidents.filter(i => i.status === 'sos_created' || i.status === 'alerting').length;
 
   return (
@@ -274,60 +215,6 @@ export default function EmergencyOpsView() {
 
         {/* Action Controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', width: '100%', maxWidth: '100%' }}>
-          <button
-            type="button"
-            onClick={handleSimulateCrash}
-            disabled={isSimulating}
-            style={{
-              padding: '10px 16px',
-              borderRadius: '10px',
-              background: '#dc2626',
-              color: '#ffffff',
-              border: 'none',
-              fontSize: '12px',
-              fontWeight: 800,
-              cursor: isSimulating ? 'not-allowed' : 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              boxShadow: '0 4px 12px rgba(220, 38, 38, 0.35)',
-              opacity: isSimulating ? 0.6 : 1,
-              transition: 'all 0.15s ease',
-              flex: '1 1 180px'
-            }}
-          >
-            <Play size={14} fill="#ffffff" />
-            <span>{isSimulating ? 'Simulating...' : 'Simulate Crash Incident'}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={handleClearAllIncidents}
-            disabled={isClearing}
-            style={{
-              padding: '10px 14px',
-              borderRadius: '10px',
-              background: 'rgba(239, 68, 68, 0.15)',
-              border: '1px solid rgba(239, 68, 68, 0.3)',
-              color: '#fca5a5',
-              fontSize: '12px',
-              fontWeight: 700,
-              cursor: isClearing ? 'not-allowed' : 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              opacity: isClearing ? 0.6 : 1,
-              transition: 'all 0.15s ease',
-              flex: '1 1 140px'
-            }}
-            title="Clear all test emergency incidents from database"
-          >
-            <Trash2 size={14} />
-            <span>{isClearing ? 'Clearing...' : 'Clear All Incidents'}</span>
-          </button>
-
           <button
             type="button"
             onClick={() => {
