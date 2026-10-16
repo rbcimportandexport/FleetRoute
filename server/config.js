@@ -20,7 +20,7 @@ function validateProductionConfig() {
   if (!isProduction) return;
 
   const missing = [];
-  if (!process.env.MONGODB_URI && !process.env.MONGO_URI) missing.push('MONGODB_URI');
+  if (!process.env.LIVE_MONGODB_URI && !process.env.MONGODB_URI && !process.env.MONGO_URI) missing.push('LIVE_MONGODB_URI or MONGODB_URI');
   if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) missing.push('JWT_SECRET (minimum 32 characters)');
   if (corsOrigins.length === 0) missing.push('CORS_ORIGINS');
 

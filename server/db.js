@@ -27,7 +27,7 @@ class DataStore {
     };
   }
 
-  async connect(uri = process.env.MONGODB_URI || process.env.MONGO_URI || (process.env.NODE_ENV === 'production' ? null : 'mongodb://127.0.0.1:27017/fleetroute')) {
+  async connect(uri = process.env.LIVE_MONGODB_URI || process.env.MONGODB_URI || process.env.MONGO_URI || (process.env.NODE_ENV === 'production' ? null : 'mongodb://127.0.0.1:27017/fleetroute')) {
     if (!uri) {
       throw new Error('MONGODB_URI is required in production.');
     }

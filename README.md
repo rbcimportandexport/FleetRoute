@@ -127,6 +127,7 @@ npm run build
 | `PORT` | Optional (default: `5000`) | HTTP port for the Express backend API. |
 | `NODE_ENV` | Optional (default: `development`) | Runtime environment mode. Production enables strict configuration validation. |
 | `MONGODB_URI` | **Mandatory** | MongoDB connection URI string. Startup cleanly fails if missing or unreachable. |
+| `LIVE_MONGODB_URI` | Optional replacement | Zero-downtime MongoDB rotation URI. When set, it takes precedence over `MONGODB_URI`. |
 | `JWT_SECRET` | **Mandatory in production** | Cryptographic key of at least 32 characters used for JWTs. No hardcoded production fallback exists. |
 | `CORS_ORIGINS` | **Mandatory in production** | Comma-separated exact web origins allowed to call the API. |
 | `IOT_DEVICE_AUTH_SECRET` | Required to enable IoT ingestion | Distinct 32+ character key used for exact token and HMAC verification. |
