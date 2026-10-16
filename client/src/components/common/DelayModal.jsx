@@ -11,7 +11,6 @@ import {
   CheckCircle2,
   FileText,
   Camera,
-  Mic,
   RotateCcw,
   Truck,
   AlertOctagon,
@@ -19,10 +18,7 @@ import {
   Shield,
   Scale,
   CreditCard,
-  Plus,
-  Play,
-  Square,
-  Trash2
+  Plus
 } from 'lucide-react';
 import { soundEffects } from '../../utils/soundEffects';
 
@@ -48,25 +44,19 @@ export default function DelayModal({
   // ==========================================
   const [breakdownCategory, setBreakdownCategory] = useState('engine');
   const [incidentPhotos, setIncidentPhotos] = useState([]);
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingSeconds, setRecordingSeconds] = useState(12);
-  const [hasVoiceNote, setHasVoiceNote] = useState(true); // Pre-saved 12s matching Image 1
-  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [breakdownNotes, setBreakdownNotes] = useState('');
   const photoInputRef = useRef(null);
-  const recordingTimerRef = useRef(null);
 
   // ==========================================
   // POLICE / RTO CHALLAN STATE (Images 3, 4, 5)
   // ==========================================
   const [authority, setAuthority] = useState('traffic_police');
   const [stoppageReason, setStoppageReason] = useState('overload');
-  const [challanNumber, setChallanNumber] = useState('GJ01-2024-CH-9182');
-  const [penaltyAmount, setPenaltyAmount] = useState('2000');
+  const [challanNumber, setChallanNumber] = useState('');
+  const [penaltyAmount, setPenaltyAmount] = useState('');
   const [challanSlipPhoto, setChallanSlipPhoto] = useState(null);
   const [weighmentSlipPhoto, setWeighmentSlipPhoto] = useState(null);
   const [settlementOption, setSettlementOption] = useState('cash_spot');
-  const [isScanningChallan, setIsScanningChallan] = useState(false);
 
   const challanInputRef = useRef(null);
   const weighmentInputRef = useRef(null);
@@ -74,52 +64,18 @@ export default function DelayModal({
   // ==========================================
   // REFUELING & GENERAL DELAY STATE
   // ==========================================
-  const [fuelLiters, setFuelLiters] = useState('45');
-  const [fuelCost, setFuelCost] = useState('4275');
-  const [odometer, setOdometer] = useState('42850');
-  const [fuelStation, setFuelStation] = useState('Indian Oil, Outer Ring Rd');
+  const [fuelLiters, setFuelLiters] = useState('');
+  const [fuelCost, setFuelCost] = useState('');
+  const [odometer, setOdometer] = useState('');
+  const [fuelStation, setFuelStation] = useState('');
   const [delayDuration, setDelayDuration] = useState('20');
   const [delayNotes, setDelayNotes] = useState('');
 
   if (!isOpen) return null;
 
-  const driverAccountLabel = driver?.name 
-    ? `Linked Driver Account: SBI •••• 4182 (${driver.name})`
-    : 'Linked Driver Account: SBI •••• 4182 (Rajesh Kumar)';
-
-  // Voice note timer logic
-  const handleToggleVoiceRecord = () => {
-    soundEffects.playActionClick();
-    if (isRecording) {
-      // Stop recording
-      clearInterval(recordingTimerRef.current);
-      setIsRecording(false);
-      setHasVoiceNote(true);
-      soundEffects.playSuccessChime();
-    } else {
-      // Start recording
-      setRecordingSeconds(0);
-      setIsRecording(true);
-      setHasVoiceNote(false);
-      recordingTimerRef.current = setInterval(() => {
-        setRecordingSeconds((prev) => {
-          if (prev >= 60) {
-            clearInterval(recordingTimerRef.current);
-            setIsRecording(false);
-            setHasVoiceNote(true);
-            return prev;
-          }
-          return prev + 1;
-        });
-      }, 1000);
-    }
-  };
-
-  const handlePlayVoicePreview = () => {
-    soundEffects.playActionClick();
-    setIsPlayingAudio(true);
-    setTimeout(() => setIsPlayingAudio(false), 2000);
-  };
+  const driverAccountLabel = driver?.name
+    ? `Reimbursement account not configured for ${driver.name}`
+    : 'Reimbursement account not configured';
 
   const handleAddIncidentPhoto = (e) => {
     const file = e.target.files?.[0];
@@ -131,17 +87,6 @@ export default function DelayModal({
       soundEffects.playSuccessChime();
     };
     reader.readAsDataURL(file);
-  };
-
-  const handleScanChallanOcr = () => {
-    soundEffects.playActionClick();
-    setIsScanningChallan(true);
-    setTimeout(() => {
-      setIsScanningChallan(false);
-      const randomMemo = `GJ01-${new Date().getFullYear()}-CH-${Math.floor(1000 + Math.random() * 9000)}`;
-      setChallanNumber(randomMemo);
-      soundEffects.playSuccessChime();
-    }, 800);
   };
 
   const handleQuickAddAmount = (addValue) => {
@@ -165,7 +110,7 @@ export default function DelayModal({
           breakdownCategory,
           photosCount: incidentPhotos.length,
           photos: incidentPhotos,
-          voiceNote: hasVoiceNote ? { durationSeconds: recordingSeconds, saved: true } : null
+          voiceNote: null
         }
       };
     } else if (activeTab === 'challan') {
@@ -181,7 +126,7 @@ export default function DelayModal({
           challanSlipAttached: Boolean(challanSlipPhoto),
           weighmentSlipAttached: Boolean(weighmentSlipPhoto),
           settlementOption,
-          reimbursementAccount: driverAccountLabel
+          reimbursementAccount: null
         }
       };
     } else if (activeTab === 'refueling') {
@@ -752,14 +697,13 @@ export default function DelayModal({
 
                   {/* Right Card: Voice Note Recorded (Matching Image 1) */}
                   <div
-                    onClick={handleToggleVoiceRecord}
                     style={{
                       border: '2px solid #0f172a',
                       borderRadius: '12px',
                       background: '#eff6ff',
                       padding: '16px 12px',
                       textAlign: 'center',
-                      cursor: 'pointer',
+                      cursor: 'not-allowed',
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'center',
@@ -767,9 +711,8 @@ export default function DelayModal({
                       minHeight: '120px'
                     }}
                   >
-                    <Mic size={26} strokeWidth={2.4} color="#dc2626" style={{ marginBottom: '8px' }} />
                     <div style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a', lineHeight: 1.3 }}>
-                      {isRecording ? 'Recording Voice...' : 'Voice Note Recorded'}
+                      Voice capture unavailable
                     </div>
                     
                     {/* Badge: 12s SAVED (બોલો) */}
@@ -786,7 +729,7 @@ export default function DelayModal({
                       alignItems: 'center',
                       gap: '4px'
                     }}>
-                      {isRecording ? `REC: ${recordingSeconds}s` : `${recordingSeconds}s SAVED (બોલો)`}
+                      NOT CONFIGURED
                     </div>
                   </div>
                 </div>
@@ -1024,7 +967,8 @@ export default function DelayModal({
                   />
                   <button
                     type="button"
-                    onClick={handleScanChallanOcr}
+                    disabled
+                    title="OCR provider is not configured"
                     style={{
                       background: '#eff6ff',
                       color: '#0f172a',
@@ -1033,14 +977,15 @@ export default function DelayModal({
                       padding: '0 14px',
                       fontSize: '12px',
                       fontWeight: 800,
-                      cursor: 'pointer',
+                      cursor: 'not-allowed',
+                      opacity: 0.6,
                       display: 'flex',
                       alignItems: 'center',
                       gap: '6px'
                     }}
                   >
                     <Camera size={16} />
-                    <span>{isScanningChallan ? 'SCANNING...' : 'SCAN'}</span>
+                    <span>OCR UNAVAILABLE</span>
                   </button>
                 </div>
               </div>
@@ -1466,7 +1411,7 @@ export default function DelayModal({
                     color: '#0f766e',
                     letterSpacing: '0.04em'
                   }}>
-                    VERIFIED
+                    NOT CONFIGURED
                   </span>
                 </div>
               </div>

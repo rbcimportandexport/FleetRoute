@@ -4,10 +4,6 @@ import { soundEffects } from '../../utils/soundEffects';
 import { api } from '../../utils/api';
 import { useTranslation } from '../../hooks/useTranslation';
 
-const DEFAULT_ODOMETER = '/images/gate-proofs/odometer-cluster.jpg';
-const DEFAULT_WALKAROUND = '/images/gate-proofs/walkaround-front.jpg';
-const DEFAULT_SELFIE = '/images/gate-proofs/driver-seatbelt-selfie.jpg';
-
 export default function GateProofPhotosCard({
   trip,
   onProofUpdated,
@@ -17,20 +13,21 @@ export default function GateProofPhotosCard({
   const { t } = useTranslation();
   const existingProofs = trip?.gateProofs || {};
 
-  const [odometerPhoto, setOdometerPhoto] = useState(existingProofs.odometerPhoto || DEFAULT_ODOMETER);
-  const [odometerTime, setOdometerTime] = useState(existingProofs.odometerTimestamp ? new Date(existingProofs.odometerTimestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '10:14 AM');
+  const [odometerPhoto, setOdometerPhoto] = useState(existingProofs.odometerPhoto || '');
+  const [odometerTime, setOdometerTime] = useState(existingProofs.odometerTimestamp ? new Date(existingProofs.odometerTimestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Not captured');
   
-  const [walkaroundPhoto, setWalkaroundPhoto] = useState(existingProofs.walkaroundPhoto || DEFAULT_WALKAROUND);
-  const [walkaroundTime, setWalkaroundTime] = useState(existingProofs.walkaroundTimestamp ? new Date(existingProofs.walkaroundTimestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '10:17 AM');
+  const [walkaroundPhoto, setWalkaroundPhoto] = useState(existingProofs.walkaroundPhoto || '');
+  const [walkaroundTime, setWalkaroundTime] = useState(existingProofs.walkaroundTimestamp ? new Date(existingProofs.walkaroundTimestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Not captured');
   
-  const [selfiePhoto, setSelfiePhoto] = useState(existingProofs.driverSeatbeltPhoto || DEFAULT_SELFIE);
-  const [selfieTime, setSelfieTime] = useState(existingProofs.driverSeatbeltTimestamp ? new Date(existingProofs.driverSeatbeltTimestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '10:19 AM');
+  const [selfiePhoto, setSelfiePhoto] = useState(existingProofs.driverSeatbeltPhoto || '');
+  const [selfieTime, setSelfieTime] = useState(existingProofs.driverSeatbeltTimestamp ? new Date(existingProofs.driverSeatbeltTimestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Not captured');
 
-  const [seatbeltVerified, setSeatbeltVerified] = useState(existingProofs.seatbeltVerified !== undefined ? existingProofs.seatbeltVerified : true);
-  const [overspeedingPledge, setOverspeedingPledge] = useState(existingProofs.overspeedingPledge !== undefined ? existingProofs.overspeedingPledge : true);
+  const [seatbeltVerified, setSeatbeltVerified] = useState(Boolean(existingProofs.seatbeltVerified));
+  const [overspeedingPledge, setOverspeedingPledge] = useState(Boolean(existingProofs.overspeedingPledge));
 
   const [activeModalImg, setActiveModalImg] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [proofError, setProofError] = useState('');
 
   const odoInputRef = useRef(null);
   const walkInputRef = useRef(null);
@@ -61,6 +58,7 @@ export default function GateProofPhotosCard({
       if (onProofUpdated) onProofUpdated(res.trip);
     } catch (err) {
       console.error('Failed to save gate proof photos:', err);
+      setProofError(err.message || 'Gate evidence could not be saved.');
     } finally {
       setIsSaving(false);
     }
@@ -69,6 +67,15 @@ export default function GateProofPhotosCard({
   const handleFileUpload = (e, type) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setProofError('');
+    if (!file.type.startsWith('image/')) {
+      setProofError('Only image files are accepted for gate evidence.');
+      return;
+    }
+    if (file.size > 3 * 1024 * 1024) {
+      setProofError('Each gate evidence image must be 3 MB or smaller.');
+      return;
+    }
 
     const reader = new FileReader();
     reader.onload = () => {
@@ -189,6 +196,11 @@ export default function GateProofPhotosCard({
       </div>
 
       {/* 3 Proof Photo Cards Grid */}
+      {proofError && (
+        <div style={{ marginBottom: '12px', color: 'var(--status-rose-text)', fontSize: '12px', fontWeight: 700 }}>
+          {proofError}
+        </div>
+      )}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
@@ -215,14 +227,14 @@ export default function GateProofPhotosCard({
             background: 'var(--slate-200)',
             marginBottom: '10px'
           }}>
-            <img
+            {odometerPhoto ? <img
               src={odometerPhoto}
               alt="Odometer & Cluster"
               style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
               onClick={() => setActiveModalImg(odometerPhoto)}
-            />
+            /> : <div style={{ height: '100%', display: 'grid', placeItems: 'center', color: 'var(--slate-500)', fontSize: '11px', fontWeight: 800 }}><Camera size={24} /> CAPTURE REQUIRED</div>}
             {/* Pill Badge matching Image 3 */}
-            <div style={{
+            {odometerPhoto && <div style={{
               position: 'absolute',
               bottom: '8px',
               right: '8px',
@@ -240,7 +252,7 @@ export default function GateProofPhotosCard({
             }}>
               <Check size={13} strokeWidth={3} />
               <span>VERIFIED</span>
-            </div>
+            </div>}
           </div>
 
           {/* Details */}
@@ -274,7 +286,7 @@ export default function GateProofPhotosCard({
                 textTransform: 'uppercase'
               }}
             >
-              RETAKE
+              {odometerPhoto ? 'RETAKE' : 'CAPTURE'}
             </button>
           )}
         </div>
@@ -298,14 +310,14 @@ export default function GateProofPhotosCard({
             background: 'var(--slate-200)',
             marginBottom: '10px'
           }}>
-            <img
+            {walkaroundPhoto ? <img
               src={walkaroundPhoto}
               alt="Walkaround Front Face"
               style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
               onClick={() => setActiveModalImg(walkaroundPhoto)}
-            />
+            /> : <div style={{ height: '100%', display: 'grid', placeItems: 'center', color: 'var(--slate-500)', fontSize: '11px', fontWeight: 800 }}><Camera size={24} /> CAPTURE REQUIRED</div>}
             {/* Pill Badge matching Image 3 */}
-            <div style={{
+            {walkaroundPhoto && <div style={{
               position: 'absolute',
               bottom: '8px',
               right: '8px',
@@ -323,7 +335,7 @@ export default function GateProofPhotosCard({
             }}>
               <Check size={13} strokeWidth={3} />
               <span>CAPTURED</span>
-            </div>
+            </div>}
           </div>
 
           {/* Details */}
@@ -357,7 +369,7 @@ export default function GateProofPhotosCard({
                 textTransform: 'uppercase'
               }}
             >
-              RETAKE
+              {walkaroundPhoto ? 'RETAKE' : 'CAPTURE'}
             </button>
           )}
         </div>
@@ -381,14 +393,14 @@ export default function GateProofPhotosCard({
             background: 'var(--slate-200)',
             marginBottom: '10px'
           }}>
-            <img
+            {selfiePhoto ? <img
               src={selfiePhoto}
               alt="Driver Seated with Fastened Seatbelt"
               style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
               onClick={() => setActiveModalImg(selfiePhoto)}
-            />
+            /> : <div style={{ height: '100%', display: 'grid', placeItems: 'center', color: 'var(--slate-500)', fontSize: '11px', fontWeight: 800 }}><Camera size={24} /> SELFIE REQUIRED</div>}
             {/* Pill Badge matching Image 3 */}
-            <div style={{
+            {selfiePhoto && <div style={{
               position: 'absolute',
               bottom: '8px',
               right: '8px',
@@ -406,7 +418,7 @@ export default function GateProofPhotosCard({
             }}>
               <Check size={13} strokeWidth={3} />
               <span>VERIFIED</span>
-            </div>
+            </div>}
           </div>
 
           {/* Details */}
@@ -440,7 +452,7 @@ export default function GateProofPhotosCard({
                   textTransform: 'uppercase'
                 }}
               >
-                RETAKE / TAKE SELFIE
+                {selfiePhoto ? 'RETAKE SELFIE' : 'TAKE SELFIE'}
               </button>
             </div>
           )}

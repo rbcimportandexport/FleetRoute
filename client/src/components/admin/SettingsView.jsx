@@ -681,7 +681,7 @@ export default function SettingsView() {
                         Mandatory Linked Bank Account for Cash Settlement
                       </div>
                       <div style={{ fontSize: '11px', color: 'var(--slate-500)' }}>
-                        Ensures drivers have verified bank details (e.g. SBI •••• 4182) linked in personnel profile.
+                        Requires a separately configured and verified reimbursement account before payments can be processed.
                       </div>
                     </div>
                     <input

@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Navbar from './components/layout/Navbar';
 import Sidebar from './components/layout/Sidebar';
-import DelayModal from './components/common/DelayModal';
 import ErrorBoundary from './components/common/ErrorBoundary';
 
 // Auth Components
@@ -9,24 +8,25 @@ import LoginPage from './components/auth/LoginPage';
 import UserProfileModal from './components/auth/UserProfileModal';
 
 // Admin Components
-import AdminDashboard from './components/admin/AdminDashboard';
-import LiveTrackingView from './components/admin/LiveTrackingView';
-import TripsManager from './components/admin/TripsManager';
-import TripCreateModal from './components/admin/TripCreateModal';
-import LocationsManager from './components/admin/LocationsManager';
-import DriversManager from './components/admin/DriversManager';
-import VehiclesManager from './components/admin/VehiclesManager';
-import ProductsManager from './components/admin/ProductsManager';
-import CargoLedgerView from './components/admin/CargoLedgerView';
-import ActivityTimelineView from './components/admin/ActivityTimelineView';
-import DeliveriesView from './components/admin/DeliveriesView';
-import SafetyAlertsView from './components/admin/SafetyAlertsView';
-import EmergencyOpsView from './components/admin/EmergencyOpsView';
-import ReportsView from './components/admin/ReportsView';
-import SettingsView from './components/admin/SettingsView';
+const AdminDashboard = React.lazy(() => import('./components/admin/AdminDashboard'));
+const LiveTrackingView = React.lazy(() => import('./components/admin/LiveTrackingView'));
+const TripsManager = React.lazy(() => import('./components/admin/TripsManager'));
+const TripCreateModal = React.lazy(() => import('./components/admin/TripCreateModal'));
+const LocationsManager = React.lazy(() => import('./components/admin/LocationsManager'));
+const DriversManager = React.lazy(() => import('./components/admin/DriversManager'));
+const VehiclesManager = React.lazy(() => import('./components/admin/VehiclesManager'));
+const ProductsManager = React.lazy(() => import('./components/admin/ProductsManager'));
+const CargoLedgerView = React.lazy(() => import('./components/admin/CargoLedgerView'));
+const ActivityTimelineView = React.lazy(() => import('./components/admin/ActivityTimelineView'));
+const DeliveriesView = React.lazy(() => import('./components/admin/DeliveriesView'));
+const SafetyAlertsView = React.lazy(() => import('./components/admin/SafetyAlertsView'));
+const EmergencyOpsView = React.lazy(() => import('./components/admin/EmergencyOpsView'));
+const ReportsView = React.lazy(() => import('./components/admin/ReportsView'));
+const SettingsView = React.lazy(() => import('./components/admin/SettingsView'));
+const DelayModal = React.lazy(() => import('./components/common/DelayModal'));
 
 // Driver Component
-import DriverMobileHome from './components/driver/DriverMobileHome';
+const DriverMobileHome = React.lazy(() => import('./components/driver/DriverMobileHome'));
 
 import { api } from './utils/api';
 import { soundEffects } from './utils/soundEffects';
@@ -62,6 +62,7 @@ export default function App() {
   const [safetyEvents, setSafetyEvents] = useState([]);
   const [stats, setStats] = useState({});
   const [loading, setLoading] = useState(false);
+  const [operationError, setOperationError] = useState('');
 
   // Selected identifiers
   const [activeDriverId, setActiveDriverId] = useState(null);
@@ -77,6 +78,7 @@ export default function App() {
   const loadInitialData = useCallback(async () => {
     try {
       setLoading(true);
+      setOperationError('');
       const [tripsData, driversData, vehiclesData, locationsData, productsData, safetyData, dashStats] = await Promise.all([
         api.getTrips().catch(() => []),
         api.getDrivers().catch(() => []),
@@ -106,6 +108,7 @@ export default function App() {
       }
     } catch (err) {
       console.error('Failed to load logistics operational data:', err);
+      setOperationError(err.message || 'Operational data could not be loaded.');
     } finally {
       setLoading(false);
     }
@@ -119,6 +122,7 @@ export default function App() {
           const res = await api.getProfile();
           if (res && res.user) {
             setCurrentUser(res.user);
+            if (res.user.mustChangePassword) setIsProfileOpen(true);
             await loadInitialData();
           } else {
             api.clearSession();
@@ -153,6 +157,7 @@ export default function App() {
   // Handle Login Success
   const handleLoginSuccess = async (user) => {
     setCurrentUser(user);
+    if (user?.mustChangePassword) setIsProfileOpen(true);
     if (user && user.driverId) {
       setActiveDriverId(user.driverId);
     }
@@ -196,6 +201,7 @@ export default function App() {
     if (!targetTrip) return;
 
     try {
+      setOperationError('');
       const res = await api.advanceStop(targetTrip.id, payload);
       if (res && res.trip) {
         setTrips(prev => prev.map(t => t.id === res.trip.id ? res.trip : t));
@@ -203,6 +209,7 @@ export default function App() {
       }
     } catch (err) {
       console.error('Error advancing stop workflow:', err);
+      setOperationError(err.message || 'Trip workflow could not be updated.');
     }
   };
 
@@ -211,12 +218,14 @@ export default function App() {
     if (!targetTrip) return;
 
     try {
+      setOperationError('');
       const res = await api.cargoAction(targetTrip.id, payload);
       if (res && res.trip) {
         setTrips(prev => prev.map(t => t.id === res.trip.id ? res.trip : t));
       }
     } catch (err) {
       console.error('Error recording cargo action:', err);
+      setOperationError(err.message || 'Cargo action could not be recorded.');
     }
   };
 
@@ -225,12 +234,14 @@ export default function App() {
     if (!targetTrip) return;
 
     try {
+      setOperationError('');
       const res = await api.recordActivity(targetTrip.id, payload);
       if (res && res.trip) {
         setTrips(prev => prev.map(t => t.id === res.trip.id ? res.trip : t));
       }
     } catch (err) {
       console.error('Error recording timed activity:', err);
+      setOperationError(err.message || 'Activity could not be recorded.');
     }
   };
 
@@ -327,6 +338,7 @@ export default function App() {
   const isDriver = currentUser.role === 'driver';
 
   return (
+    <React.Suspense fallback={<div style={{ padding: '24px', color: 'var(--slate-600)' }}>Loading workspace...</div>}>
     <div className="app-shell">
       {/* Top Navigation */}
       <Navbar
@@ -381,6 +393,27 @@ export default function App() {
             background: 'var(--slate-50)'
           }}
         >
+          {operationError && (
+            <div role="alert" style={{
+              maxWidth: '1400px',
+              margin: '0 auto 12px',
+              padding: '10px 14px',
+              borderRadius: '10px',
+              border: '1px solid var(--status-rose)',
+              background: 'var(--status-rose-light)',
+              color: 'var(--status-rose-text)',
+              fontSize: '12px',
+              fontWeight: 700,
+              display: 'flex',
+              justifyContent: 'space-between',
+              gap: '12px'
+            }}>
+              <span>{operationError}</span>
+              <button type="button" onClick={() => setOperationError('')} style={{ border: 0, background: 'transparent', color: 'inherit', cursor: 'pointer', fontWeight: 800 }}>
+                Dismiss
+              </button>
+            </div>
+          )}
           <ErrorBoundary>
             {isDriver ? (
             /* Dedicated Driver Screen: Strictly Isolated to Driver's Assigned Trip */
@@ -390,6 +423,11 @@ export default function App() {
               onAdvanceStop={handleAdvanceStop}
               onCargoAction={handleCargoAction}
               onRecordActivity={handleRecordActivity}
+              onTripUpdated={(updatedTrip) => {
+                if (updatedTrip?.id) {
+                  setTrips(prev => prev.map(trip => trip.id === updatedTrip.id ? updatedTrip : trip));
+                }
+              }}
               onOpenDelayModal={(type = 'breakdown') => {
                 setDelayModalType(type);
                 setIsDelayModalOpen(true);
@@ -580,7 +618,9 @@ export default function App() {
       {/* User Profile & Password Change Modal */}
       <UserProfileModal
         isOpen={isProfileOpen}
-        onClose={() => setIsProfileOpen(false)}
+        onClose={() => {
+          if (!currentUser?.mustChangePassword) setIsProfileOpen(false);
+        }}
         currentUser={currentUser}
         driver={currentDriver}
         driverTrip={driverTrip}
@@ -589,5 +629,6 @@ export default function App() {
         onProfileUpdated={(updatedUser) => setCurrentUser(updatedUser)}
       />
     </div>
+    </React.Suspense>
   );
 }

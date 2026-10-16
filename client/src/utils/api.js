@@ -1,15 +1,16 @@
-import { cloudFallbackData } from './cloudFallbackData';
-
 const getApiBase = () => {
+  const configuredBase = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/+$/, '');
+
   if (typeof window !== 'undefined') {
     const isCapacitor = window.Capacitor !== undefined || 
                         window.location.origin.includes('capacitor://') || 
                         (window.location.hostname === 'localhost' && !window.location.port);
     if (isCapacitor) {
-      return localStorage.getItem('fleetroute_custom_api') || 'http://192.168.3.20:5000/api';
+      const runtimeBase = localStorage.getItem('fleetroute_api_base_url')?.trim().replace(/\/+$/, '');
+      return configuredBase || runtimeBase || null;
     }
   }
-  return '/api';
+  return configuredBase || '/api';
 };
 
 const API_BASE = getApiBase();
@@ -82,18 +83,28 @@ class ApiService {
       if (user) localStorage.setItem('fleetroute_current_user', JSON.stringify(user));
       else localStorage.removeItem('fleetroute_current_user');
     } catch {
-      // Storage fallback
+      // Storage can be unavailable in private/restricted browser contexts.
     }
+    this.offlineQueue = this.loadQueue(user);
   }
 
   clearSession() {
     this.setSession(null, null);
   }
 
-  loadQueue() {
+  getQueueStorageKey(user = this.currentUser) {
+    return user?.id ? `fleetroute_offline_queue:${user.id}` : null;
+  }
+
+  loadQueue(user = this.currentUser) {
     try {
-      const data = localStorage.getItem('fleetroute_offline_queue');
-      return data ? JSON.parse(data) : [];
+      // Remove the former cross-account queue. It cannot be safely attributed.
+      localStorage.removeItem('fleetroute_offline_queue');
+      const key = this.getQueueStorageKey(user);
+      if (!key) return [];
+      const data = localStorage.getItem(key);
+      const parsed = data ? JSON.parse(data) : [];
+      return Array.isArray(parsed) ? parsed.filter(item => item?.userId === user.id) : [];
     } catch {
       return [];
     }
@@ -101,22 +112,28 @@ class ApiService {
 
   saveQueue() {
     try {
-      localStorage.setItem('fleetroute_offline_queue', JSON.stringify(this.offlineQueue));
+      const key = this.getQueueStorageKey();
+      if (key) localStorage.setItem(key, JSON.stringify(this.offlineQueue));
     } catch {
-      // Storage fallback
+      // Storage can be unavailable in private/restricted browser contexts.
     }
   }
 
   async request(endpoint, options = {}) {
+    if (!API_BASE) {
+      throw new Error('API endpoint is not configured for this device. Set VITE_API_BASE_URL to the production HTTPS /api URL.');
+    }
+
+    const { queueOffline = false, ...fetchOptions } = options;
     const url = `${API_BASE}${endpoint}`;
     const headers = {
       'Content-Type': 'application/json',
       ...(this.token ? { 'Authorization': `Bearer ${this.token}` } : {}),
-      ...(options.headers || {})
+      ...(fetchOptions.headers || {})
     };
 
     try {
-      const res = await fetch(url, { ...options, headers });
+      const res = await fetch(url, { ...fetchOptions, headers });
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
@@ -126,122 +143,68 @@ class ApiService {
             window.dispatchEvent(new CustomEvent('fleetroute:unauthorized'));
           }
         }
-        // If deployed on Vercel/Static where backend /api returns 404 or 405, use cloud fallback
-        if (res.status === 404 || res.status === 405) {
-          const fallback = this.handleCloudFallback(endpoint, options);
-          if (fallback !== undefined) return fallback;
-        }
-        throw new Error(data.error || `HTTP error ${res.status}`);
+        const error = new Error(data.error || data.message || `HTTP error ${res.status}`);
+        error.status = res.status;
+        error.code = data.code || 'HTTP_ERROR';
+        throw error;
       }
       return data;
     } catch (err) {
-      const fallback = this.handleCloudFallback(endpoint, options);
-      if (fallback !== undefined) return fallback;
-
-      // Queue offline requests
-      if (!this.isOnline && options.method && options.method !== 'GET') {
+      const isMutation = fetchOptions.method && fetchOptions.method !== 'GET';
+      const canQueue = queueOffline && isMutation && !this.isOnline && this.currentUser?.id;
+      if (canQueue) {
+        const operationId = fetchOptions.headers?.['X-Idempotency-Key'] || crypto.randomUUID();
         const queuedItem = {
-          id: `queue-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+          id: operationId,
+          operationId,
+          userId: this.currentUser.id,
           endpoint,
-          options,
-          timestamp: new Date().toISOString()
+          options: fetchOptions,
+          queuedAt: new Date().toISOString(),
+          status: 'pending',
+          attempts: 0
         };
         this.offlineQueue.push(queuedItem);
         this.saveQueue();
-        return { success: true, queued: true, queueId: queuedItem.id };
+        return { success: false, queued: true, syncStatus: 'pending', operationId };
       }
       throw err;
     }
   }
 
-  handleCloudFallback(endpoint, options = {}) {
-
-    if (endpoint === '/auth/login' && options.method === 'POST') {
-      try {
-        const body = JSON.parse(options.body || '{}');
-        const user = cloudFallbackData.users.find(u => u.email === body.identifier || u.phone === body.identifier) || cloudFallbackData.users[0];
-        return {
-          success: true,
-          token: 'vercel-demo-jwt-token-9988',
-          user: user
-        };
-      } catch {
-        return {
-          success: true,
-          token: 'vercel-demo-jwt-token-9988',
-          user: cloudFallbackData.users[0]
-        };
-      }
-    }
-
-    if (endpoint === '/auth/me') {
-      return { user: this.currentUser || cloudFallbackData.users[0] };
-    }
-    if (endpoint === '/trips' || endpoint.startsWith('/trips?')) return cloudFallbackData.trips;
-    if (endpoint.startsWith('/trips/')) return { trip: cloudFallbackData.trips[0] };
-    if (endpoint === '/drivers' || endpoint.startsWith('/drivers?')) return cloudFallbackData.drivers;
-    if (endpoint === '/vehicles' || endpoint.startsWith('/vehicles?')) return cloudFallbackData.vehicles;
-    if (endpoint === '/locations' || endpoint.startsWith('/locations?')) return cloudFallbackData.locations;
-    if (endpoint === '/products' || endpoint.startsWith('/products?')) return cloudFallbackData.products;
-    if (endpoint === '/safety-events') return cloudFallbackData.safetyEvents;
-    if (endpoint === '/delivery-proofs') return cloudFallbackData.deliveryProofs;
-    if (endpoint === '/settings') return cloudFallbackData.settings;
-    if (endpoint === '/dashboard') {
-      return {
-        activeTrips: 1,
-        activeDrivers: 2,
-        totalFleet: 2,
-        completedTripsToday: 4,
-        pendingDrops: 2,
-        delayedTrips: 0,
-        safetyAlertsCount: 0
-      };
-    }
-    if (endpoint === '/telemetry/drivers') {
-      return [
-        {
-          driverId: 'DRV-101',
-          driverName: 'Rajesh Sharma',
-          vehicleId: 'VEH-201',
-          lat: 28.5355,
-          lng: 77.2684,
-          speed: 42,
-          speedLimit: 50,
-          status: 'ON_DUTY',
-          seatbeltFastened: true,
-          timestamp: new Date().toISOString()
-        }
-      ];
-    }
-    if (endpoint.startsWith('/v1/emergencies')) return [];
-    if (endpoint.startsWith('/v1/responders')) return [];
-
-    if (options.method && options.method !== 'GET') {
-      return { success: true, message: 'Action saved successfully' };
-    }
-
-    return undefined;
-  }
-
   async flushQueue() {
-    if (this.offlineQueue.length === 0) return;
-    const items = [...this.offlineQueue];
-    this.offlineQueue = [];
-    this.saveQueue();
-
-    for (const item of items) {
+    if (!API_BASE || !this.currentUser?.id || this.offlineQueue.length === 0) return;
+    const userId = this.currentUser.id;
+    for (const item of [...this.offlineQueue]) {
+      if (item.userId !== userId || item.status !== 'pending') continue;
       try {
-        await fetch(`${API_BASE}${item.endpoint}`, {
+        const response = await fetch(`${API_BASE}${item.endpoint}`, {
           ...item.options,
           headers: {
             'Content-Type': 'application/json',
             ...(this.token ? { 'Authorization': `Bearer ${this.token}` } : {}),
             ...(item.options.headers || {}),
-            'X-Queued-Request-Id': item.id
+            'X-Queued-Request-Id': item.id,
+            'X-Idempotency-Key': item.operationId
           }
         });
-      } catch {
-        this.offlineQueue.push(item);
+        if (response.ok) {
+          this.offlineQueue = this.offlineQueue.filter(queued => queued.id !== item.id);
+          this.saveQueue();
+          continue;
+        }
+        item.attempts += 1;
+        item.lastAttemptAt = new Date().toISOString();
+        item.lastError = `HTTP ${response.status}`;
+        if (response.status >= 400 && response.status < 500 && response.status !== 408 && response.status !== 429) {
+          item.status = 'failed';
+        }
+        this.saveQueue();
+        break;
+      } catch (error) {
+        item.attempts += 1;
+        item.lastAttemptAt = new Date().toISOString();
+        item.lastError = error.message;
         this.saveQueue();
         break;
       }
@@ -346,7 +309,8 @@ class ApiService {
   sendLocationSample(sample) {
     return this.request('/telemetry/location', {
       method: 'POST',
-      body: JSON.stringify(sample)
+      body: JSON.stringify(sample),
+      queueOffline: true
     });
   }
 
@@ -392,9 +356,12 @@ class ApiService {
   }
 
   cargoAction(tripId, payload) {
+    const idempotencyKey = payload.idempotencyKey || crypto.randomUUID();
     return this.request(`/trips/${tripId}/cargo-action`, {
       method: 'POST',
-      body: JSON.stringify(payload)
+      headers: { 'X-Idempotency-Key': idempotencyKey },
+      body: JSON.stringify({ ...payload, idempotencyKey }),
+      queueOffline: true
     });
   }
 
@@ -523,9 +490,12 @@ class ApiService {
 
   // --- Emergency Response & Zero-Touch Dispatch API ---
   detectEmergency(payload) {
+    const idempotencyKey = payload.idempotencyKey || crypto.randomUUID();
     return this.request('/v1/emergencies/detect', {
       method: 'POST',
-      body: JSON.stringify(payload)
+      headers: { 'X-Idempotency-Key': idempotencyKey },
+      body: JSON.stringify({ ...payload, idempotencyKey }),
+      queueOffline: true
     });
   }
 
@@ -593,7 +563,8 @@ class ApiService {
   sendSafetyHeartbeat(payload) {
     return this.request('/v1/safety-service/heartbeat', {
       method: 'POST',
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
+      queueOffline: true
     });
   }
 

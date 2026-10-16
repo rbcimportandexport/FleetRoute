@@ -41,7 +41,8 @@ function generateToken(user) {
       phone: user.phone,
       role: user.role,
       driverId: user.driverId || null,
-      name: user.name
+      name: user.name,
+      tokenVersion: Number(user.tokenVersion) || 0
     },
     JWT_SECRET,
     { expiresIn: JWT_EXPIRES_IN }
@@ -68,6 +69,10 @@ async function requireAuth(req, res, next) {
       return res.status(403).json({ error: 'Account has been disabled by central administrator.' });
     }
 
+    if ((Number(decoded.tokenVersion) || 0) !== (Number(user.tokenVersion) || 0)) {
+      return res.status(401).json({ error: 'Session has been revoked. Please log in again.' });
+    }
+
     req.user = {
       id: user.id,
       email: user.email,
@@ -75,8 +80,15 @@ async function requireAuth(req, res, next) {
       role: user.role,
       driverId: user.driverId,
       name: user.name,
-      status: user.status
+      status: user.status,
+      mustChangePassword: Boolean(user.mustChangePassword)
     };
+    if (user.mustChangePassword && !['/api/auth/me', '/api/auth/change-password'].includes(req.originalUrl?.split('?')[0])) {
+      return res.status(403).json({
+        error: 'Password change is required before using operational features.',
+        code: 'PASSWORD_CHANGE_REQUIRED'
+      });
+    }
     next();
   } catch (err) {
     if (err.name === 'TokenExpiredError') {

@@ -27,15 +27,20 @@ class DataStore {
     };
   }
 
-  async connect(uri = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/fleetroute') {
+  async connect(uri = process.env.MONGODB_URI || process.env.MONGO_URI || (process.env.NODE_ENV === 'production' ? null : 'mongodb://127.0.0.1:27017/fleetroute')) {
+    if (!uri) {
+      throw new Error('MONGODB_URI is required in production.');
+    }
+
+    const redactedUri = uri.replace(/(mongodb(?:\+srv)?:\/\/)([^@/]+)@/i, '$1[credentials-redacted]@');
     try {
       await mongoose.connect(uri, { 
         serverSelectionTimeoutMS: 5000,
         autoIndex: true
       });
-      console.log(`[FleetRoute Database] Connected to persistent MongoDB at ${uri}`);
+      console.log(`[FleetRoute Database] Connected to persistent MongoDB at ${redactedUri}`);
     } catch (err) {
-      console.error(`[FleetRoute Database CRITICAL] Failed to connect to MongoDB at ${uri}:`, err.message);
+      console.error(`[FleetRoute Database CRITICAL] Failed to connect to MongoDB at ${redactedUri}:`, err.message);
       // Strictly fail startup when database connection cannot be established
       throw new Error(`Production Database Unavailable: MongoDB connection failed (${err.message})`);
     }

@@ -241,7 +241,13 @@ async function runComprehensiveTests() {
     const drvRes = await apiRequest('/api/drivers', {
       method: 'POST',
       token: adminToken,
-      body: { name: 'Vikram Shinde', phone: '+91 98200 44556', licenseNumber: 'MH-02-2021-9988', assignedVehicleId: vehicle.id }
+      body: {
+        name: 'Vikram Shinde',
+        phone: '+91 98200 44556',
+        licenseNumber: 'MH-02-2021-9988',
+        licenseExpiry: '2030-12-31',
+        assignedVehicleId: vehicle.id
+      }
     });
     assert.strictEqual(drvRes.status, 201);
     const driver = drvRes.data.driver;
@@ -300,9 +306,53 @@ async function runComprehensiveTests() {
       body: { identifier: 'vikram.driver@fleetroute.com', password: 'DriverSecurePass2026!' }
     });
     assert.strictEqual(driverLogin.status, 200);
-    const driverToken = driverLogin.data.token;
+    assert.strictEqual(driverLogin.data.user.mustChangePassword, true, 'New account must require initial password rotation');
+    const passwordRotation = await apiRequest('/api/auth/change-password', {
+      method: 'POST',
+      token: driverLogin.data.token,
+      body: { currentPassword: 'DriverSecurePass2026!', newPassword: 'DriverRotatedSecurePass2026!' }
+    });
+    assert.strictEqual(passwordRotation.status, 200);
+    assert.strictEqual(passwordRotation.data.reauthRequired, true);
+    const rotatedDriverLogin = await apiRequest('/api/auth/login', {
+      method: 'POST',
+      body: { identifier: 'vikram.driver@fleetroute.com', password: 'DriverRotatedSecurePass2026!' }
+    });
+    assert.strictEqual(rotatedDriverLogin.status, 200);
+    assert.strictEqual(rotatedDriverLogin.data.user.mustChangePassword, false);
+    const driverToken = rotatedDriverLogin.data.token;
     assert.strictEqual(driverLogin.data.user.role, 'driver');
     console.log('[PASS] 6.1 Driver authenticated successfully.');
+
+    const lockedDeparture = await apiRequest(`/api/trips/${trip.id}/advance-stop`, {
+      method: 'POST',
+      token: driverToken,
+      body: { action: 'start_trip' }
+    });
+    assert.strictEqual(lockedDeparture.status, 409, 'Departure must remain locked before gate evidence');
+    assert.strictEqual(lockedDeparture.data.code, 'GATE_INTERLOCK_LOCKED');
+
+    const gateProof = await apiRequest(`/api/trips/${trip.id}/gate-proofs`, {
+      method: 'POST',
+      token: driverToken,
+      body: {
+        odometerPhoto: 'data:image/jpeg;base64,TEST_ODOMETER',
+        walkaroundPhoto: 'data:image/jpeg;base64,TEST_WALKAROUND',
+        driverSeatbeltPhoto: 'data:image/jpeg;base64,TEST_SELFIE',
+        seatbeltVerified: true,
+        overspeedingPledge: true,
+        depotLocationName: 'Mumbai Central Depot'
+      }
+    });
+    assert.strictEqual(gateProof.status, 200);
+    assert(gateProof.data.gateProofs.gateClearedAt, 'Complete gate evidence must clear interlock');
+
+    const startTrip = await apiRequest(`/api/trips/${trip.id}/advance-stop`, {
+      method: 'POST',
+      token: driverToken,
+      body: { action: 'start_trip' }
+    });
+    assert.strictEqual(startTrip.status, 200, 'Verified driver can start the trip once');
 
     // Fetch trips as driver: must see ONLY assigned trip
     const driverTripsRes = await apiRequest('/api/trips', { token: driverToken });
@@ -319,6 +369,155 @@ async function runComprehensiveTests() {
     });
     assert.strictEqual(driverForbidden.status, 403, 'Driver access to admin routes forbidden');
     console.log('[PASS] 6.3 Driver forbidden from administrative operations.');
+
+    // A second driver must not mutate the first driver's trip or inspect their incident.
+    const otherDriverRes = await apiRequest('/api/drivers', {
+      method: 'POST',
+      token: adminToken,
+      body: { name: 'Unauthorized Driver', phone: '+91 98200 40000', licenseNumber: 'MH-02-2022-4000' }
+    });
+    assert.strictEqual(otherDriverRes.status, 201);
+    const otherDriver = otherDriverRes.data.driver;
+    const otherUserRes = await apiRequest('/api/auth/users', {
+      method: 'POST',
+      token: adminToken,
+      body: {
+        name: otherDriver.name,
+        email: 'other.driver@fleetroute.com',
+        phone: otherDriver.phone,
+        password: 'OtherDriverSecurePass2026!',
+        role: 'driver',
+        driverId: otherDriver.id
+      }
+    });
+    assert.strictEqual(otherUserRes.status, 201);
+    const otherLogin = await apiRequest('/api/auth/login', {
+      method: 'POST',
+      body: { identifier: 'other.driver@fleetroute.com', password: 'OtherDriverSecurePass2026!' }
+    });
+    assert.strictEqual(otherLogin.status, 200);
+    const otherPasswordRotation = await apiRequest('/api/auth/change-password', {
+      method: 'POST',
+      token: otherLogin.data.token,
+      body: { currentPassword: 'OtherDriverSecurePass2026!', newPassword: 'OtherDriverRotatedPass2026!' }
+    });
+    assert.strictEqual(otherPasswordRotation.status, 200);
+    const otherRotatedLogin = await apiRequest('/api/auth/login', {
+      method: 'POST',
+      body: { identifier: 'other.driver@fleetroute.com', password: 'OtherDriverRotatedPass2026!' }
+    });
+    assert.strictEqual(otherRotatedLogin.status, 200);
+
+    const crossDriverCargo = await apiRequest(`/api/trips/${trip.id}/cargo-action`, {
+      method: 'POST',
+      token: otherRotatedLogin.data.token,
+      body: { action: 'load', productId: product.id, quantity: 1, idempotencyKey: 'CROSS-DRIVER-DENIED' }
+    });
+    assert.strictEqual(crossDriverCargo.status, 403, 'Other driver must not mutate this trip cargo');
+
+    const crossDriverTelemetry = await apiRequest('/api/driver/location', {
+      method: 'POST',
+      token: otherRotatedLogin.data.token,
+      body: {
+        tripId: trip.id,
+        lat: 19.07,
+        lng: 72.87,
+        accuracy: 10,
+        speed: 20,
+        heading: 90,
+        deviceTimestamp: new Date().toISOString()
+      }
+    });
+    assert.strictEqual(crossDriverTelemetry.status, 403, 'Other driver must not update this trip telemetry');
+
+    await models.EmergencyIncident.create({
+      id: 'INC-ROLE-ISOLATION',
+      incidentId: 'INC-ROLE-ISOLATION',
+      driverId: driver.id,
+      status: 'sos_created',
+      coordinates: { lat: 19.07, lng: 72.87 },
+      locationPoint: { type: 'Point', coordinates: [72.87, 19.07] },
+      detectedAtDevice: new Date().toISOString(),
+      detectedAtServer: new Date().toISOString()
+    });
+    const crossDriverIncident = await apiRequest('/api/v1/emergencies/INC-ROLE-ISOLATION', {
+      token: otherRotatedLogin.data.token
+    });
+    assert.strictEqual(crossDriverIncident.status, 403, 'Other driver must not inspect this incident');
+    const ownDriverIncident = await apiRequest('/api/v1/emergencies/INC-ROLE-ISOLATION', { token: driverToken });
+    assert.strictEqual(ownDriverIncident.status, 200, 'Assigned driver can inspect their own incident');
+
+    const emergencyKey = `EMERGENCY-IDEMPOTENCY-${Date.now()}`;
+    const detectedEmergency = await apiRequest('/api/v1/emergencies/detect', {
+      method: 'POST',
+      token: driverToken,
+      body: {
+        idempotencyKey: emergencyKey,
+        tripId: trip.id,
+        coordinates: { lat: 19.071, lng: 72.871 },
+        locationAccuracy: 8,
+        speedBeforeImpact: 54,
+        estimatedImpactForce: 4.8,
+        confidenceScore: 0.94,
+        severity: 'CRITICAL',
+        detectionSource: 'INTEGRATION_TEST_SENSOR'
+      }
+    });
+    assert.strictEqual(detectedEmergency.status, 201, 'Valid driver emergency must be persisted');
+    const detectedIncidentId = detectedEmergency.data.incident.incidentId;
+    const duplicateEmergency = await apiRequest('/api/v1/emergencies/detect', {
+      method: 'POST',
+      token: driverToken,
+      body: { idempotencyKey: emergencyKey, coordinates: { lat: 19.071, lng: 72.871 } }
+    });
+    assert.strictEqual(duplicateEmergency.status, 200);
+    assert.strictEqual(duplicateEmergency.data.isDuplicate, true, 'Emergency retry must be idempotent');
+    assert.strictEqual(duplicateEmergency.data.incident.incidentId, detectedIncidentId);
+
+    const unauthorizedEmergencyRead = await apiRequest(`/api/v1/emergencies/${detectedIncidentId}`, {
+      token: otherRotatedLogin.data.token
+    });
+    assert.strictEqual(unauthorizedEmergencyRead.status, 403, 'Other driver must not inspect detected emergency');
+    const cancelEmergency = await apiRequest(`/api/v1/emergencies/${detectedIncidentId}/cancel`, {
+      method: 'POST',
+      token: driverToken,
+      body: { reason: 'Integration test false-positive confirmation.' }
+    });
+    assert.strictEqual(cancelEmergency.status, 200);
+    const cancelledEmergency = await apiRequest(`/api/v1/emergencies/${detectedIncidentId}`, { token: driverToken });
+    assert.strictEqual(cancelledEmergency.data.status, 'cancelled_by_driver');
+
+    const heartbeat = await apiRequest('/api/v1/safety-service/heartbeat', {
+      method: 'POST',
+      token: driverToken,
+      body: {
+        deviceId: 'INTEGRATION-DEVICE-1',
+        activeTripId: trip.id,
+        serviceRunning: true,
+        locationPermission: 'granted_fine',
+        notificationPermission: 'granted',
+        batteryOptimizationExempt: true,
+        sensorAvailability: { accelerometer: true, gyroscope: true, gps: true, obd2: false },
+        batteryLevel: 90
+      }
+    });
+    assert.strictEqual(heartbeat.status, 200, 'Authenticated driver heartbeat must be accepted');
+    const heartbeatHealth = await apiRequest('/api/v1/safety-service/health', { token: driverToken });
+    assert.strictEqual(heartbeatHealth.status, 200);
+    assert.strictEqual(heartbeatHealth.data.driverId, driver.id);
+
+    const unconfiguredIot = await apiRequest('/api/v1/iot/crash-events', {
+      method: 'POST',
+      body: {}
+    });
+    assert.strictEqual(unconfiguredIot.status, 503, 'Unconfigured IoT ingestion must fail closed');
+    assert.strictEqual(unconfiguredIot.data.code, 'IOT_NOT_CONFIGURED');
+
+    const unknownRoute = await apiRequest('/api/does-not-exist', { token: adminToken });
+    assert.strictEqual(unknownRoute.status, 404);
+    assert.strictEqual(unknownRoute.data.code, 'ROUTE_NOT_FOUND');
+    assert(unknownRoute.data.requestId, 'Structured errors must include a request ID');
+    console.log('[PASS] 6.4 Cross-driver access, emergency idempotency/cancellation, heartbeat, IoT and errors verified.');
 
     // -------------------------------------------------------------------------
     // TEST 7: Real GPS Telemetry, Out-of-Order Rejection & Speed Alerts
@@ -348,7 +547,7 @@ async function runComprehensiveTests() {
     console.log('[PASS] 7.1 Normal speed GPS sample accepted (42 km/h). No alert generated.');
 
     // Verify no safety event was created for normal speed
-    const safetyEvents1 = await models.SafetyEvent.find({ tripId: trip.id });
+    const safetyEvents1 = await models.SafetyEvent.find({ tripId: trip.id, type: 'overspeed' });
     assert.strictEqual(safetyEvents1.length, 0, 'No alert must be generated for normal speed');
 
     // 7.2 Send out-of-order older sample: must not overwrite newer position
@@ -386,7 +585,7 @@ async function runComprehensiveTests() {
     assert.strictEqual(overspeedTel.status, 200);
 
     // Verify speed alert was generated ONLY because of genuine GPS telemetry exceeding threshold
-    const safetyEvents2 = await models.SafetyEvent.find({ tripId: trip.id });
+    const safetyEvents2 = await models.SafetyEvent.find({ tripId: trip.id, type: 'overspeed' });
     assert.strictEqual(safetyEvents2.length, 1, 'Genuine speed violation alert logged');
     assert.strictEqual(safetyEvents2[0].recordedSpeed, 92);
     assert.strictEqual(safetyEvents2[0].type, 'overspeed');
@@ -432,6 +631,11 @@ async function runComprehensiveTests() {
       token: driverToken,
       body: { stopIndex: 0, status: 'completed' }
     });
+    await apiRequest(`/api/trips/${trip.id}/advance-stop`, {
+      method: 'POST',
+      token: driverToken,
+      body: { action: 'next_stop' }
+    });
     console.log('[PASS] 8.1 Pickup completed with 12 units onboard. Idempotency verified.');
 
     // Step 2: Deliver 5 units at Stop A (with real POD evidence)
@@ -464,7 +668,8 @@ async function runComprehensiveTests() {
           deliveredQty: 5,
           damagedQty: 0,
           rejectedQty: 0,
-          signature: 'Amit Shah (Verified)'
+          signature: 'data:image/png;base64,TEST_SIGNATURE_A',
+          photoData: 'data:image/jpeg;base64,TEST_DELIVERY_A'
         }
       }
     });
@@ -475,6 +680,12 @@ async function runComprehensiveTests() {
     assert.strictEqual(savedPodsA.length, 1, 'DeliveryProof record must be persisted in MongoDB');
     assert.strictEqual(savedPodsA[0].recipientName, 'Amit Shah');
     console.log('[PASS] 8.2 Stop A delivery fulfilled (5 units delivered, 7 onboard). Real POD persisted.');
+
+    await apiRequest(`/api/trips/${trip.id}/advance-stop`, {
+      method: 'POST',
+      token: driverToken,
+      body: { action: 'next_stop' }
+    });
 
     // Step 3: Deliver 6 units at Stop B, with 1 damaged in transit
     await apiRequest(`/api/trips/${trip.id}/advance-stop`, {
@@ -506,7 +717,8 @@ async function runComprehensiveTests() {
           deliveredQty: 6,
           damagedQty: 1,
           rejectedQty: 0,
-          signature: 'Pooja Mehta'
+          signature: 'data:image/png;base64,TEST_SIGNATURE_B',
+          photoData: 'data:image/jpeg;base64,TEST_DELIVERY_B'
         }
       }
     });

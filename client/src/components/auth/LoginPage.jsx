@@ -12,8 +12,8 @@ import { api } from '../../utils/api';
 import { soundEffects } from '../../utils/soundEffects';
 
 export default function LoginPage({ onLoginSuccess }) {
-  const [identifier, setIdentifier] = useState('admin@gmail.com');
-  const [password, setPassword] = useState('admin123');
+  const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');

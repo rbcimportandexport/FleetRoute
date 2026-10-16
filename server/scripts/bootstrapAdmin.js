@@ -8,6 +8,9 @@ const readline = require('readline');
 const db = require('../db');
 const { hashPassword } = require('../auth');
 
+const isStrongPassword = value => typeof value === 'string' && value.length >= 12 && value.length <= 128 &&
+  /[a-z]/.test(value) && /[A-Z]/.test(value) && /\d/.test(value) && /[^A-Za-z0-9]/.test(value);
+
 function prompt(query, hideInput = false) {
   return new Promise((resolve) => {
     const rl = readline.createInterface({
@@ -86,8 +89,8 @@ async function bootstrapAdmin(options = {}) {
   if (!email || !email.includes('@')) {
     throw new Error('A valid administrator email address is required.');
   }
-  if (!password || password.length < 8) {
-    throw new Error('Password must be at least 8 characters long.');
+  if (!isStrongPassword(password)) {
+    throw new Error('Password must be 12-128 characters and include uppercase, lowercase, number, and symbol.');
   }
 
   const passwordHash = await hashPassword(password);
@@ -146,7 +149,7 @@ async function bootstrap() {
     phone = await prompt('Enter Contact Phone Number (optional): ');
   }
   if (!password) {
-    password = await prompt('Enter Secure Administrator Password (min 8 chars): ', true);
+    password = await prompt('Enter Secure Administrator Password (12+ chars, upper/lower/number/symbol): ', true);
   }
 
   try {

@@ -4,11 +4,12 @@
   "description": "FleetRoute - Production Fleet, Driver, Cargo, and Multi-Stop Delivery Management Application",
   "scripts": {
     "server": "node server/server.js",
-    "client": "npm.cmd --prefix client run dev",
+    "client": "npm --prefix client run dev",
     "dev": "concurrently \"npm run server\" \"npm run client\"",
-    "build": "npm.cmd --prefix client run build",
+    "build": "npm --prefix client run build",
     "test": "node server/tests/logic.test.js",
-    "test:all": "node server/tests/comprehensive.test.js",
+    "test:integration": "node server/tests/comprehensive.test.js",
+    "test:all": "npm run test && npm run test:integration && npm run build",
     "bootstrap:admin": "node server/scripts/bootstrapAdmin.js",
     "cleanup:demo": "node server/scripts/cleanupDemoData.js"
   },
@@ -21,5 +22,11 @@
     "multi-stop"
   ],
   "author": "FleetRoute Engineering",
-  "license": "ISC"
+  "license": "ISC",
+  "engines": {
+    "node": ">=20.11.0"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.6"
+  }
 }

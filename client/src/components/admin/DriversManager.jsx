@@ -247,9 +247,15 @@ export default function DriversManager({ drivers = [], onCreateDriver, onRefresh
     try {
       const res = await api.autoProvisionDriverAccounts();
       soundEffects.playSuccessChime();
-      setAccountSuccess(`Successfully provisioned ${res.count || 'all'} driver login accounts. Default password: Driver1234!`);
+      const credentials = Array.isArray(res.created)
+        ? res.created.map(item => `${item.email}  |  ${item.temporaryPassword}`).join('\n')
+        : '';
+      setAccountSuccess(
+        res.count > 0
+          ? `Provisioned ${res.count} driver account(s). Copy these one-time credentials now; they will not be shown again:\n${credentials}`
+          : 'No accounts were created; every active driver already has a login account.'
+      );
       loadVehiclesAndUsers();
-      setTimeout(() => setAccountSuccess(''), 5000);
     } catch (err) {
       setAccountError(err.message || 'Failed to auto-provision driver accounts.');
     } finally {
@@ -327,7 +333,7 @@ export default function DriversManager({ drivers = [], onCreateDriver, onRefresh
           gap: '8px'
         }}>
           <CheckCircle2 size={18} />
-          <span>{accountSuccess}</span>
+          <span style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{accountSuccess}</span>
         </div>
       )}
 

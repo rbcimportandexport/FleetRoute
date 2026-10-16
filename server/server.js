@@ -3,8 +3,13 @@
 // STRICTLY ZERO EMOJIS. ZERO MOCK/DEMO DATA. REAL MONGODB PERSISTENCE ONLY.
 
 require('dotenv').config();
+require('express-async-errors');
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const { rateLimit } = require('express-rate-limit');
+const crypto = require('crypto');
+const config = require('./config');
 const db = require('./db');
 const {
   hashPassword,
@@ -17,10 +22,30 @@ const {
 const emergencyEscalationService = require('./emergencyEscalationService');
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = config.port;
 
-app.use(cors());
-app.use(express.json({ limit: '15mb' })); // Support actual delivery photos and signatures
+app.disable('x-powered-by');
+if (config.trustProxy) app.set('trust proxy', config.trustProxy);
+app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+app.use(cors(config.corsOptions));
+app.use(express.json({ limit: config.jsonBodyLimit }));
+app.use((req, res, next) => {
+  req.requestId = req.headers['x-request-id'] || crypto.randomUUID();
+  res.setHeader('X-Request-Id', req.requestId);
+  next();
+});
+
+const authRateLimiter = rateLimit({
+  windowMs: config.authRateLimitWindowMs,
+  limit: config.authRateLimitMax,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { error: 'Too many login attempts. Please try again later.', code: 'AUTH_RATE_LIMITED' }
+});
+
+const DUMMY_PASSWORD_HASH = '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.';
+const isStrongPassword = value => typeof value === 'string' && value.length >= 12 && value.length <= 128 &&
+  /[a-z]/.test(value) && /[A-Z]/.test(value) && /\d/.test(value) && /[^A-Za-z0-9]/.test(value);
 
 // System settings default in-memory cache, backed by database
 let systemSettings = {
@@ -64,7 +89,7 @@ app.use((req, res, next) => {
 
 // Haversine formula for arrival radius validation
 function calculateDistanceMeters(lat1, lon1, lat2, lon2) {
-  if (!lat1 || !lon1 || !lat2 || !lon2) return 0;
+  if (![lat1, lon1, lat2, lon2].every(value => Number.isFinite(Number(value)))) return null;
   const R = 6371e3;
   const phi1 = (lat1 * Math.PI) / 180;
   const phi2 = (lat2 * Math.PI) / 180;
@@ -154,6 +179,27 @@ function formatTrip(t, drivers = [], vehicles = []) {
   };
 }
 
+function canMutateTrip(user, trip) {
+  return user?.role === 'admin' || (user?.role === 'driver' && trip?.driverId === (user.driverId || user.id));
+}
+
+function hasValidGateProofs(trip) {
+  const proofs = trip?.gateProofs;
+  return Boolean(
+    isAcceptedImageEvidence(proofs?.odometerPhoto) &&
+    isAcceptedImageEvidence(proofs?.walkaroundPhoto) &&
+    isAcceptedImageEvidence(proofs?.driverSeatbeltPhoto) &&
+    proofs?.seatbeltVerified &&
+    proofs?.overspeedingPledge &&
+    proofs?.gateClearedAt
+  );
+}
+
+function isAcceptedImageEvidence(value) {
+  if (typeof value !== 'string' || value.length === 0 || value.length > 4_500_000) return false;
+  return /^data:image\/(jpeg|jpg|png|webp);base64,/i.test(value) || /^https:\/\//i.test(value);
+}
+
 // Connect to MongoDB on startup. Fail startup cleanly if database is unreachable.
 async function initializeDatabase() {
   await db.connect();
@@ -173,25 +219,14 @@ const initDbPromise = initializeDatabase();
 app.initDbPromise = initDbPromise;
 
 // =========================================================================
-// 1. HEALTH & PERSISTENCE DIAGNOSTICS
-// =========================================================================
-app.get('/api/health', (req, res) => {
-  res.json({
-    ...db.health(),
-    service: 'FleetRoute Production Logistics Engine',
-    timestamp: new Date().toISOString()
-  });
-});
-
-// =========================================================================
 // 2. AUTHENTICATION & ACCESS CONTROL
 // =========================================================================
 
 // Login with Email or Phone Number + Password
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', authRateLimiter, async (req, res) => {
   const { identifier, password } = req.body;
 
-  if (!identifier || !password) {
+  if (!identifier || !password || typeof identifier !== 'string' || typeof password !== 'string' || identifier.length > 320 || password.length > 128) {
     return res.status(400).json({ error: 'Please enter your email or phone number and password.' });
   }
 
@@ -207,16 +242,17 @@ app.post('/api/auth/login', async (req, res) => {
   });
 
   if (!user) {
-    return res.status(401).json({ error: 'Invalid credentials. User account not found.' });
-  }
-
-  if (user.status === 'disabled') {
-    return res.status(403).json({ error: 'Your account has been disabled by central management.' });
+    await comparePassword(password, DUMMY_PASSWORD_HASH);
+    return res.status(401).json({ error: 'Invalid email/phone or password.' });
   }
 
   const isMatch = await comparePassword(password, user.passwordHash);
   if (!isMatch) {
-    return res.status(401).json({ error: 'Invalid credentials. Incorrect password.' });
+    return res.status(401).json({ error: 'Invalid email/phone or password.' });
+  }
+
+  if (user.status === 'disabled') {
+    return res.status(403).json({ error: 'Your account has been disabled by central management.' });
   }
 
   const token = generateToken(user);
@@ -234,6 +270,7 @@ app.post('/api/auth/login', async (req, res) => {
       name: user.name,
       role: user.role,
       driverId: user.driverId || null,
+      mustChangePassword: Boolean(user.mustChangePassword),
       driver: driverInfo
     }
   });
@@ -270,37 +307,58 @@ app.post('/api/auth/change-password', requireAuth, async (req, res) => {
     return res.status(400).json({ error: 'Current password verification failed.' });
   }
 
-  if (newPassword.length < 6) {
-    return res.status(400).json({ error: 'New password must be at least 6 characters long.' });
+  if (!isStrongPassword(newPassword)) {
+    return res.status(400).json({ error: 'New password must be 12-128 characters and include uppercase, lowercase, number, and symbol.' });
   }
 
   const newHash = await hashPassword(newPassword);
-  await db.collection('users').updateOne({ id: user.id }, { passwordHash: newHash });
+  await db.collection('users').updateOne(
+    { id: user.id },
+    { $set: { passwordHash: newHash, mustChangePassword: false }, $inc: { tokenVersion: 1 } }
+  );
 
-  res.json({ message: 'Password updated successfully.' });
+  res.json({ message: 'Password updated successfully. Please log in again.', reauthRequired: true });
 });
 
 // Admin-managed Account Creation (Public registration cannot create Admin!)
 app.post('/api/auth/users', requireAuth, requireAdmin, async (req, res) => {
   const { name, email, phone, password, role, driverId } = req.body;
+  const cleanEmail = typeof email === 'string' ? email.toLowerCase().trim() : '';
 
   if (!name || !email || !password || !role) {
     return res.status(400).json({ error: 'Name, email, password, and role are required.' });
   }
+  if (!['admin', 'driver'].includes(role)) {
+    return res.status(400).json({ error: 'Role must be admin or driver.' });
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail) || cleanEmail.length > 320) {
+    return res.status(400).json({ error: 'A valid email address is required.' });
+  }
+  if (!isStrongPassword(password)) {
+    return res.status(400).json({ error: 'Password must be 12-128 characters and include uppercase, lowercase, number, and symbol.' });
+  }
+  if (role === 'driver') {
+    if (!driverId) return res.status(400).json({ error: 'driverId is required for a driver account.' });
+    const driver = await db.collection('drivers').findById(driverId);
+    if (!driver || driver.status !== 'active') return res.status(400).json({ error: 'A valid active driver profile is required.' });
+    const linkedAccount = await db.collection('users').findOne({ driverId });
+    if (linkedAccount) return res.status(409).json({ error: 'This driver profile already has a login account.' });
+  }
 
-  const existing = await db.collection('users').findOne({ email: email.toLowerCase().trim() });
+  const existing = await db.collection('users').findOne({ email: cleanEmail });
   if (existing) {
     return res.status(400).json({ error: 'An account with this email address already exists.' });
   }
 
   const passwordHash = await hashPassword(password);
   const newUser = await db.collection('users').insertOne({
-    email: email.toLowerCase().trim(),
+    email: cleanEmail,
     phone: phone ? phone.trim() : '',
     name: name.trim(),
     role: role === 'admin' ? 'admin' : 'driver',
     driverId: role === 'driver' ? (driverId || null) : null,
     status: 'active',
+    mustChangePassword: true,
     passwordHash,
     isDemo: false
   });
@@ -331,6 +389,9 @@ app.put('/api/auth/users/:id', requireAuth, requireAdmin, async (req, res) => {
   if (name) updateData.name = name.trim();
   if (email) {
     const cleanEmail = email.toLowerCase().trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail) || cleanEmail.length > 320) {
+      return res.status(400).json({ error: 'A valid email address is required.' });
+    }
     const existing = await db.collection('users').findOne({ email: cleanEmail, id: { $ne: user.id } });
     if (existing) {
       return res.status(400).json({ error: 'Email address is already in use by another user account.' });
@@ -338,15 +399,37 @@ app.put('/api/auth/users/:id', requireAuth, requireAdmin, async (req, res) => {
     updateData.email = cleanEmail;
   }
   if (phone !== undefined) updateData.phone = phone.trim();
+  if (role && !['admin', 'driver'].includes(role)) {
+    return res.status(400).json({ error: 'Role must be admin or driver.' });
+  }
   if (role) updateData.role = role;
   if (driverId !== undefined) updateData.driverId = driverId || null;
   if (status && ['active', 'disabled'].includes(status)) updateData.status = status;
 
+  const effectiveRole = updateData.role || user.role;
+  const effectiveDriverId = driverId !== undefined ? (driverId || null) : user.driverId;
+  if (effectiveRole === 'driver') {
+    const driver = effectiveDriverId ? await db.collection('drivers').findById(effectiveDriverId) : null;
+    if (!driver || driver.status !== 'active') {
+      return res.status(400).json({ error: 'A valid active driver profile is required for a driver account.' });
+    }
+    const linkedAccount = await db.collection('users').findOne({ driverId: effectiveDriverId, id: { $ne: user.id } });
+    if (linkedAccount) return res.status(409).json({ error: 'This driver profile already has a login account.' });
+  } else {
+    updateData.driverId = null;
+  }
+
   if (password && password.trim()) {
-    if (password.trim().length < 6) {
-      return res.status(400).json({ error: 'New password must be at least 6 characters long.' });
+    if (!isStrongPassword(password.trim())) {
+      return res.status(400).json({ error: 'Password must be 12-128 characters and include uppercase, lowercase, number, and symbol.' });
     }
     updateData.passwordHash = await hashPassword(password.trim());
+    updateData.tokenVersion = (Number(user.tokenVersion) || 0) + 1;
+    updateData.mustChangePassword = true;
+  }
+
+  if (email || role || driverId !== undefined || status) {
+    updateData.tokenVersion = (Number(user.tokenVersion) || 0) + 1;
   }
 
   const updated = await db.collection('users').updateOne(
@@ -379,8 +462,8 @@ app.post('/api/auth/users/auto-provision', requireAuth, requireAdmin, async (req
     if (!hasAccount) {
       const namePart = drv.name.toLowerCase().replace(/[^a-z0-9]/g, '');
       const email = `${namePart || 'driver'}.${drv.id.toLowerCase()}@fleetroute.com`;
-      const defaultPassword = 'Driver1234!';
-      const passwordHash = await hashPassword(defaultPassword);
+      const temporaryPassword = `${crypto.randomBytes(18).toString('base64url')}!aA1`;
+      const passwordHash = await hashPassword(temporaryPassword);
 
       const newUser = await db.collection('users').insertOne({
         email,
@@ -389,6 +472,7 @@ app.post('/api/auth/users/auto-provision', requireAuth, requireAdmin, async (req
         role: 'driver',
         driverId: drv.id,
         status: 'active',
+        mustChangePassword: true,
         passwordHash,
         isDemo: false
       });
@@ -398,7 +482,7 @@ app.post('/api/auth/users/auto-provision', requireAuth, requireAdmin, async (req
         name: newUser.name,
         email: newUser.email,
         driverId: drv.id,
-        defaultPassword
+        temporaryPassword
       });
     }
   }
@@ -417,10 +501,14 @@ app.patch('/api/auth/users/:id/status', requireAuth, requireAdmin, async (req, r
     return res.status(400).json({ error: 'Status must be active or disabled.' });
   }
 
-  const updated = await db.collection('users').updateOne({ id: req.params.id }, { status });
-  if (!updated) {
+  const user = await db.collection('users').findById(req.params.id);
+  if (!user) {
     return res.status(404).json({ error: 'User account not found.' });
   }
+  const updated = await db.collection('users').updateOne(
+    { id: req.params.id },
+    { status, tokenVersion: (Number(user.tokenVersion) || 0) + 1 }
+  );
 
   res.json({ message: `User account status updated to ${status}.`, user: updated });
 });
@@ -566,7 +654,7 @@ const INDIAN_LOGISTICS_HUBS = [
 ];
 
 // Geocoding Proxy (Instant Pre-indexed Hubs + Real Nominatim)
-app.get('/api/geocode/search', async (req, res) => {
+app.get('/api/geocode/search', requireAuth, async (req, res) => {
   const query = (req.query.q || '').trim().toLowerCase();
   if (!query) {
     return res.status(400).json({ error: 'Search query parameter q is required.' });
@@ -620,7 +708,7 @@ app.get('/api/geocode/search', async (req, res) => {
 });
 
 // Reverse Geocoding Proxy (Nominatim with reliable fallback)
-app.get('/api/geocode/reverse', async (req, res) => {
+app.get('/api/geocode/reverse', requireAuth, async (req, res) => {
   const lat = parseFloat(req.query.lat);
   const lng = parseFloat(req.query.lng);
   if (isNaN(lat) || isNaN(lng)) {
@@ -689,11 +777,24 @@ const handleLocationSample = async (req, res) => {
     return res.status(404).json({ error: 'Driver profile not found.' });
   }
 
+  const activeTrip = tripId
+    ? await db.collection('trips').findById(tripId)
+    : await db.collection('trips').findOne({ driverId, status: { $in: ['in_progress', 'in_transit', 'IN_TRANSIT'] } });
+  if (tripId && !activeTrip) {
+    return res.status(404).json({ error: 'Telemetry trip not found.' });
+  }
+  if (activeTrip && activeTrip.driverId !== driverId) {
+    return res.status(403).json({ error: 'Access denied: telemetry trip is assigned to another driver.' });
+  }
+
   const sampleTimestamp = deviceTimestamp ? new Date(deviceTimestamp).getTime() : Date.now();
+  if (!Number.isFinite(sampleTimestamp) || sampleTimestamp > Date.now() + 2 * 60 * 1000) {
+    return res.status(400).json({ error: 'Telemetry device timestamp is invalid or too far in the future.' });
+  }
   const lastRecorded = driver.lastSampleTimestamp ? new Date(driver.lastSampleTimestamp).getTime() : 0;
 
   // Reject out-of-order samples (older timestamp replacing newer recorded position)
-  if (driver.lastSampleTimestamp && sampleTimestamp < lastRecorded) {
+  if (driver.lastSampleTimestamp && sampleTimestamp <= lastRecorded) {
     return res.status(200).json({ 
       success: false, 
       ignoredOutOfOrder: true, 
@@ -715,6 +816,12 @@ const handleLocationSample = async (req, res) => {
     source: source || 'live_gps'
   };
 
+  if ((sample.accuracy !== null && (!Number.isFinite(sample.accuracy) || sample.accuracy < 0 || sample.accuracy > 1000)) ||
+      (sample.speed !== null && (!Number.isFinite(sample.speed) || sample.speed < 0 || sample.speed > 300)) ||
+      (sample.heading !== null && (!Number.isFinite(sample.heading) || sample.heading < 0 || sample.heading > 360))) {
+    return res.status(400).json({ error: 'Telemetry accuracy, speed, or heading is outside accepted bounds.' });
+  }
+
   await db.collection('locationSamples').insertOne(sample);
 
   // Update Driver Current Location Record
@@ -735,11 +842,7 @@ const handleLocationSample = async (req, res) => {
     lastLocationUpdate: sample.serverReceivedTimestamp
   });
 
-  // If driver has an active or planned trip, record telemetry on trip
-  const activeTrip = tripId 
-    ? await db.collection('trips').findById(tripId)
-    : await db.collection('trips').findOne({ driverId, status: { $in: ['in_progress', 'IN_TRANSIT', 'planned'] } });
-
+  // If driver has an active trip, record telemetry on that assigned trip.
   if (activeTrip) {
     const tripUpdate = { currentLocation: { lat, lng } };
     let speedKmH = 0;
@@ -790,7 +893,7 @@ app.post('/api/telemetry/location', requireAuth, requireDriver, handleLocationSa
 app.post('/api/driver/location', requireAuth, requireDriver, handleLocationSample);
 
 // Fleet Live Telemetry Overview
-app.get('/api/telemetry/drivers', requireAuth, async (req, res) => {
+app.get('/api/telemetry/drivers', requireAuth, requireAdmin, async (req, res) => {
   const drivers = (await db.collection('drivers').find()).filter(d => d.status !== 'archived');
   const vehicles = await db.collection('vehicles').find();
   const trips = await db.collection('trips').find();
@@ -888,20 +991,47 @@ app.post('/api/trips', requireAuth, requireAdmin, async (req, res) => {
 
   const driver = await db.collection('drivers').findById(driverId);
   if (!driver) return res.status(400).json({ error: 'Assigned driver not found.' });
+  if (driver.status !== 'active') {
+    return res.status(409).json({ error: 'Assigned driver is not active.', code: 'DRIVER_NOT_ACTIVE' });
+  }
+  if ((Number(driver.safetyScore) || 0) < 80) {
+    return res.status(409).json({ error: 'Driver safety score must be at least 80.', code: 'DRIVER_SAFETY_SCORE_LOW' });
+  }
+  const licenseExpiry = Date.parse(driver.licenseExpiry);
+  if (!driver.licenseNumber || !Number.isFinite(licenseExpiry) || licenseExpiry < Date.now()) {
+    return res.status(409).json({ error: 'Driver must have a valid, unexpired driving license.', code: 'DRIVER_LICENSE_INVALID' });
+  }
 
-  const activeDriverTrip = await db.collection('trips').findOne({ driverId, status: { $in: ['in_progress', 'IN_TRANSIT'] } });
+  const assignedStatuses = ['planned', 'active', 'in_progress', 'in_transit', 'IN_TRANSIT'];
+  const activeDriverTrip = await db.collection('trips').findOne({ driverId, status: { $in: assignedStatuses } });
   if (activeDriverTrip) {
     return res.status(400).json({ error: `Driver ${driver.name} is already assigned to active trip ${activeDriverTrip.id}.` });
   }
 
   const vehicle = await db.collection('vehicles').findById(vehicleId);
   if (!vehicle) return res.status(400).json({ error: 'Assigned vehicle not found.' });
+  if (vehicle.status !== 'active') {
+    return res.status(409).json({ error: 'Assigned vehicle is not active.', code: 'VEHICLE_NOT_ACTIVE' });
+  }
+  const activeVehicleTrip = await db.collection('trips').findOne({ vehicleId, status: { $in: assignedStatuses } });
+  if (activeVehicleTrip) {
+    return res.status(409).json({ error: `Vehicle is already assigned to active trip ${activeVehicleTrip.id}.`, code: 'VEHICLE_ALREADY_ASSIGNED' });
+  }
 
   // Vehicle Capacity Check
-  const totalPlannedKg = (cargo || []).reduce((acc, c) => acc + (parseFloat(c.weightKg) || 0), 0);
+  if (!Array.isArray(cargo) || cargo.length === 0 || cargo.some(c => !Number.isFinite(Number(c.plannedQty)) || Number(c.plannedQty) <= 0)) {
+    return res.status(400).json({ error: 'At least one cargo line with a positive planned quantity is required.' });
+  }
+  const totalPlannedKg = cargo.reduce((acc, c) => acc + (Number(c.weightKg) || 0) * Number(c.plannedQty), 0);
+  const totalPlannedVolumeM3 = cargo.reduce((acc, c) => acc + (Number(c.volumeM3 || c.defaultVolumeM3) || 0) * Number(c.plannedQty), 0);
   if (vehicle.capacityKg && totalPlannedKg > vehicle.capacityKg) {
     return res.status(400).json({
       error: `Planned cargo weight (${totalPlannedKg} kg) exceeds vehicle capacity (${vehicle.capacityKg} kg).`
+    });
+  }
+  if (vehicle.maxVolumeM3 && totalPlannedVolumeM3 > vehicle.maxVolumeM3) {
+    return res.status(400).json({
+      error: `Planned cargo volume (${totalPlannedVolumeM3} m3) exceeds vehicle capacity (${vehicle.maxVolumeM3} m3).`
     });
   }
 
@@ -932,7 +1062,16 @@ app.post('/api/trips', requireAuth, requireAdmin, async (req, res) => {
     };
   }));
 
-  const tripId = `TRIP-${Math.floor(1000 + Math.random() * 9000)}`;
+  const invalidStop = formattedStops.find(stop =>
+    !Number.isFinite(Number(stop.location?.lat)) || !Number.isFinite(Number(stop.location?.lng)) ||
+    Number(stop.location.lat) < -90 || Number(stop.location.lat) > 90 ||
+    Number(stop.location.lng) < -180 || Number(stop.location.lng) > 180
+  );
+  if (invalidStop) {
+    return res.status(400).json({ error: `Stop ${invalidStop.stopIndex + 1} requires valid coordinates.` });
+  }
+
+  const tripId = `TRIP-${Date.now()}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
   const newTrip = {
     id: tripId,
     driverId,
@@ -993,12 +1132,29 @@ app.post('/api/trips/:id/advance-stop', requireAuth, async (req, res) => {
   const { action, status, stopIndex, driverLocation, manualArrivalReason, pod } = req.body;
   const currentIdx = trip.currentStopIndex !== undefined ? trip.currentStopIndex : 0;
   const targetIdx = stopIndex !== undefined ? parseInt(stopIndex, 10) : currentIdx;
-  if (stopIndex !== undefined) {
-    trip.currentStopIndex = targetIdx;
+  if (!Number.isInteger(targetIdx) || targetIdx < 0 || targetIdx >= (trip.stops || []).length) {
+    return res.status(400).json({ error: 'A valid stop index is required.', code: 'INVALID_STOP_INDEX' });
+  }
+  if (targetIdx !== currentIdx) {
+    return res.status(409).json({ error: 'Stops must be processed in their assigned order.', code: 'STOP_SEQUENCE_VIOLATION' });
   }
   const currentStop = (trip.stops && trip.stops[targetIdx]) ? trip.stops[targetIdx] : (trip.stops[currentIdx] || trip.stops[0]);
 
   const nowIso = new Date().toISOString();
+
+  if (trip.status === 'planned') {
+    if (action !== 'start_trip' && status !== 'in_progress') {
+      return res.status(409).json({ error: 'Start the trip before changing stop state.', code: 'TRIP_NOT_STARTED' });
+    }
+    if (!hasValidGateProofs(trip)) {
+      return res.status(409).json({
+        error: 'Mandatory odometer, walkaround, seatbelt selfie, and safety pledge proofs must be verified before departure.',
+        code: 'GATE_INTERLOCK_LOCKED'
+      });
+    }
+  } else if (action === 'start_trip' || status === 'in_progress') {
+    return res.status(409).json({ error: 'Trip has already started.', code: 'TRIP_ALREADY_STARTED' });
+  }
 
   // 1. Start Trip
   if (action === 'start_trip' || (status === 'in_progress' && trip.status === 'planned')) {
@@ -1019,15 +1175,14 @@ app.post('/api/trips/:id/advance-stop', requireAuth, async (req, res) => {
 
   // 2. Arrive at Stop
   else if (action === 'arrive_at_stop' || status === 'arrived') {
-    if (trip.status === 'planned') {
-      trip.status = 'in_progress';
-      trip.actualStartTime = nowIso;
-      await db.collection('drivers').updateOne({ id: trip.driverId }, { availability: 'on_trip' });
-    }
     if (!currentStop) return res.status(400).json({ error: 'No active stop found to arrive at.' });
+    if (currentStop.status !== 'pending') {
+      return res.status(409).json({ error: 'Only a pending stop can be marked arrived.', code: 'INVALID_STOP_TRANSITION' });
+    }
 
     // Validate Geofence Radius
-    if (driverLocation && currentStop.location && currentStop.location.lat && currentStop.location.lng) {
+    if (driverLocation && currentStop.location &&
+        Number.isFinite(Number(currentStop.location.lat)) && Number.isFinite(Number(currentStop.location.lng))) {
       const radius = currentStop.location.arrivalRadiusMeters || systemSettings.defaultArrivalRadiusMeters;
       const dist = calculateDistanceMeters(driverLocation.lat, driverLocation.lng, currentStop.location.lat, currentStop.location.lng);
 
@@ -1056,8 +1211,10 @@ app.post('/api/trips/:id/advance-stop', requireAuth, async (req, res) => {
 
   // 3. Start Loading
   else if (action === 'start_loading' || status === 'loading') {
-    if (trip.status === 'planned') trip.status = 'in_progress';
     if (!currentStop) return res.status(400).json({ error: 'No active stop to load at.' });
+    if (currentStop.type !== 'pickup' || currentStop.status !== 'arrived') {
+      return res.status(409).json({ error: 'Loading can start only at an arrived pickup stop.', code: 'INVALID_STOP_TRANSITION' });
+    }
     currentStop.status = 'loading';
     trip.currentActivity = 'loading';
   }
@@ -1065,6 +1222,9 @@ app.post('/api/trips/:id/advance-stop', requireAuth, async (req, res) => {
   // 4. Finish Loading
   else if (action === 'finish_loading') {
     if (!currentStop) return res.status(400).json({ error: 'No active stop.' });
+    if (currentStop.status !== 'loading') {
+      return res.status(409).json({ error: 'Loading must be started before it can finish.', code: 'INVALID_STOP_TRANSITION' });
+    }
     currentStop.status = 'completed';
     currentStop.completedAt = nowIso;
     trip.currentActivity = 'driving';
@@ -1083,6 +1243,9 @@ app.post('/api/trips/:id/advance-stop', requireAuth, async (req, res) => {
   // 5. Start Unloading
   else if (action === 'start_unloading' || status === 'unloading') {
     if (!currentStop) return res.status(400).json({ error: 'No active stop to unload at.' });
+    if (currentStop.type !== 'delivery' || currentStop.status !== 'arrived') {
+      return res.status(409).json({ error: 'Unloading can start only at an arrived delivery stop.', code: 'INVALID_STOP_TRANSITION' });
+    }
     currentStop.status = 'unloading';
     trip.currentActivity = 'unloading';
   }
@@ -1090,6 +1253,16 @@ app.post('/api/trips/:id/advance-stop', requireAuth, async (req, res) => {
   // 6. Finish Unloading / Complete Stop with Real Delivery Proof (POD)
   else if (action === 'finish_unloading' || status === 'completed') {
     if (!currentStop) return res.status(400).json({ error: 'No active stop to complete.' });
+    const validCompletionState = currentStop.type === 'pickup' ? currentStop.status === 'loading' : currentStop.status === 'unloading';
+    if (!validCompletionState) {
+      return res.status(409).json({ error: 'Stop cannot be completed from its current state.', code: 'INVALID_STOP_TRANSITION' });
+    }
+    if (currentStop.type === 'delivery' && (!pod?.recipientName || !isAcceptedImageEvidence(pod?.signature) || !isAcceptedImageEvidence(pod?.photoData))) {
+      return res.status(400).json({
+        error: 'Delivery proof requires recipient name, signature, and delivery photo.',
+        code: 'POD_EVIDENCE_REQUIRED'
+      });
+    }
 
     currentStop.status = 'completed';
     currentStop.completedAt = nowIso;
@@ -1154,6 +1327,9 @@ app.post('/api/trips/:id/advance-stop', requireAuth, async (req, res) => {
 
   // 7. Advance to Next Stop or Finalize Trip
   else if (action === 'next_stop') {
+    if (!currentStop || currentStop.status !== 'completed') {
+      return res.status(409).json({ error: 'Complete the current stop before advancing.', code: 'STOP_NOT_COMPLETED' });
+    }
     if (targetIdx < trip.stops.length - 1) {
       trip.currentStopIndex = targetIdx + 1;
       trip.stops[targetIdx + 1].status = 'pending';
@@ -1215,6 +1391,23 @@ app.post('/api/trips/:id/gate-proofs', requireAuth, async (req, res) => {
     verifiedByDriverName: trip.driverName
   };
 
+  const suppliedEvidence = [odometerPhoto, walkaroundPhoto, driverSeatbeltPhoto].filter(value => value !== undefined && value !== null && value !== '');
+  if (suppliedEvidence.some(value => !isAcceptedImageEvidence(value))) {
+    return res.status(400).json({
+      error: 'Gate evidence must be a JPEG, PNG, or WebP image up to 3 MB, or an HTTPS object-storage URL.',
+      code: 'INVALID_GATE_EVIDENCE'
+    });
+  }
+
+  const gateComplete = Boolean(
+    isAcceptedImageEvidence(gateProofs.odometerPhoto) &&
+    isAcceptedImageEvidence(gateProofs.walkaroundPhoto) &&
+    isAcceptedImageEvidence(gateProofs.driverSeatbeltPhoto) &&
+    gateProofs.seatbeltVerified &&
+    gateProofs.overspeedingPledge
+  );
+  gateProofs.gateClearedAt = gateComplete ? (trip.gateProofs?.gateClearedAt || nowIso) : null;
+
   await db.collection('trips').updateOne({ id: trip.id }, { gateProofs });
 
   const drivers = await db.collection('drivers').find();
@@ -1222,22 +1415,30 @@ app.post('/api/trips/:id/gate-proofs', requireAuth, async (req, res) => {
   const updatedTrip = await db.collection('trips').findById(trip.id);
 
   res.json({
-    message: 'Pre-trip gate inspection proof recorded successfully.',
+    message: gateComplete
+      ? 'Pre-trip gate inspection completed and departure interlock cleared.'
+      : 'Partial gate inspection saved; departure remains locked.',
     gateProofs,
     trip: formatTrip(updatedTrip, drivers, vehicles)
   });
 });
 
-// Idempotent Cargo Action (Deduplication prevents double deductions)
-const processedCargoActions = new Set();
+// Durable idempotent cargo action. Operation keys live with the trip so retries
+// remain safe across process restarts and horizontally scaled API instances.
 app.post('/api/trips/:id/cargo-action', requireAuth, async (req, res) => {
   const trip = await db.collection('trips').findById(req.params.id);
   if (!trip) return res.status(404).json({ error: 'Trip not found.' });
+  if (!canMutateTrip(req.user, trip)) {
+    return res.status(403).json({ error: 'Access denied: You can only update your assigned trip.' });
+  }
 
   const { action, productId, quantity, idempotencyKey } = req.body;
   const reqKey = idempotencyKey || req.headers['x-idempotency-key'];
+  if (!reqKey || typeof reqKey !== 'string' || reqKey.length > 128) {
+    return res.status(400).json({ error: 'A valid idempotency key is required.', code: 'IDEMPOTENCY_KEY_REQUIRED' });
+  }
 
-  if (reqKey && processedCargoActions.has(reqKey)) {
+  if ((trip.processedCargoActionKeys || []).includes(reqKey)) {
     const drivers = await db.collection('drivers').find();
     const vehicles = await db.collection('vehicles').find();
     return res.status(200).json({ 
@@ -1250,7 +1451,27 @@ app.post('/api/trips/:id/cargo-action', requireAuth, async (req, res) => {
   const line = (trip.cargo || []).find(c => c.productId === productId || c.id === productId);
   if (!line) return res.status(404).json({ error: 'Cargo line item not found.' });
 
-  const qty = parseFloat(quantity) || 0;
+  const qty = Number(quantity);
+  const validActions = ['load', 'deliver', 'damage', 'reject', 'return'];
+  if (!validActions.includes(action) || !Number.isFinite(qty) || qty <= 0) {
+    return res.status(400).json({ error: 'Valid cargo action and a positive quantity are required.' });
+  }
+
+  const loaded = Number(line.loadedQty) || 0;
+  const delivered = Number(line.deliveredQty) || 0;
+  const damaged = Number(line.damagedQty) || 0;
+  const returned = Number(line.returnedQty) || 0;
+  const onboard = loaded - delivered - damaged - returned;
+  if (action === 'load' && loaded + qty > (Number(line.plannedQty) || 0)) {
+    return res.status(409).json({ error: 'Loaded quantity cannot exceed planned quantity.', code: 'CARGO_OVERLOAD' });
+  }
+  if (['deliver', 'damage', 'return'].includes(action) && qty > onboard) {
+    return res.status(409).json({ error: 'Cargo action exceeds the physical onboard balance.', code: 'CARGO_NEGATIVE_BALANCE' });
+  }
+  if (action === 'reject' && qty > onboard) {
+    return res.status(409).json({ error: 'Rejected quantity cannot exceed the physical onboard balance.', code: 'CARGO_REJECTION_EXCEEDS_BALANCE' });
+  }
+
   if (action === 'load') {
     line.loadedQty = (line.loadedQty || 0) + qty;
   } else if (action === 'deliver') {
@@ -1272,20 +1493,56 @@ app.post('/api/trips/:id/cargo-action', requireAuth, async (req, res) => {
     if (action === 'reject') activeStop.cargoRejectedByAction = (activeStop.cargoRejectedByAction || 0) + qty;
   }
 
-  if (reqKey) processedCargoActions.add(reqKey);
+  const operationVersion = Number(trip.operationVersion) || 0;
+  const updatedTrip = await db.collection('trips').updateOne(
+    {
+      id: trip.id,
+      processedCargoActionKeys: { $ne: reqKey },
+      $or: [
+        { operationVersion },
+        ...(operationVersion === 0 ? [{ operationVersion: { $exists: false } }] : [])
+      ]
+    },
+    {
+      $set: {
+        cargo: trip.cargo,
+        stops: trip.stops || [],
+        operationVersion: operationVersion + 1
+      },
+      $addToSet: { processedCargoActionKeys: reqKey }
+    }
+  );
 
-  await db.collection('trips').updateOne({ id: trip.id }, trip);
+  if (!updatedTrip) {
+    const latestTrip = await db.collection('trips').findById(trip.id);
+    if ((latestTrip?.processedCargoActionKeys || []).includes(reqKey)) {
+      const drivers = await db.collection('drivers').find();
+      const vehicles = await db.collection('vehicles').find();
+      return res.status(200).json({
+        isDuplicate: true,
+        message: 'Idempotent duplicate request recognized: action already applied.',
+        trip: formatTrip(latestTrip, drivers, vehicles)
+      });
+    }
+    return res.status(409).json({
+      error: 'Trip cargo changed concurrently. Retry with the same idempotency key.',
+      code: 'CARGO_CONCURRENT_MODIFICATION'
+    });
+  }
 
   const drivers = await db.collection('drivers').find();
   const vehicles = await db.collection('vehicles').find();
 
-  res.json({ message: 'Cargo action recorded', trip: formatTrip(trip, drivers, vehicles) });
+  res.json({ message: 'Cargo action recorded', trip: formatTrip(updatedTrip, drivers, vehicles) });
 });
 
 // Record Atomic Non-Overlapping Timed Activity
 app.post('/api/trips/:id/activity', requireAuth, async (req, res) => {
   const trip = await db.collection('trips').findById(req.params.id);
   if (!trip) return res.status(404).json({ error: 'Trip not found.' });
+  if (!canMutateTrip(req.user, trip)) {
+    return res.status(403).json({ error: 'Access denied: You can only update your assigned trip.' });
+  }
 
   const { category, notes, durationMinutes, details } = req.body;
   const now = new Date();
@@ -1327,7 +1584,8 @@ app.post('/api/trips/:id/activity', requireAuth, async (req, res) => {
 // 6. SAFETY TELEMATICS & DELIVERY PROOFS
 // =========================================================================
 app.get('/api/safety-events', requireAuth, async (req, res) => {
-  const events = await db.collection('safetyEvents').find();
+  const filter = req.user.role === 'driver' ? { driverId: req.user.driverId || req.user.id } : {};
+  const events = await db.collection('safetyEvents').find(filter);
   res.json(events);
 });
 
@@ -1335,6 +1593,9 @@ app.get('/api/safety-events', requireAuth, async (req, res) => {
 app.post('/api/trips/:id/safety-event', requireAuth, async (req, res) => {
   const trip = await db.collection('trips').findById(req.params.id);
   if (!trip) return res.status(404).json({ error: 'Trip not found.' });
+  if (!canMutateTrip(req.user, trip)) {
+    return res.status(403).json({ error: 'Access denied: You can only update your assigned trip.' });
+  }
 
   const { type, recordedSpeed, speedThreshold, notes } = req.body;
   const newEvent = {
@@ -1369,7 +1630,8 @@ app.patch('/api/safety-events/:id', requireAuth, requireAdmin, async (req, res) 
 });
 
 app.get('/api/delivery-proofs', requireAuth, async (req, res) => {
-  const proofs = await db.collection('deliveryProofs').find();
+  const filter = req.user.role === 'driver' ? { driverId: req.user.driverId || req.user.id } : {};
+  const proofs = await db.collection('deliveryProofs').find(filter);
   res.json(proofs);
 });
 
@@ -1377,11 +1639,15 @@ app.get('/api/delivery-proofs', requireAuth, async (req, res) => {
 // 7. ENTITY MANAGEMENT (DRIVERS, VEHICLES, PRODUCTS)
 // =========================================================================
 app.get('/api/drivers', requireAuth, async (req, res) => {
-  const drivers = await db.collection('drivers').find();
+  const filter = req.user.role === 'driver' ? { id: req.user.driverId || req.user.id } : {};
+  const drivers = await db.collection('drivers').find(filter);
   res.json(drivers);
 });
 
 app.get('/api/drivers/:id', requireAuth, async (req, res) => {
+  if (req.user.role === 'driver' && req.params.id !== (req.user.driverId || req.user.id)) {
+    return res.status(403).json({ error: 'Access denied to this driver profile.' });
+  }
   const driver = await db.collection('drivers').findById(req.params.id);
   if (!driver) return res.status(404).json({ error: 'Driver not found.' });
   res.json(driver);
@@ -1423,7 +1689,12 @@ app.patch('/api/drivers/:id/archive', requireAuth, requireAdmin, async (req, res
 });
 
 app.get('/api/vehicles', requireAuth, async (req, res) => {
-  const vehicles = await db.collection('vehicles').find();
+  let filter = {};
+  if (req.user.role === 'driver') {
+    const driver = await db.collection('drivers').findById(req.user.driverId || req.user.id);
+    filter = driver?.assignedVehicleId ? { id: driver.assignedVehicleId } : { id: '__none__' };
+  }
+  const vehicles = await db.collection('vehicles').find(filter);
   res.json(vehicles);
 });
 
@@ -1509,7 +1780,7 @@ app.patch('/api/products/:id/archive', requireAuth, requireAdmin, async (req, re
 // =========================================================================
 // 8. REAL DASHBOARD, REPORTS & SETTINGS (ZERO FAKE TOTALS)
 // =========================================================================
-app.get('/api/dashboard', requireAuth, async (req, res) => {
+app.get('/api/dashboard', requireAuth, requireAdmin, async (req, res) => {
   const trips = await db.collection('trips').find();
   const drivers = await db.collection('drivers').find();
   const vehicles = await db.collection('vehicles').find();
@@ -1547,7 +1818,7 @@ app.get('/api/dashboard', requireAuth, async (req, res) => {
   });
 });
 
-app.get('/api/reports', requireAuth, async (req, res) => {
+app.get('/api/reports', requireAuth, requireAdmin, async (req, res) => {
   const trips = await db.collection('trips').find();
   const drivers = await db.collection('drivers').find();
   const vehicles = await db.collection('vehicles').find();
@@ -1579,7 +1850,7 @@ app.get('/api/reports', requireAuth, async (req, res) => {
   });
 });
 
-app.get('/api/settings', requireAuth, async (req, res) => {
+app.get('/api/settings', requireAuth, requireAdmin, async (req, res) => {
   const doc = await db.collection('settings').findOne({ key: 'system_settings' });
   if (doc && doc.value) {
     systemSettings = { ...systemSettings, ...doc.value };
@@ -1609,7 +1880,7 @@ app.post('/api/settings', requireAuth, requireAdmin, async (req, res) => {
 // ============================================================================
 
 // Server-Sent Events (SSE) stream for real-time emergency dashboard alerts
-app.get('/api/v1/emergencies/stream', requireAuth, (req, res) => {
+app.get('/api/v1/emergencies/stream', requireAuth, requireAdmin, (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
@@ -1636,6 +1907,14 @@ function calculateHaversineDistanceKm(lat1, lon1, lat2, lon2) {
   return Math.round((R * c) * 10) / 10;
 }
 
+function getAuthenticatedDriverId(user) {
+  return user?.driverId || user?.id || null;
+}
+
+function canAccessIncident(user, incident) {
+  return user?.role === 'admin' || incident?.driverId === getAuthenticatedDriverId(user);
+}
+
 // 1. POST /api/v1/emergencies/detect - Ingest crash detection candidate from native sensor service
 app.post('/api/v1/emergencies/detect', requireAuth, async (req, res) => {
   const {
@@ -1654,7 +1933,8 @@ app.post('/api/v1/emergencies/detect', requireAuth, async (req, res) => {
     detectionSource
   } = req.body;
 
-  if (!coordinates || typeof coordinates.lat !== 'number' || typeof coordinates.lng !== 'number') {
+  if (!coordinates || typeof coordinates.lat !== 'number' || typeof coordinates.lng !== 'number' ||
+      coordinates.lat < -90 || coordinates.lat > 90 || coordinates.lng < -180 || coordinates.lng > 180) {
     return res.status(400).json({ error: 'Valid GPS coordinates {lat, lng} required' });
   }
 
@@ -1671,9 +1951,12 @@ app.post('/api/v1/emergencies/detect', requireAuth, async (req, res) => {
   }
 
   // Look up driver and trip metadata
-  const driverId = req.user.role === 'driver' ? req.user.id : (req.body.driverId || req.user.id);
+  const driverId = req.user.role === 'driver' ? getAuthenticatedDriverId(req.user) : (req.body.driverId || req.user.id);
   const driver = await db.collection('drivers').findOne({ id: driverId }) || {};
   const activeTrip = tripId ? await db.collection('trips').findOne({ id: tripId }) : null;
+  if (req.user.role === 'driver' && activeTrip && activeTrip.driverId !== driverId) {
+    return res.status(403).json({ error: 'Access denied: incident trip is not assigned to this driver.' });
+  }
   const vehicleId = activeTrip?.vehicleId || driver.assignedVehicleId || req.body.vehicleId || 'VEH-UNKNOWN';
   const vehicle = await db.collection('vehicles').findOne({ id: vehicleId }) || {};
 
@@ -1756,7 +2039,7 @@ app.post('/api/v1/emergencies/detect', requireAuth, async (req, res) => {
   });
 
   res.status(201).json({
-    message: 'Emergency accident incident registered and escalated successfully',
+    message: 'Emergency incident registered; configured escalation channels have been initiated.',
     incident: newIncident
   });
 });
@@ -1767,6 +2050,9 @@ app.post('/api/v1/emergencies/:id/confirm', requireAuth, async (req, res) => {
   const incident = await db.collection('emergencyIncidents').findOne({ incidentId: id });
   if (!incident) {
     return res.status(404).json({ error: 'Incident not found' });
+  }
+  if (!canAccessIncident(req.user, incident)) {
+    return res.status(403).json({ error: 'Access denied to this incident' });
   }
 
   const nowIso = new Date().toISOString();
@@ -1801,6 +2087,9 @@ app.post('/api/v1/emergencies/:id/cancel', requireAuth, async (req, res) => {
   const incident = await db.collection('emergencyIncidents').findOne({ incidentId: id });
   if (!incident) {
     return res.status(404).json({ error: 'Incident not found' });
+  }
+  if (!canAccessIncident(req.user, incident)) {
+    return res.status(403).json({ error: 'Access denied to this incident' });
   }
 
   const nowIso = new Date().toISOString();
@@ -1959,7 +2248,7 @@ app.post('/api/v1/emergencies/:id/assign-ambulance', requireAuth, requireAdmin, 
 });
 
 // 6. POST /api/v1/emergencies/:id/status - Update incident lifecycle status
-app.post('/api/v1/emergencies/:id/status', requireAuth, async (req, res) => {
+app.post('/api/v1/emergencies/:id/status', requireAuth, requireAdmin, async (req, res) => {
   const { id } = req.params;
   const { status, reason, hospitalId } = req.body;
 
@@ -2034,7 +2323,7 @@ app.get('/api/v1/emergencies', requireAuth, async (req, res) => {
 
   // Drivers can only see their own incidents
   if (req.user.role === 'driver') {
-    filter.driverId = req.user.id;
+    filter.driverId = getAuthenticatedDriverId(req.user);
   }
 
   const incidents = await db.collection('emergencyIncidents').find(filter);
@@ -2055,7 +2344,7 @@ app.get('/api/v1/emergencies/:id', requireAuth, async (req, res) => {
   }
 
   // Driver authorization boundary
-  if (req.user.role === 'driver' && incident.driverId !== req.user.id) {
+  if (!canAccessIncident(req.user, incident)) {
     return res.status(403).json({ error: 'Access denied to this incident' });
   }
 
@@ -2084,6 +2373,9 @@ app.get('/api/v1/emergencies/:id/timeline', requireAuth, async (req, res) => {
   if (!incident) {
     return res.status(404).json({ error: 'Incident not found' });
   }
+  if (!canAccessIncident(req.user, incident)) {
+    return res.status(403).json({ error: 'Access denied to this incident' });
+  }
   res.json({ incidentId: id, timeline: incident.timeline || [] });
 });
 
@@ -2095,8 +2387,8 @@ app.get('/api/v1/emergencies/:id/delivery-attempts', requireAuth, requireAdmin, 
 });
 
 // 11. POST /api/v1/safety-service/heartbeat - Native driver service health heartbeat
-app.post('/api/v1/safety-service/heartbeat', requireAuth, async (req, res) => {
-  const driverId = req.user.id;
+app.post('/api/v1/safety-service/heartbeat', requireAuth, requireDriver, async (req, res) => {
+  const driverId = getAuthenticatedDriverId(req.user);
   const {
     deviceId,
     activeTripId,
@@ -2142,8 +2434,9 @@ app.post('/api/v1/safety-service/heartbeat', requireAuth, async (req, res) => {
 // 12. GET /api/v1/safety-service/health - Monitor safety service health across drivers
 app.get('/api/v1/safety-service/health', requireAuth, async (req, res) => {
   if (req.user.role === 'driver') {
-    const health = await db.collection('safetyServiceHealth').findOne({ driverId: req.user.id });
-    return res.json(health || { driverId: req.user.id, serviceRunning: false, message: 'No heartbeat recorded yet' });
+    const driverId = getAuthenticatedDriverId(req.user);
+    const health = await db.collection('safetyServiceHealth').findOne({ driverId });
+    return res.json(health || { driverId, serviceRunning: false, message: 'No heartbeat recorded yet' });
   }
 
   const allHealth = await db.collection('safetyServiceHealth').find();
@@ -2208,7 +2501,7 @@ app.get('/api/v1/responders/nearby', requireAuth, async (req, res) => {
 });
 
 // 14. POST /api/v1/ambulance-units/:id/accept - Ambulance partner accepts dispatch
-app.post('/api/v1/ambulance-units/:id/accept', requireAuth, async (req, res) => {
+app.post('/api/v1/ambulance-units/:id/accept', requireAuth, requireAdmin, async (req, res) => {
   const { id } = req.params;
   const { incidentId } = req.body;
 
@@ -2241,7 +2534,7 @@ app.post('/api/v1/ambulance-units/:id/accept', requireAuth, async (req, res) => 
 });
 
 // 15. POST /api/v1/ambulance-units/:id/reject - Ambulance partner rejects dispatch
-app.post('/api/v1/ambulance-units/:id/reject', requireAuth, async (req, res) => {
+app.post('/api/v1/ambulance-units/:id/reject', requireAuth, requireAdmin, async (req, res) => {
   const { id } = req.params;
   const { incidentId, reason } = req.body;
 
@@ -2291,15 +2584,59 @@ app.post('/api/v1/iot/crash-events', async (req, res) => {
     signature
   } = req.body;
 
-  // Validate hardware authentication
-  const expectedToken = process.env.IOT_DEVICE_AUTH_SECRET || 'fleetroute_iot_secure_token_default';
-  const authHeader = req.headers['x-iot-device-token'] || req.headers['authorization'];
-  if (!authHeader || !authHeader.includes(expectedToken)) {
+  // Fail closed unless the deployment has explicitly provisioned its IoT secret.
+  const expectedToken = process.env.IOT_DEVICE_AUTH_SECRET;
+  if (!expectedToken || expectedToken.length < 32) {
+    return res.status(503).json({ error: 'IoT ingestion is not configured', code: 'IOT_NOT_CONFIGURED' });
+  }
+
+  const rawAuthHeader = req.headers['x-iot-device-token'] || req.headers.authorization || '';
+  const suppliedToken = rawAuthHeader.startsWith('Bearer ') ? rawAuthHeader.slice(7) : rawAuthHeader;
+  const tokenMatches = suppliedToken.length === expectedToken.length &&
+    crypto.timingSafeEqual(Buffer.from(suppliedToken), Buffer.from(expectedToken));
+  if (!tokenMatches) {
     return res.status(401).json({ error: 'Invalid or missing IoT hardware credentials' });
   }
 
-  if (!deviceId || !vehicleId || !coordinates || typeof coordinates.lat !== 'number' || typeof coordinates.lng !== 'number') {
+  if (!deviceId || !vehicleId || !Number.isInteger(sequenceNumber) || !timestamp ||
+      !coordinates || typeof coordinates.lat !== 'number' || typeof coordinates.lng !== 'number' ||
+      coordinates.lat < -90 || coordinates.lat > 90 || coordinates.lng < -180 || coordinates.lng > 180) {
     return res.status(400).json({ error: 'Missing mandatory hardware telemetry fields' });
+  }
+
+  const deviceTimestamp = Date.parse(timestamp);
+  const maxClockSkewMs = Number.parseInt(process.env.IOT_MAX_CLOCK_SKEW_MS || '300000', 10);
+  if (!Number.isFinite(deviceTimestamp) || Math.abs(Date.now() - deviceTimestamp) > maxClockSkewMs) {
+    return res.status(400).json({ error: 'IoT event timestamp is stale or invalid', code: 'IOT_STALE_EVENT' });
+  }
+
+  const canonicalPayload = [
+    deviceId,
+    vehicleId,
+    sequenceNumber,
+    timestamp,
+    coordinates.lat,
+    coordinates.lng,
+    impactForce || 0,
+    airbagSignal ? 1 : 0
+  ].join('|');
+  const expectedSignature = crypto.createHmac('sha256', expectedToken).update(canonicalPayload).digest('hex');
+  const suppliedSignature = String(signature || req.headers['x-iot-signature'] || '').toLowerCase();
+  const signatureMatches = suppliedSignature.length === expectedSignature.length &&
+    crypto.timingSafeEqual(Buffer.from(suppliedSignature), Buffer.from(expectedSignature));
+  if (!signatureMatches) {
+    return res.status(401).json({ error: 'Invalid IoT event signature', code: 'IOT_SIGNATURE_INVALID' });
+  }
+
+  const idempotencyKey = `IOT-${deviceId}-${sequenceNumber}`;
+  const existingIncident = await db.collection('emergencyIncidents').findOne({ idempotencyKey });
+  if (existingIncident) {
+    return res.status(200).json({
+      message: 'Hardware crash event already accepted',
+      incidentId: existingIncident.incidentId,
+      status: existingIncident.status,
+      isDuplicate: true
+    });
   }
 
   const nowIso = new Date().toISOString();
@@ -2307,13 +2644,16 @@ app.post('/api/v1/iot/crash-events', async (req, res) => {
 
   // Find associated vehicle and active trip if any
   const vehicle = await db.collection('vehicles').findOne({ id: vehicleId }) || {};
-  const activeTrip = await db.collection('trips').findOne({ vehicleId, status: 'active' });
+  const activeTrip = await db.collection('trips').findOne({
+    vehicleId,
+    status: { $in: ['active', 'in_progress', 'in_transit', 'IN_TRANSIT'] }
+  });
   const driver = activeTrip ? await db.collection('drivers').findOne({ id: activeTrip.driverId }) : null;
 
   const newIncident = {
     id: incidentId,
     incidentId,
-    idempotencyKey: `IOT-${deviceId}-${sequenceNumber || Date.now()}`,
+    idempotencyKey,
     tripId: activeTrip?.id || null,
     driverId: driver?.id || 'DRIVER-UNKNOWN',
     driverName: driver?.name || 'Assigned Fleet Driver',
@@ -2403,10 +2743,45 @@ app.delete('/api/v1/emergencies', requireAuth, requireAdmin, async (req, res) =>
   });
 });
 
-if (require.main === module) {
-  app.listen(PORT, () => {
-    console.log(`[FleetRoute Server] running on http://localhost:${PORT}`);
+app.use((req, res) => {
+  res.status(404).json({ error: 'API route not found.', code: 'ROUTE_NOT_FOUND', requestId: req.requestId });
+});
+
+app.use((err, req, res, next) => {
+  if (res.headersSent) return next(err);
+  const status = Number.isInteger(err.status) && err.status >= 400 && err.status < 600 ? err.status : 500;
+  if (status >= 500) {
+    console.error(`[FleetRoute API] requestId=${req.requestId} ${req.method} ${req.path}:`, err.message);
+  }
+  res.status(status).json({
+    error: status === 500 ? 'Internal server error.' : err.message,
+    code: err.code || (status === 500 ? 'INTERNAL_ERROR' : 'REQUEST_ERROR'),
+    requestId: req.requestId
   });
+});
+
+if (require.main === module) {
+  initDbPromise
+    .then(() => {
+      const server = app.listen(PORT, () => {
+        console.log(`[FleetRoute Server] running on port ${PORT}`);
+      });
+
+      const shutdown = signal => {
+        console.log(`[FleetRoute Server] ${signal} received; draining connections.`);
+        server.close(async () => {
+          await db.disconnect();
+          process.exit(0);
+        });
+        setTimeout(() => process.exit(1), 10000).unref();
+      };
+      process.once('SIGTERM', () => shutdown('SIGTERM'));
+      process.once('SIGINT', () => shutdown('SIGINT'));
+    })
+    .catch(error => {
+      console.error('[FleetRoute Server] Startup failed:', error.message);
+      process.exit(1);
+    });
 }
 
 module.exports = app;

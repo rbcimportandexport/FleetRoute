@@ -38,7 +38,7 @@ import { api } from '../../utils/api';
 
 // Haversine formula to compute distance in meters
 function getDistanceMeters(lat1, lon1, lat2, lon2) {
-  if (!lat1 || !lon1 || !lat2 || !lon2) return 0;
+  if (![lat1, lon1, lat2, lon2].every(value => Number.isFinite(Number(value)))) return null;
   const R = 6371e3;
   const p1 = (lat1 * Math.PI) / 180;
   const p2 = (lat2 * Math.PI) / 180;
@@ -55,6 +55,7 @@ export default function DriverMobileHome({
   onAdvanceStop,
   onCargoAction,
   onRecordActivity,
+  onTripUpdated,
   onOpenDelayModal,
   isOnline = true
 }) {
@@ -68,6 +69,9 @@ export default function DriverMobileHome({
   const [podPhotoPreview, setPodPhotoPreview] = useState('');
   const photoInputRef = useRef(null);
   const [podSignature, setPodSignature] = useState('');
+  const signatureCanvasRef = useRef(null);
+  const signatureDrawingRef = useRef(false);
+  const [podValidationError, setPodValidationError] = useState('');
 
   // Location Sharing State
   const [isSharingLocation, setIsSharingLocation] = useState(false);
@@ -335,6 +339,7 @@ export default function DriverMobileHome({
   const currentStop = trip.stops?.[currentStopIndex];
   const isTripFinished = trip.status === 'completed';
   const isTripNotStarted = trip.status === 'planned';
+  const isGateCleared = Boolean(trip.gateProofs?.gateClearedAt);
 
   // Calculate onboard cargo total
   const totalOnboard = (trip.cargo || []).reduce((acc, c) => acc + (c.loadedQty - c.deliveredQty - c.damagedQty - c.rejectedQty), 0);
@@ -344,6 +349,7 @@ export default function DriverMobileHome({
     soundEffects.playActionClick();
 
     if (isTripNotStarted) {
+      if (!isGateCleared) return;
       onAdvanceStop({ action: 'start_trip' });
       return;
     }
@@ -353,7 +359,8 @@ export default function DriverMobileHome({
     if (currentStop.status === 'pending') {
       // Check arrival radius
       const targetRadius = currentStop.location?.arrivalRadiusMeters || 150;
-      if (currentCoords && currentStop.location && currentStop.location.lat && currentStop.location.lng) {
+      if (currentCoords && currentStop.location &&
+          Number.isFinite(Number(currentStop.location.lat)) && Number.isFinite(Number(currentStop.location.lng))) {
         const dist = getDistanceMeters(
           currentCoords.lat,
           currentCoords.lng,
@@ -396,15 +403,21 @@ export default function DriverMobileHome({
     }
 
     if (currentStop.status === 'unloading') {
+      const recipientName = deliveryRecipient.trim() || currentStop.recipientName || '';
+      if (!recipientName || !podPhotoPreview || !podSignature) {
+        setPodValidationError('Recipient name, delivery photo, and on-screen signature are mandatory.');
+        return;
+      }
+      setPodValidationError('');
       onAdvanceStop({
         action: 'finish_unloading',
         pod: {
-          recipientName: deliveryRecipient.trim() || currentStop.recipientName || 'Authorized Signatory',
+          recipientName,
           notes: podNotes.trim(),
           hasPhoto: Boolean(podPhotoPreview || podPhotoFile),
           photoData: podPhotoPreview || undefined,
-          hasSignature: Boolean(podSignature.trim()),
-          signature: podSignature.trim() || 'Signatory verified onsite',
+          hasSignature: true,
+          signature: podSignature,
           deliveredQty: deliveredQty ? parseInt(deliveredQty, 10) : undefined,
           damagedQty: parseInt(damagedQty, 10) || 0,
           rejectedQty: parseInt(rejectedQty, 10) || 0
@@ -428,6 +441,52 @@ export default function DriverMobileHome({
     }
   };
 
+  const getSignaturePoint = (event) => {
+    const canvas = signatureCanvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: (event.clientX - rect.left) * (canvas.width / rect.width),
+      y: (event.clientY - rect.top) * (canvas.height / rect.height)
+    };
+  };
+
+  const startSignature = (event) => {
+    const canvas = signatureCanvasRef.current;
+    if (!canvas) return;
+    event.preventDefault();
+    signatureDrawingRef.current = true;
+    canvas.setPointerCapture?.(event.pointerId);
+    const point = getSignaturePoint(event);
+    const context = canvas.getContext('2d');
+    context.beginPath();
+    context.moveTo(point.x, point.y);
+  };
+
+  const drawSignature = (event) => {
+    if (!signatureDrawingRef.current || !signatureCanvasRef.current) return;
+    event.preventDefault();
+    const point = getSignaturePoint(event);
+    const context = signatureCanvasRef.current.getContext('2d');
+    context.lineWidth = 3;
+    context.lineCap = 'round';
+    context.strokeStyle = '#0f172a';
+    context.lineTo(point.x, point.y);
+    context.stroke();
+  };
+
+  const finishSignature = (event) => {
+    if (!signatureDrawingRef.current || !signatureCanvasRef.current) return;
+    signatureDrawingRef.current = false;
+    signatureCanvasRef.current.releasePointerCapture?.(event.pointerId);
+    setPodSignature(signatureCanvasRef.current.toDataURL('image/png'));
+  };
+
+  const clearSignature = () => {
+    const canvas = signatureCanvasRef.current;
+    if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+    setPodSignature('');
+  };
+
   const handleConfirmManualArrival = (e) => {
     e.preventDefault();
     if (!manualArrivalReason.trim()) return;
@@ -445,7 +504,7 @@ export default function DriverMobileHome({
   // Label for the big primary touch button
   const getPrimaryActionLabel = () => {
     if (isTripFinished) return 'Trip Completed Successfully';
-    if (isTripNotStarted) return 'Start Scheduled Trip';
+    if (isTripNotStarted) return isGateCleared ? 'Start Scheduled Trip' : 'Complete Gate Inspection First';
     if (!currentStop) return 'Continue Workflow';
 
     switch (currentStop.status) {
@@ -558,9 +617,7 @@ export default function DriverMobileHome({
       {/* MANDATORY PRE-TRIP GATE PROOF INSPECTION CARD */}
       <GateProofPhotosCard
         trip={trip}
-        onProofUpdated={() => {
-          if (onCargoAction) onCargoAction({});
-        }}
+        onProofUpdated={onTripUpdated}
         depotName={trip.stops?.[0]?.location?.name || 'Depot 4'}
       />
 
@@ -912,7 +969,6 @@ export default function DriverMobileHome({
                   onClick={() => {
                     soundEffects.playActionClick();
                     setDeliveryRecipient(currentStop.recipientName || 'Authorized Signatory');
-                    setPodSignature('Verified & Signed Onsite');
                     setDamagedQty('0');
                     setRejectedQty('0');
                     setPodNotes('Cargo unloaded safely in good condition');
@@ -932,7 +988,7 @@ export default function DriverMobileHome({
                   }}
                 >
                   <Zap size={13} />
-                  <span>1-Tap Fast-Fill (All Good)</span>
+                  <span>Fill Delivery Details</span>
                 </button>
               </div>
 
@@ -950,15 +1006,24 @@ export default function DriverMobileHome({
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--slate-500)', marginBottom: '4px' }}>
-                    Signatory Signature Note
-                  </label>
-                  <input
-                    type="text"
-                    value={podSignature}
-                    onChange={(e) => setPodSignature(e.target.value)}
-                    placeholder="Signature captured"
-                    className="form-control"
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                    <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--slate-500)' }}>
+                      Sign on Screen
+                    </label>
+                    <button type="button" onClick={clearSignature} style={{ border: 0, background: 'transparent', color: 'var(--primary-blue)', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>
+                      Clear
+                    </button>
+                  </div>
+                  <canvas
+                    ref={signatureCanvasRef}
+                    width="600"
+                    height="180"
+                    onPointerDown={startSignature}
+                    onPointerMove={drawSignature}
+                    onPointerUp={finishSignature}
+                    onPointerCancel={finishSignature}
+                    style={{ width: '100%', height: '74px', background: '#ffffff', border: `1px solid ${podSignature ? 'var(--status-emerald)' : 'var(--slate-300)'}`, borderRadius: '8px', touchAction: 'none', cursor: 'crosshair' }}
+                    aria-label="Recipient signature pad"
                   />
                 </div>
               </div>
@@ -1001,6 +1066,11 @@ export default function DriverMobileHome({
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (file) {
+                      if (!file.type.startsWith('image/') || file.size > 3 * 1024 * 1024) {
+                        setPodValidationError('Delivery photo must be an image no larger than 3 MB.');
+                        return;
+                      }
+                      setPodValidationError('');
                       setPodPhotoFile(file);
                       const reader = new FileReader();
                       reader.onload = () => setPodPhotoPreview(reader.result);
@@ -1049,22 +1119,28 @@ export default function DriverMobileHome({
                   className="form-control"
                 />
               </div>
+              {podValidationError && (
+                <div style={{ color: 'var(--status-rose)', fontSize: '12px', fontWeight: 700, marginBottom: '12px' }}>
+                  {podValidationError}
+                </div>
+              )}
             </div>
           )}
 
           {/* Primary Action Button */}
           <button
             onClick={handlePrimaryAction}
+            disabled={isTripFinished || (isTripNotStarted && !isGateCleared)}
             style={{
               width: '100%',
               padding: '14px 20px',
               borderRadius: '12px',
-              background: 'var(--primary-blue)',
+              background: (isTripFinished || (isTripNotStarted && !isGateCleared)) ? 'var(--slate-300)' : 'var(--primary-blue)',
               color: '#ffffff',
               border: 'none',
               fontSize: '15px',
               fontWeight: 800,
-              cursor: 'pointer',
+              cursor: (isTripFinished || (isTripNotStarted && !isGateCleared)) ? 'not-allowed' : 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',

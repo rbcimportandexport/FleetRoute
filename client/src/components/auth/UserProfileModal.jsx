@@ -55,6 +55,7 @@ export default function UserProfileModal({
   if (!isOpen || !activeUser) return null;
 
   const isDriver = activeUser.role === 'driver';
+  const passwordChangeRequired = Boolean(activeUser.mustChangePassword);
 
   const handleChangePassword = async (e) => {
     e.preventDefault();
@@ -66,8 +67,8 @@ export default function UserProfileModal({
       return;
     }
 
-    if (newPassword.length < 6) {
-      setErrorMsg('New password must be at least 6 characters long.');
+    if (newPassword.length < 12 || newPassword.length > 128 || !/[a-z]/.test(newPassword) || !/[A-Z]/.test(newPassword) || !/\d/.test(newPassword) || !/[^A-Za-z0-9]/.test(newPassword)) {
+      setErrorMsg('Use 12-128 characters with uppercase, lowercase, number, and symbol.');
       return;
     }
 
@@ -75,13 +76,20 @@ export default function UserProfileModal({
     soundEffects.playActionClick();
 
     try {
-      await api.changePassword(currentPassword, newPassword);
+      const result = await api.changePassword(currentPassword, newPassword);
       soundEffects.playSuccessChime();
-      setSuccessMsg('Password changed successfully.');
+      setSuccessMsg(result.message || 'Password changed successfully.');
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
-      setTimeout(() => setIsPasswordSectionOpen(false), 2000);
+      if (result.reauthRequired) {
+        setTimeout(() => {
+          onClose?.();
+          onLogout?.();
+        }, 1200);
+      } else {
+        setTimeout(() => setIsPasswordSectionOpen(false), 2000);
+      }
     } catch (err) {
       setErrorMsg(err.message || 'Failed to change password. Verify your current password.');
     } finally {
@@ -176,11 +184,15 @@ export default function UserProfileModal({
 
           <button
             onClick={onClose}
+            disabled={passwordChangeRequired}
+            aria-label={passwordChangeRequired ? 'Password change required before closing' : 'Close profile'}
+            title={passwordChangeRequired ? 'Change your temporary password to continue' : 'Close'}
             style={{
               background: '#f1f5f9',
               border: 'none',
               color: 'var(--slate-500)',
-              cursor: 'pointer',
+              cursor: passwordChangeRequired ? 'not-allowed' : 'pointer',
+              opacity: passwordChangeRequired ? 0.35 : 1,
               padding: '6px',
               borderRadius: '8px',
               display: 'flex',
@@ -277,7 +289,7 @@ export default function UserProfileModal({
                   <User size={12} /> Personnel ID
                 </div>
                 <div style={{ fontSize: '13px', fontWeight: 800, color: 'var(--navy-900)', marginTop: '2px', fontFamily: 'var(--font-mono)' }}>
-                  {activeUser.driverId || driver?.id || 'DISPATCH-01'}
+                  {activeUser.driverId || driver?.id || 'Not assigned'}
                 </div>
               </div>
 
@@ -286,7 +298,7 @@ export default function UserProfileModal({
                   <Phone size={12} /> Phone
                 </div>
                 <div style={{ fontSize: '13px', fontWeight: 800, color: 'var(--navy-900)', marginTop: '2px' }}>
-                  {activeUser.phone || driver?.phone || '+91 98210 44821'}
+                  {activeUser.phone || driver?.phone || 'Not configured'}
                 </div>
               </div>
 
@@ -307,7 +319,7 @@ export default function UserProfileModal({
                     <Truck size={12} /> Assigned Vehicle
                   </div>
                   <div style={{ fontSize: '12px', fontWeight: 800, color: 'var(--navy-900)', marginTop: '2px' }}>
-                    {assignedVehicle?.registrationNumber || driver?.assignedVehicleId || 'VEH-201'}
+                    {assignedVehicle?.registrationNumber || driver?.assignedVehicleId || 'Not assigned'}
                   </div>
                 </div>
               )}
@@ -329,8 +341,8 @@ export default function UserProfileModal({
                 </div>
               </div>
               <span style={{
-                background: '#dcfce7',
-                color: '#15803d',
+                background: '#e2e8f0',
+                color: '#475569',
                 fontSize: '10px',
                 fontWeight: 900,
                 padding: '2px 8px',
@@ -339,15 +351,15 @@ export default function UserProfileModal({
                 alignItems: 'center',
                 gap: '4px'
               }}>
-                <CheckCircle2 size={12} /> VERIFIED
+                <AlertCircle size={12} /> NOT CONFIGURED
               </span>
             </div>
 
             <div style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a' }}>
-              State Bank of India (SBI) •••• 4182 ({activeUser.name})
+              Reimbursement account not configured
             </div>
             <div style={{ fontSize: '11px', color: '#0369a1', marginTop: '4px', lineHeight: 1.4 }}>
-              Approved police challan payments and emergency repair expenses will be credited directly to this verified UPI account within 15 minutes.
+              Contact an administrator to configure and verify reimbursement details before submitting an expense.
             </div>
           </div>
 
@@ -363,8 +375,7 @@ export default function UserProfileModal({
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-              <a
-                href="tel:18002004455"
+              <div
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -373,16 +384,15 @@ export default function UserProfileModal({
                   border: '1px solid #cbd5e1',
                   borderRadius: '10px',
                   padding: '10px',
-                  textDecoration: 'none',
                   color: 'var(--navy-900)'
                 }}
               >
                 <Headphones size={18} color="#0284c7" />
                 <div>
                   <div style={{ fontSize: '11px', color: 'var(--slate-500)' }}>24x7 Control Desk</div>
-                  <div style={{ fontSize: '12px', fontWeight: 800 }}>1800-200-4455</div>
+                  <div style={{ fontSize: '12px', fontWeight: 800 }}>Not configured</div>
                 </div>
-              </a>
+              </div>
 
               <div style={{
                 display: 'flex',
@@ -545,11 +555,11 @@ export default function UserProfileModal({
                 </span>
               </div>
               <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--primary-blue)' }}>
-                {isPasswordSectionOpen ? 'Collapse' : 'Update Password'}
+                {(isPasswordSectionOpen || passwordChangeRequired) ? (passwordChangeRequired ? 'Required now' : 'Collapse') : 'Update Password'}
               </span>
             </button>
 
-            {isPasswordSectionOpen && (
+            {(isPasswordSectionOpen || passwordChangeRequired) && (
               <div style={{ padding: '0 16px 16px 16px', borderTop: '1px solid #f1f5f9' }}>
                 {errorMsg && (
                   <div style={{

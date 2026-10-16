@@ -7,17 +7,24 @@ const mongoose = require('mongoose');
 // 1. User Model
 const UserSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true, index: true },
-  email: { type: String, lowercase: true, trim: true, index: true },
+  email: { type: String, lowercase: true, trim: true },
   phone: { type: String, trim: true, index: true },
   name: { type: String, required: true },
   role: { type: String, enum: ['admin', 'driver'], default: 'driver', required: true },
   status: { type: String, enum: ['active', 'disabled'], default: 'active' },
   driverId: { type: String, default: null },
+  tokenVersion: { type: Number, default: 0 },
+  mustChangePassword: { type: Boolean, default: false },
   passwordHash: { type: String, required: true },
   isDemo: { type: Boolean, default: false, index: true },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });
+UserSchema.index({ email: 1 }, { unique: true, sparse: true });
+UserSchema.index(
+  { driverId: 1 },
+  { unique: true, partialFilterExpression: { driverId: { $type: 'string' }, role: 'driver' } }
+);
 
 // 2. Driver Model
 const DriverSchema = new mongoose.Schema({
@@ -118,6 +125,8 @@ const TripSchema = new mongoose.Schema({
   cargo: { type: Array, default: [] },
   activities: { type: Array, default: [] },
   gateProofs: { type: mongoose.Schema.Types.Mixed, default: null },
+  processedCargoActionKeys: [{ type: String }],
+  operationVersion: { type: Number, default: 0 },
   isDemo: { type: Boolean, default: false, index: true },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
@@ -308,7 +317,7 @@ const EmergencyDeliveryAttemptSchema = new mongoose.Schema({
     required: true,
     index: true
   },
-  provider: { type: String, default: 'native_mock_adapter' },
+  provider: { type: String, default: 'unconfigured' },
   recipientType: { 
     type: String, 
     enum: ['dispatch_control_room', 'emergency_contact', 'ambulance_unit', 'partner_hospital', 'supervisor'],
@@ -317,15 +326,15 @@ const EmergencyDeliveryAttemptSchema = new mongoose.Schema({
   recipientReference: { type: String, required: true },
   status: { 
     type: String, 
-    enum: ['pending', 'sent', 'delivered', 'acknowledged', 'failed'], 
-    default: 'sent',
+    enum: ['pending', 'submitted', 'sent', 'delivered', 'acknowledged', 'failed'],
+    default: 'pending',
     index: true
   },
   providerMessageId: { type: String, default: null },
   failureCode: { type: String, default: null },
   failureMessage: { type: String, default: null },
   attemptNumber: { type: Number, default: 1 },
-  sentAt: { type: String, default: () => new Date().toISOString() },
+  sentAt: { type: String, default: null },
   deliveredAt: { type: String, default: null },
   acknowledgedAt: { type: String, default: null },
   createdAt: { type: Date, default: Date.now }

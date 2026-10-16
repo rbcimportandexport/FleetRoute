@@ -33,11 +33,11 @@ class EmergencyEscalationService {
       id: attemptId,
       incidentId: payload.incidentId || payload.id,
       channel,
-      provider: process.env[`${channel.toUpperCase()}_PROVIDER`] || 'native_adapter',
+      provider: process.env[`${channel.toUpperCase()}_PROVIDER`] || 'unconfigured',
       recipientType,
       recipientReference,
-      status: 'sent',
-      sentAt: new Date().toISOString(),
+      status: 'pending',
+      sentAt: null,
       deliveredAt: null,
       failureCode: null,
       failureMessage: null
@@ -53,35 +53,15 @@ class EmergencyEscalationService {
           timestamp: new Date().toISOString()
         });
         attempt.status = 'delivered';
-        attempt.deliveredAt = new Date().toISOString();
-      } else if (channel === 'sms') {
-        const smsProvider = process.env.SMS_PROVIDER;
-        if (!smsProvider || smsProvider === 'none') {
-          attempt.status = 'delivered'; // Safe default adapter logged
-          attempt.providerMessageId = `SMS-SIM-${Date.now()}`;
-          attempt.deliveredAt = new Date().toISOString();
-        } else {
-          // If configured external provider (Twilio, Gupshup, etc.)
-          attempt.providerMessageId = `SMS-PROV-${Date.now()}`;
-          attempt.deliveredAt = new Date().toISOString();
-        }
-      } else if (channel === 'automated_voice_call') {
-        const voiceProvider = process.env.VOICE_PROVIDER;
-        if (!voiceProvider || voiceProvider === 'none') {
-          attempt.status = 'delivered';
-          attempt.providerMessageId = `VOICE-SIM-${Date.now()}`;
-          attempt.deliveredAt = new Date().toISOString();
-        } else {
-          attempt.providerMessageId = `VOICE-PROV-${Date.now()}`;
-          attempt.deliveredAt = new Date().toISOString();
-        }
-      } else if (channel === 'ambulance_partner_api' || channel === 'hospital_partner_api') {
-        attempt.status = 'delivered';
-        attempt.providerMessageId = `PARTNER-API-${Date.now()}`;
+        attempt.provider = 'fleetroute_sse';
+        attempt.sentAt = new Date().toISOString();
         attempt.deliveredAt = new Date().toISOString();
       } else {
-        attempt.status = 'delivered';
-        attempt.deliveredAt = new Date().toISOString();
+        // External provider adapters are intentionally fail-closed. A configured
+        // provider name is not proof that a message was submitted or delivered.
+        attempt.status = 'failed';
+        attempt.failureCode = 'PROVIDER_ADAPTER_UNAVAILABLE';
+        attempt.failureMessage = `No verified delivery adapter is implemented for channel ${channel}.`;
       }
     } catch (err) {
       attempt.status = 'failed';

@@ -33,24 +33,17 @@ FleetRoute enforces a strict zero-emoji design policy, using clean Lucide vector
 ## 2. Setup and Startup Instructions
 
 ### Prerequisites
-- **Node.js**: v18.0.0 or higher (tested on Node.js v20+)
+- **Node.js**: v20.11.0 or higher
 - **npm**: v9.0.0 or higher
 - **MongoDB**: Local MongoDB instance (port 27017) or MongoDB Atlas connection URI
 
 ### Step-by-Step Installation
 
-1. **Install backend dependencies:**
+1. **Install all lockfile-pinned dependencies:**
    ```bash
-   cd server
-   npm.cmd install
-   cd ..
-   ```
-
-2. **Install frontend dependencies:**
-   ```bash
-   cd client
-   npm.cmd install
-   cd ..
+   npm ci
+   npm --prefix server ci
+   npm --prefix client ci
    ```
 
 3. **Configure Environment Variables:**
@@ -58,7 +51,7 @@ FleetRoute enforces a strict zero-emoji design policy, using clean Lucide vector
    ```bash
    cp .env.example server/.env
    ```
-   Set `MONGODB_URI` and `JWT_SECRET` in `server/.env`. A cryptographically strong `JWT_SECRET` is strictly required.
+   Set `MONGODB_URI`, a cryptographically strong `JWT_SECRET`, and exact `CORS_ORIGINS`. Android builds must also set `VITE_API_BASE_URL` to the reachable HTTPS backend `/api` URL.
 
 4. **Bootstrap Initial Administrator:**
    Because automatic demo seeding is removed, run the one-time admin bootstrap tool:
@@ -132,9 +125,11 @@ npm run build
 | Variable | Required | Description |
 | :--- | :--- | :--- |
 | `PORT` | Optional (default: `5000`) | HTTP port for the Express backend API. |
-| `NODE_ENV` | Optional (default: `production`) | Runtime environment mode. |
+| `NODE_ENV` | Optional (default: `development`) | Runtime environment mode. Production enables strict configuration validation. |
 | `MONGODB_URI` | **Mandatory** | MongoDB connection URI string. Startup cleanly fails if missing or unreachable. |
-| `JWT_SECRET` | **Mandatory** | Cryptographic key used to sign and verify session JWTs. No hardcoded fallback exists. |
+| `JWT_SECRET` | **Mandatory in production** | Cryptographic key of at least 32 characters used for JWTs. No hardcoded production fallback exists. |
+| `CORS_ORIGINS` | **Mandatory in production** | Comma-separated exact web origins allowed to call the API. |
+| `IOT_DEVICE_AUTH_SECRET` | Required to enable IoT ingestion | Distinct 32+ character key used for exact token and HMAC verification. |
 | `JWT_EXPIRES_IN` | Optional (default: `24h`) | Session token expiration duration. |
 | `DEFAULT_ARRIVAL_RADIUS_METERS` | Optional (default: `150`) | Arrival geofence radius in meters for driver check-in. |
 | `OVERSPEED_THRESHOLD_KMH` | Optional (default: `80`) | Speed threshold that generates an overspeed safety alert from real telemetry. |
@@ -186,13 +181,13 @@ npm run build
 
 ### 6. Multi-Stop Workflows & Cargo Reconciliation
 - Cargo ledger tracks `loadedQty`, `deliveredQty`, `damagedQty`, `rejectedQty`, and `returnedQty`.
-- Idempotency deduplication prevents double deductions on network retries.
+- Durable trip-level idempotency keys and optimistic concurrency guards prevent cargo retry double deductions across restarts.
 - Delivery proofs require real recipient names and genuine signatures/photos stored in MongoDB.
 
 ### 7. Production Service Worker & Offline Caching
 - Service Worker invalidates legacy prototype caches.
 - Authenticated operational API requests are never stored in public service worker caches, preventing cross-user data leakage.
-- Offline action queuing preserves offline actions locally until connectivity is restored.
+- Only explicitly retry-safe operations are queued. Queues are account-scoped, carry stable operation IDs, and remain visibly `pending` until the backend acknowledges them.
 
 ---
 
@@ -211,23 +206,6 @@ Actual test output:
 [PASS] Test 2: Activity durations exactly match 250 minutes with 0 overlaps.
 [PASS] Test 3: Stop sequence progression verified.
 --- ALL AUTOMATED LOGIC TESTS PASSED SUCCESSFULLY (3/3) ---
-```
-
-### Running Backend Endpoint Verification Script
-```bash
-node server/scripts/verifyEndpoints.js
-```
-Actual test output:
-```text
-[Test] Logging in as admin...
-[Test] Admin logged in successfully.
-[Test 1] Fetching driver user accounts... Found 8 driver accounts.
-[Test 2] Editing driver account USE-1791885665898-380 (Rajesh Sharma)... Edit result: 200 -> User account updated successfully.
-[Test 3] Fetching locations... Editing location LOC-HOME -> Result: 200
-[Test 4] Fetching trips... Submitting gate proofs for trip TRIP-DEMO-01 -> Result: 200 (Driver Selfie Verified, Seatbelt Verified, Pledge Verified)
-[Test 5] Recording Breakdown & Incident Report -> Result: 201 (Category: engine, Voice Note Saved)
-[Test 6] Recording Police / RTO Challan Report -> Result: 201 (GJ01-2024-CH-9182, Penalty: 2000, Option: cash_spot)
-[ALL TESTS PASSED SUCCESSFULLY!]
 ```
 
 ### Running Comprehensive Production Verification Suite
@@ -297,9 +275,9 @@ ALL COMPREHENSIVE PRODUCTION VERIFICATION SUITES PASSED (9/9)
 
 ## 8. Automatic Accident Detection & Zero-Touch Emergency Dispatch
 
-FleetRoute includes a production-grade accident detection, zero-touch emergency escalation, and hospital triage engine built across seven architectural layers:
+FleetRoute includes an emergency workflow baseline across the following architectural layers. Native background-service and external-provider rollout still require real-device and provider acceptance before operational use:
 
-1. **Native Android Driver Application / Capacitor Wrapper**: Persistent foreground safety service with `FOREGROUND_SERVICE_LOCATION`, `POST_NOTIFICATIONS`, `BODY_SENSORS`, and `WAKE_LOCK`. Continuous sensor monitoring survives screen lock and process restarts.
+1. **Android Driver Application / Capacitor Wrapper**: Android permissions and the Capacitor wrapper exist. A custom foreground safety service that is proven across screen lock and process restart remains a release requirement.
 2. **Multi-Sensor Fusion Engine**: Evaluates high-frequency accelerometer vector force (G-force), rapid GPS speed reduction (deceleration > 25 km/h drop), abnormal gyroscope rotation, and post-impact zero-motion stillness.
 3. **Zero-Touch SOS Countdown**:
    - Severe crash detection triggers a high-urgency full-screen countdown (20 seconds default).
@@ -309,7 +287,7 @@ FleetRoute includes a production-grade accident detection, zero-touch emergency 
    - **Auto-Expiry**: If the driver is unconscious or incapacitated and cannot touch the phone before the countdown reaches zero, the system automatically registers the emergency and escalates without requiring any click or confirmation.
 4. **Emergency Escalation Engine**:
    - Immediately notifies control-room operators via Web Audio and real-time SSE stream.
-   - Delivers multi-channel alerts to primary and secondary emergency contacts (SMS / Automated Voice Call).
+   - Broadcasts verified in-app control-room alerts. SMS, voice, ambulance, and hospital channels fail closed as `PROVIDER_ADAPTER_UNAVAILABLE` until real adapters and delivery receipts are implemented.
    - Queries proximity-ranked nearby ambulance units and trauma-capable hospitals.
    - Automatically escalates unacknowledged emergencies to senior operations supervisors after 30 seconds.
 5. **Emergency Operations Command Console (`/emergency-ops`)**:
@@ -318,9 +296,9 @@ FleetRoute includes a production-grade accident detection, zero-touch emergency 
    - Proximity-ranked ambulance and hospital selector with direct dispatch actions.
    - Immutable audit timeline tracking every lifecycle transition (`sos_created` -> `acknowledged` -> `ambulance_assigned` -> `ambulance_en_route` -> `resolved`).
 6. **Dedicated Vehicle IoT Hardware Ingestion (`POST /api/v1/iot/crash-events`)**:
-   - Secure ingestion contract for in-vehicle OBD-II/telematics hardware with monotonic sequence numbers, cryptographic tokens, and airbag deployment sensors.
+   - Fail-closed ingestion contract requiring a provisioned 32+ character secret, exact bearer token, timestamp freshness, monotonic operation identity, and HMAC-SHA256 event signature.
 7. **Offline Queue & Idempotency**:
-   - Unsent emergency actions are stored with unique idempotency keys in local storage and retried automatically with exponential backoff on reconnection, preventing duplicate incidents.
+   - Retry-safe emergency detection uses account-scoped local queues and stable idempotency keys. Failed validation remains visible instead of being reported as saved.
 
 ---
 
@@ -349,50 +327,23 @@ FleetRoute includes a production-grade accident detection, zero-touch emergency 
 
 ## 10. Automated Test Results
 
-Run all test suites across the platform:
+Run the isolated logic, API/workflow, security-boundary, emergency, cleanup, and production-build checks:
 
 ```bash
-# 1. Automatic Accident Detection & Zero-Touch SOS Integration Tests
-node server/tests/emergency.test.js
-
-# 2. REST API Endpoints & Proofs Verification
-node server/scripts/verifyEndpoints.js
-
-# 3. Core Cargo & Operational Timeline Logic Tests
-node server/tests/logic.test.js
+npm run test:all
 ```
 
-### Actual Test Execution Output:
-```text
-================================================================
-STARTING FLEETROUTE AUTOMATIC ACCIDENT & ZERO-TOUCH SOS TESTS
-================================================================
-[PASS] Test 1: Rejected crash event with missing coordinates.
-[PASS] Test 2: Multi-sensor zero-touch emergency created (INC-1791893688037-843).
-[PASS] Test 3: Idempotency enforced. Duplicate crash event prevented.
-[PASS] Test 4: Driver cancellation creates false-positive safety record and stops alarm.
-[PASS] Test 5: Control-room operator acknowledged emergency incident.
-[PASS] Test 6: Responders ranked by proximity (3 ambulances, 3 hospitals).
-[PASS] Test 7: Ambulance AMB-UNIT-101 dispatched with destination hospital HOSP-HYD-01.
-[PASS] Test 8: Ambulance concurrency conflict prevented.
-[PASS] Test 9: Foreground safety service heartbeat and health monitoring verified.
-[PASS] Test 10: Dedicated IoT hardware crash ingestion verified (INC-IOT-1791893688093-621).
-[PASS] Test 11: Immutable audit timeline verified (3 audited transitions: sos_created -> acknowledged -> ambulance_assigned).
-[PASS] Test 12: Emergency incident successfully resolved with freed ambulance unit.
-================================================================
-ALL AUTOMATIC ACCIDENT & EMERGENCY TESTS PASSED 100%!
-================================================================
-```
+The integration suite starts an isolated in-memory MongoDB instance and does not depend on demo credentials, a pre-running API, or production data.
 
 ---
 
 ## 11. Real-World Telematics & Integration Boundaries
 
 1. **Browser PWA Background Tracking Constraints**:
-   Standard web browsers restrict or terminate geolocation sampling when a browser tab is placed in the background or the mobile device screen locks. Reliable background crash detection is executed by the Native Android safety service with `FOREGROUND_SERVICE` and `WAKE_LOCK`.
+   Standard web browsers restrict or terminate geolocation sampling when a browser tab is backgrounded or the screen locks. Native foreground-service implementation and real-device acceptance remain mandatory before claiming reliable background crash detection.
 
 2. **Emergency Calling (112 / 911) Compliance**:
-   Standard mobile applications cannot silently dial 112 without operating-system emergency-call confirmation. FleetRoute compliant escalation delivers automated data incidents to backend dispatch, alerts verified contacts, dispatches partner ambulance APIs, and opens the system dialer with 112 when driver confirmation is required.
+   Standard mobile applications cannot silently dial 112 without operating-system emergency-call confirmation. FleetRoute currently records incidents and alerts the authenticated control room; telecom, partner ambulance, hospital, and government emergency delivery require separately implemented and verified provider adapters.
 
 3. **Independently Powered Vehicle IoT Device**:
    If the mobile device is completely destroyed, powered off, or without cellular reception, a phone-only solution cannot guarantee delivery. FleetRoute supports an optional independently powered in-vehicle IoT/OBD-II hardware device with eSIM and dedicated battery (`POST /api/v1/iot/crash-events`).
