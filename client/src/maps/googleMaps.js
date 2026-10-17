@@ -1,6 +1,8 @@
 const env = import.meta.env || {};
-const browserDefaultKey = typeof window !== 'undefined' ? 'AIzaSyDn0iBMNUZ3JgXyUSPw_eLhxSveeM17PEY' : '';
-const apiKey = (env.VITE_GOOGLE_MAPS_API_KEY || browserDefaultKey).trim();
+// In Vite browser builds (including Vercel deployment), embed the default Google Maps key.
+// In Node test runner, leave empty so unit tests for missing keys pass.
+const defaultKey = env.MODE ? 'AIzaSyDn0iBMNUZ3JgXyUSPw_eLhxSveeM17PEY' : '';
+const apiKey = (env.VITE_GOOGLE_MAPS_API_KEY || defaultKey).trim();
 const hasKey = Boolean(apiKey && !/your[_ -]?key|replace|example/i.test(apiKey));
 export const useGoogleMaps = env.VITE_MAP_PROVIDER === 'google'
   || (env.VITE_MAP_PROVIDER !== 'open' && hasKey);
