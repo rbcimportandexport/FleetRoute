@@ -3,7 +3,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import './routePlanner.css';
 
-const GEOCODING_URL = import.meta.env.VITE_GEOCODING_URL || 'https://nominatim.openstreetmap.org';
+const AUTOCOMPLETE_URL = import.meta.env.VITE_AUTOCOMPLETE_URL || 'https://photon.komoot.io';
 const ROUTING_URL = import.meta.env.VITE_ROUTING_URL || 'https://router.project-osrm.org';
 
 function MapIcon({ name, size = 18 }) {
@@ -52,6 +52,27 @@ function instructionFor(step) {
   return `Turn${modifier}${road}`;
 }
 
+function photonResult(feature, index) {
+  const properties = feature.properties || {};
+  const [lng, lat] = feature.geometry.coordinates;
+  const primary = properties.name || properties.street || properties.city || properties.county || properties.country || 'Selected location';
+  const parts = [
+    properties.housenumber && properties.street ? `${properties.housenumber} ${properties.street}` : properties.street,
+    properties.district,
+    properties.city,
+    properties.county,
+    properties.state,
+    properties.postcode,
+    properties.country,
+  ].filter(Boolean).filter((part, partIndex, values) => part !== primary && values.indexOf(part) === partIndex);
+  return {
+    id: `${properties.osm_type || 'place'}-${properties.osm_id || index}`,
+    label: [primary, ...parts].join(', '),
+    type: properties.type || properties.osm_value || 'place',
+    point: { lat: Number(lat), lng: Number(lng) },
+  };
+}
+
 function LocationInput({ type, label, value, point, onChange, onSearch, onLocate, busy }) {
   return (
     <div className="location-field">
@@ -93,7 +114,8 @@ export default function RoutePlanner() {
   const previewFrame = useRef(null);
   const previewProgress = useRef(0);
   const lastMapFollow = useRef(0);
-  const lastSearchAt = useRef(0);
+  const suggestionTimer = useRef(null);
+  const suggestionRequest = useRef(null);
   const [origin, setOrigin] = useState({ query: '', point: null });
   const [destination, setDestination] = useState({ query: '', point: null });
   const [results, setResults] = useState([]);
@@ -130,6 +152,8 @@ export default function RoutePlanner() {
     window.setTimeout(() => map.invalidateSize(), 100);
     return () => {
       window.cancelAnimationFrame(previewFrame.current);
+      window.clearTimeout(suggestionTimer.current);
+      suggestionRequest.current?.abort();
       map.remove();
       mapInstance.current = null;
     };
@@ -218,50 +242,74 @@ export default function RoutePlanner() {
     return () => window.cancelAnimationFrame(previewFrame.current);
   }, [route, previewRunning]);
 
-  const updateLocation = (type, query) => {
-    const setter = type === 'origin' ? setOrigin : setDestination;
-    setter({ query, point: null });
-    setRoute(null);
-    setResults([]);
-    setError('');
-  };
-
-  const searchLocation = async (type) => {
-    const location = type === 'origin' ? origin : destination;
-    if (location.query.trim().length < 2) return;
+  const loadSuggestions = async (type, query) => {
+    const normalizedQuery = query.trim();
+    if (normalizedQuery.length < 3) return;
+    suggestionRequest.current?.abort();
+    const controller = new AbortController();
+    suggestionRequest.current = controller;
     setSearching(true);
     setError('');
     setActiveField(type);
     try {
-      const elapsed = Date.now() - lastSearchAt.current;
-      if (elapsed < 1100) await new Promise((resolve) => window.setTimeout(resolve, 1100 - elapsed));
-      lastSearchAt.current = Date.now();
-      const params = new URLSearchParams({ format: 'jsonv2', q: location.query.trim(), limit: '5', addressdetails: '1', 'accept-language': 'en' });
-      const response = await fetch(`${GEOCODING_URL}/search?${params}`);
+      const params = new URLSearchParams({ q: normalizedQuery, limit: '5', lang: 'en' });
+      const center = mapInstance.current?.getCenter();
+      if (center) {
+        params.set('lat', String(center.lat));
+        params.set('lon', String(center.lng));
+        params.set('zoom', String(mapInstance.current.getZoom()));
+        params.set('location_bias_scale', '0.35');
+      }
+      const response = await fetch(`${AUTOCOMPLETE_URL}/api/?${params}`, { signal: controller.signal });
       if (!response.ok) throw new Error('Location search is unavailable.');
       const data = await response.json();
-      setResults(data.map((item) => ({
-        id: item.place_id,
-        label: item.display_name,
-        type: item.type,
-        point: { lat: Number(item.lat), lng: Number(item.lon) },
-      })));
-      if (!data.length) setError('No matching location found. Try a more specific address.');
+      const nextResults = (data.features || []).map(photonResult);
+      setResults(nextResults);
+      if (!nextResults.length) setError('No matching location found. Try a more specific address.');
     } catch (searchError) {
+      if (searchError.name === 'AbortError') return;
       setResults([]);
       setError(searchError.message || 'Unable to search for that location.');
     } finally {
-      setSearching(false);
+      if (suggestionRequest.current === controller) setSearching(false);
     }
   };
 
+  const updateLocation = (type, query) => {
+    const setter = type === 'origin' ? setOrigin : setDestination;
+    setter({ query, point: null });
+    setRoute(null);
+    setPreviewRunning(false);
+    previewProgress.current = 0;
+    setResults([]);
+    setActiveField(type);
+    setError('');
+    window.clearTimeout(suggestionTimer.current);
+    suggestionRequest.current?.abort();
+    if (query.trim().length < 3) {
+      setSearching(false);
+      return;
+    }
+    setSearching(true);
+    suggestionTimer.current = window.setTimeout(() => loadSuggestions(type, query), 500);
+  };
+
+  const searchLocation = (type) => {
+    const location = type === 'origin' ? origin : destination;
+    window.clearTimeout(suggestionTimer.current);
+    loadSuggestions(type, location.query);
+  };
+
   const chooseResult = (result) => {
-    const setter = activeField === 'origin' ? setOrigin : setDestination;
+    const selectingOrigin = activeField === 'origin';
+    const setter = selectingOrigin ? setOrigin : setDestination;
     setter({ query: result.label, point: result.point });
     setResults([]);
     setActiveField(null);
     setRoute(null);
     setError('');
+    if (selectingOrigin && destination.point) calculateRoute(result.point, destination.point);
+    if (!selectingOrigin && origin.point) calculateRoute(origin.point, result.point);
   };
 
   const useCurrentLocation = () => {
@@ -416,10 +464,10 @@ export default function RoutePlanner() {
           <LocationInput type="destination" label="To" value={destination.query} point={destination.point} onChange={(value) => updateLocation('destination', value)} onSearch={() => searchLocation('destination')} busy={searching} />
         </div>
 
-        {searching && activeField && <div className="search-state"><span className="route-loader" /> Searching real locations...</div>}
+        {searching && activeField && <div className="search-state"><span className="route-loader" /> Finding location suggestions...</div>}
         {results.length > 0 && (
           <div className="place-results">
-            <p>Select a location</p>
+            <p>Location suggestions</p>
             {results.map((result) => (
               <button type="button" key={result.id} onClick={() => chooseResult(result)}>
                 <span className="result-pin" />
@@ -466,7 +514,7 @@ export default function RoutePlanner() {
           </div>
         )}
 
-        <p className="routing-credit">Search data © OpenStreetMap contributors · Routing by OSRM</p>
+        <p className="routing-credit">Suggestions by Photon · Data © OpenStreetMap contributors · Routing by OSRM</p>
       </aside>
 
       <div className="map-stage">
