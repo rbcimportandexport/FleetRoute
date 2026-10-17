@@ -160,11 +160,27 @@ function photonResult(feature, index) {
 const LOCAL_KNOWN_PLACES = [
   {
     id: 'local-jolva',
-    label: 'Jolva, Surat, Gujarat (Palsana Taluka)',
-    primary: 'Jolva',
+    label: 'Jolva, Palsana Taluka, Surat, Gujarat (Jolva GIDC)',
+    primary: 'Jolva (Palsana)',
     showOnMap: true,
-    keywords: ['jolva', 'jolwa', 'jolvas', 'gidc jolva', 'chalthan jolva'],
+    keywords: ['jolva', 'jolwa', 'jolvas', 'gidc jolva', 'chalthan jolva', 'jolva gam', 'jolva palsana'],
     point: { lat: 21.1610, lng: 73.0070 },
+  },
+  {
+    id: 'local-rbc',
+    label: 'RBC Import & Export / RBC Salon Furniture (Haldharu-Mota Road, Surat)',
+    primary: 'RBC Import & Export (Head Office)',
+    showOnMap: true,
+    keywords: ['rbc', 'rbc import', 'rbc salon', 'ramdev beauty', 'rbc warehouse'],
+    point: { lat: 21.1732, lng: 72.9618 },
+  },
+  {
+    id: 'local-umbhel',
+    label: 'Umbhel, Kamrej Taluka, Surat, Gujarat',
+    primary: 'Umbhel (Kamrej)',
+    showOnMap: false,
+    keywords: ['umbhel', 'umbel', 'umbhel kamrej', 'umbhel garden'],
+    point: { lat: 21.1896, lng: 72.9682 },
   },
   {
     id: 'local-kadodara',
@@ -510,13 +526,14 @@ export default function RoutePlanner({
       pane: 'hybridRoads',
       opacity: 0.95,
     });
-    const hybridReference = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+    const hybridReference = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', {
+      subdomains: 'abcd',
       maxNativeZoom: 19,
       maxZoom: 22,
       pane: 'hybridLabels',
       opacity: 1,
       className: 'esri-hybrid-labels',
-      attribution: 'Labels &copy; Esri, HERE, Garmin',
+      attribution: 'Labels &copy; OpenStreetMap contributors &copy; CARTO',
     });
     streets.addTo(map);
     baseLayers.current = { streets, satellite, hybridTransportation, hybridReference };

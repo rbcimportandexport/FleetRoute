@@ -1,5 +1,6 @@
 const env = import.meta.env || {};
-const apiKey = (env.VITE_GOOGLE_MAPS_API_KEY || '').trim();
+const browserDefaultKey = typeof window !== 'undefined' ? 'AIzaSyDn0iBMNUZ3JgXyUSPw_eLhxSveeM17PEY' : '';
+const apiKey = (env.VITE_GOOGLE_MAPS_API_KEY || browserDefaultKey).trim();
 const hasKey = Boolean(apiKey && !/your[_ -]?key|replace|example/i.test(apiKey));
 export const useGoogleMaps = env.VITE_MAP_PROVIDER === 'google'
   || (env.VITE_MAP_PROVIDER !== 'open' && hasKey);
