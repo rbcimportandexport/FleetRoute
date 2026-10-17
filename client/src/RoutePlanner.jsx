@@ -18,6 +18,10 @@ function MapIcon({ name, size = 18 }) {
     chevron: <path d="m9 18 6-6-6-6"/>,
     car: <><path d="m5 11 2-5h10l2 5M4 11h16v7H4z"/><circle cx="7" cy="18" r="1.5"/><circle cx="17" cy="18" r="1.5"/></>,
     layers: <><path d="m12 3 9 5-9 5-9-5z"/><path d="m3 12 9 5 9-5M3 16l9 5 9-5"/></>,
+    pin: <><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></>,
+    play: <path d="m8 5 11 7-11 7z"/>,
+    pause: <><path d="M9 5v14M15 5v14"/></>,
+    replay: <><path d="M4 12a8 8 0 1 0 2.3-5.7L4 8.6M4 4v4.6h4.6"/></>,
   };
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
 }
@@ -85,6 +89,10 @@ export default function RoutePlanner() {
   const mapInstance = useRef(null);
   const routeLayers = useRef(null);
   const baseLayers = useRef(null);
+  const movingMarker = useRef(null);
+  const previewFrame = useRef(null);
+  const previewProgress = useRef(0);
+  const lastMapFollow = useRef(0);
   const lastSearchAt = useRef(0);
   const [origin, setOrigin] = useState({ query: '', point: null });
   const [destination, setDestination] = useState({ query: '', point: null });
@@ -96,6 +104,8 @@ export default function RoutePlanner() {
   const [error, setError] = useState('');
   const [directionsOpen, setDirectionsOpen] = useState(false);
   const [mapStyle, setMapStyle] = useState('map');
+  const [pinMode, setPinMode] = useState(false);
+  const [previewRunning, setPreviewRunning] = useState(false);
 
   useEffect(() => {
     if (!mapElement.current || mapInstance.current) return undefined;
@@ -119,6 +129,7 @@ export default function RoutePlanner() {
     mapInstance.current = map;
     window.setTimeout(() => map.invalidateSize(), 100);
     return () => {
+      window.cancelAnimationFrame(previewFrame.current);
       map.remove();
       mapInstance.current = null;
     };
@@ -142,6 +153,7 @@ export default function RoutePlanner() {
     const layers = routeLayers.current;
     if (!map || !layers) return;
     layers.clearLayers();
+    movingMarker.current = null;
 
     const marker = (point, letter, className) => L.marker([point.lat, point.lng], {
       icon: L.divIcon({
@@ -159,14 +171,52 @@ export default function RoutePlanner() {
       const points = route.geometry.coordinates.map(([lng, lat]) => [lat, lng]);
       L.polyline(points, { color: '#ffffff', weight: 9, opacity: .92 }).addTo(layers);
       const line = L.polyline(points, { color: '#1769e0', weight: 5, opacity: 1 }).addTo(layers);
+      movingMarker.current = L.marker(points[0], {
+        zIndexOffset: 1000,
+        icon: L.divIcon({
+          className: 'moving-vehicle-wrap',
+          html: '<span class="moving-vehicle"><svg viewBox="0 0 24 24"><path d="m5 11 2-5h10l2 5M4 11h16v7H4z"/><circle cx="7" cy="18" r="1.5"/><circle cx="17" cy="18" r="1.5"/></svg></span>',
+          iconSize: [42, 42],
+          iconAnchor: [21, 21],
+        }),
+      }).addTo(layers);
       map.fitBounds(line.getBounds(), { padding: [55, 55], maxZoom: 15 });
     } else if (origin.point && destination.point) {
       map.fitBounds([[origin.point.lat, origin.point.lng], [destination.point.lat, destination.point.lng]], { padding: [55, 55], maxZoom: 14 });
-    } else if (origin.point || destination.point) {
+    } else if ((origin.point || destination.point) && !pinMode) {
       const point = origin.point || destination.point;
       map.flyTo([point.lat, point.lng], 13);
     }
-  }, [origin.point, destination.point, route]);
+  }, [origin.point, destination.point, route, pinMode]);
+
+  useEffect(() => {
+    if (!route?.geometry?.coordinates || !previewRunning || !movingMarker.current || !mapInstance.current) return undefined;
+    const points = route.geometry.coordinates.map(([lng, lat]) => [lat, lng]);
+    const animationDuration = Math.min(60000, Math.max(18000, route.duration * 24));
+    const startedAt = performance.now() - (previewProgress.current * animationDuration);
+    lastMapFollow.current = 0;
+    mapInstance.current.flyTo(points[Math.floor(previewProgress.current * (points.length - 1))], 16, { duration: .8 });
+
+    const animate = (now) => {
+      const progress = Math.min((now - startedAt) / animationDuration, 1);
+      previewProgress.current = progress;
+      const index = Math.min(Math.floor(progress * (points.length - 1)), points.length - 1);
+      const position = points[index];
+      movingMarker.current?.setLatLng(position);
+      if (now - lastMapFollow.current > 500) {
+        mapInstance.current?.panTo(position, { animate: true, duration: .45 });
+        lastMapFollow.current = now;
+      }
+      if (progress < 1) {
+        previewFrame.current = window.requestAnimationFrame(animate);
+      } else {
+        setPreviewRunning(false);
+      }
+    };
+
+    previewFrame.current = window.requestAnimationFrame(animate);
+    return () => window.cancelAnimationFrame(previewFrame.current);
+  }, [route, previewRunning]);
 
   const updateLocation = (type, query) => {
     const setter = type === 'origin' ? setOrigin : setDestination;
@@ -243,21 +293,25 @@ export default function RoutePlanner() {
     setError('');
   };
 
-  const calculateRoute = async () => {
-    if (!origin.point || !destination.point) return;
+  const calculateRoute = async (startPoint = origin.point, endPoint = destination.point) => {
+    if (!startPoint || !endPoint) return;
     setRouting(true);
+    setPreviewRunning(false);
+    previewProgress.current = 0;
     setError('');
     setDirectionsOpen(false);
     try {
-      const coordinates = `${origin.point.lng},${origin.point.lat};${destination.point.lng},${destination.point.lat}`;
+      const coordinates = `${startPoint.lng},${startPoint.lat};${endPoint.lng},${endPoint.lat}`;
       const params = new URLSearchParams({ overview: 'full', geometries: 'geojson', steps: 'true', alternatives: 'false' });
       const response = await fetch(`${ROUTING_URL}/route/v1/driving/${coordinates}?${params}`);
       if (!response.ok) throw new Error('Routing service is unavailable.');
       const data = await response.json();
       if (data.code !== 'Ok' || !data.routes?.length) throw new Error('No drivable route was found between these locations.');
       setRoute(data.routes[0]);
+      setPreviewRunning(true);
     } catch (routeError) {
       setRoute(null);
+      setPreviewRunning(false);
       setError(routeError.message || 'Unable to calculate this route.');
     } finally {
       setRouting(false);
@@ -265,6 +319,10 @@ export default function RoutePlanner() {
   };
 
   const clearRoute = () => {
+    window.cancelAnimationFrame(previewFrame.current);
+    previewProgress.current = 0;
+    setPreviewRunning(false);
+    setPinMode(false);
     setOrigin({ query: '', point: null });
     setDestination({ query: '', point: null });
     setRoute(null);
@@ -272,6 +330,72 @@ export default function RoutePlanner() {
     setError('');
     mapInstance.current?.setView([22.9734, 78.6569], 5);
   };
+
+  const beginPinning = () => {
+    window.cancelAnimationFrame(previewFrame.current);
+    previewProgress.current = 0;
+    setPreviewRunning(false);
+    setResults([]);
+    setError('');
+    setPinMode(true);
+    if (origin.point && destination.point) {
+      setOrigin({ query: '', point: null });
+      setDestination({ query: '', point: null });
+      setRoute(null);
+    }
+  };
+
+  const togglePreview = () => {
+    if (!route) return;
+    if (previewProgress.current >= .999) {
+      previewProgress.current = 0;
+      const [lng, lat] = route.geometry.coordinates[0];
+      movingMarker.current?.setLatLng([lat, lng]);
+    }
+    setPreviewRunning((running) => !running);
+  };
+
+  const replayPreview = () => {
+    if (!route) return;
+    window.cancelAnimationFrame(previewFrame.current);
+    previewProgress.current = 0;
+    const [lng, lat] = route.geometry.coordinates[0];
+    movingMarker.current?.setLatLng([lat, lng]);
+    setPreviewRunning(false);
+    window.requestAnimationFrame(() => setPreviewRunning(true));
+  };
+
+  useEffect(() => {
+    const map = mapInstance.current;
+    if (!map || !pinMode) return undefined;
+    const container = map.getContainer();
+    container.classList.add('pin-mode');
+
+    const handleMapClick = ({ latlng }) => {
+      const point = { lat: Number(latlng.lat.toFixed(6)), lng: Number(latlng.lng.toFixed(6)) };
+      const label = `Pinned point (${point.lat.toFixed(5)}, ${point.lng.toFixed(5)})`;
+      setResults([]);
+      setError('');
+      setRoute(null);
+      setPreviewRunning(false);
+      previewProgress.current = 0;
+
+      if (!origin.point) {
+        setOrigin({ query: label, point });
+        return;
+      }
+
+      setDestination({ query: label, point });
+      setPinMode(false);
+      calculateRoute(origin.point, point);
+    };
+
+    map.on('click', handleMapClick);
+    return () => {
+      container.classList.remove('pin-mode');
+      map.off('click', handleMapClick);
+    };
+  }, [pinMode, origin.point]);
 
   const steps = route?.legs?.flatMap((leg) => leg.steps || []) || [];
 
@@ -308,7 +432,7 @@ export default function RoutePlanner() {
 
         {error && <div className="route-error">{error}</div>}
 
-        <button className="find-route-button" type="button" disabled={!origin.point || !destination.point || routing} onClick={calculateRoute}>
+        <button className="find-route-button" type="button" disabled={!origin.point || !destination.point || routing} onClick={() => calculateRoute()}>
           {routing ? <span className="route-loader light" /> : <MapIcon name="route" size={18} />}
           {routing ? 'Calculating route...' : 'Show route'}
         </button>
@@ -352,8 +476,20 @@ export default function RoutePlanner() {
           <button type="button" className={mapStyle === 'map' ? 'active' : ''} aria-pressed={mapStyle === 'map'} onClick={() => setMapStyle('map')}>Map</button>
           <button type="button" className={mapStyle === 'satellite' ? 'active' : ''} aria-pressed={mapStyle === 'satellite'} onClick={() => setMapStyle('satellite')}>Satellite</button>
         </div>
+        <button className={`pin-map-button${pinMode ? ' active' : ''}`} type="button" aria-pressed={pinMode} onClick={beginPinning}>
+          <MapIcon name="pin" size={16} />
+          {pinMode ? (origin.point ? 'Pin destination' : 'Pin starting point') : 'Pin locations'}
+        </button>
         <div className="map-live-badge"><span /> Live map</div>
-        {!route && <div className="map-hint"><MapIcon name="route" /><span>Select two locations to draw a route</span></div>}
+        {!route && <div className={`map-hint${pinMode ? ' pinning' : ''}`}><MapIcon name={pinMode ? 'pin' : 'route'} /><span>{pinMode ? (origin.point ? 'Click the map to pin destination B' : 'Click the map to pin starting point A') : 'Search locations or pin two points on the map'}</span></div>}
+        {route && (
+          <div className="route-playback">
+            <span className={previewRunning ? 'running' : ''} />
+            <div><strong>{previewRunning ? 'Following route' : 'Route preview paused'}</strong><small>Animated journey preview</small></div>
+            <button type="button" onClick={togglePreview} aria-label={previewRunning ? 'Pause route preview' : 'Resume route preview'} title={previewRunning ? 'Pause' : 'Resume'}><MapIcon name={previewRunning ? 'pause' : 'play'} size={16} /></button>
+            <button type="button" onClick={replayPreview} aria-label="Replay route preview" title="Replay"><MapIcon name="replay" size={16} /></button>
+          </div>
+        )}
       </div>
     </section>
   );
