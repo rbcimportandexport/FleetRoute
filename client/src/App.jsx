@@ -1,5 +1,17 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import RoutePlanner from './RoutePlanner';
+import NotificationCenter, { NotificationToasts } from './components/NotificationCenter';
+import AlertsPage from './components/AlertsPage';
+import DriversPage from './components/DriversPage';
+import TripsPage from './components/TripsPage';
+import { INITIAL_DRIVERS } from './utils/fleetData';
+import {
+  INITIAL_NOTIFICATIONS,
+  FLEET_NOTIFICATION_EVENT,
+  playNotificationChime,
+  sendBrowserNotification,
+  dispatchFleetNotification,
+} from './utils/notifications';
 
 const modules = [
   { id: 'overview', label: 'Overview', icon: 'grid', group: 'Workspace' },
@@ -62,12 +74,17 @@ function EmptyPanel({ compact = false, title = 'No information to display', text
   );
 }
 
-function Overview() {
+function Overview({
+  unreadAlertsCount = 0,
+  criticalAlertsCount = 0,
+  totalDriversCount = 6,
+  activeTripsCount = 4,
+}) {
   const summaries = [
-    ['Fleet', 'Vehicles'],
-    ['Drivers', 'Team members'],
-    ['Trips', 'Active journeys'],
-    ['Alerts', 'Open notifications'],
+    ['Fleet', 'Vehicles registered', `${totalDriversCount}`, 'Commercial fleet active'],
+    ['Drivers', 'Active team members', `${totalDriversCount}`, `${totalDriversCount - 1} on duty`],
+    ['Trips', 'Active transit runs', `${activeTripsCount}`, `${activeTripsCount} on the road`],
+    ['Alerts', 'Open notifications', unreadAlertsCount > 0 ? `${unreadAlertsCount}` : '0', unreadAlertsCount > 0 ? `${criticalAlertsCount} critical` : 'All clear'],
   ];
 
   return (
@@ -82,12 +99,15 @@ function Overview() {
       </div>
 
       <section className="summary-grid" aria-label="Workspace summaries">
-        {summaries.map(([label, description]) => (
+        {summaries.map(([label, description, val, sub]) => (
           <article className="summary-card" key={label}>
-            <div className="summary-top"><span>{label}</span><span className="status-dot" /></div>
-            <strong>—</strong>
+            <div className="summary-top">
+              <span>{label}</span>
+              <span className={`status-dot${label === 'Alerts' && unreadAlertsCount > 0 ? ' critical-dot' : ''}`} />
+            </div>
+            <strong>{val}</strong>
             <p>{description}</p>
-            <span className="not-connected">Not connected</span>
+            <span className={`not-connected${label === 'Alerts' && unreadAlertsCount > 0 ? ' active-alert-tag' : ''}`}>{sub}</span>
           </article>
         ))}
       </section>
@@ -114,13 +134,12 @@ function Overview() {
           </div>
         </article>
       </section>
-
     </>
   );
 }
 
 function ModulePage({ moduleId }) {
-  const [title, subtitle, description] = moduleCopy[moduleId];
+  const [title, subtitle, description] = moduleCopy[moduleId] || [moduleId, 'Module', 'Module content will appear here.'];
   return (
     <>
       <div className="page-heading">
@@ -147,14 +166,176 @@ function ModulePage({ moduleId }) {
 export default function App() {
   const [active, setActive] = useState('overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const current = modules.find((item) => item.id === active);
+  const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
+  const [drivers, setDrivers] = useState(INITIAL_DRIVERS);
+  const [toasts, setToasts] = useState([]);
+  const [preselectedDriverId, setPreselectedDriverId] = useState(null);
+  const current = modules.find((item) => item.id === active) || modules[0];
   const groups = [...new Set(modules.map((item) => item.group))];
+
+  useEffect(() => {
+    const handleFleetNotification = (event) => {
+      const alert = event.detail;
+      if (!alert) return;
+      setNotifications((prev) => [alert, ...prev]);
+      setToasts((prev) => [alert, ...prev.slice(0, 3)]);
+      playNotificationChime();
+      sendBrowserNotification(alert.title, alert.message);
+
+      setTimeout(() => {
+        setToasts((prev) => prev.filter((t) => t.id !== alert.id));
+      }, 5000);
+    };
+
+    window.addEventListener(FLEET_NOTIFICATION_EVENT, handleFleetNotification);
+    return () => window.removeEventListener(FLEET_NOTIFICATION_EVENT, handleFleetNotification);
+  }, []);
 
   const selectModule = (id) => {
     setActive(id);
     setSidebarOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  const markRead = (id) => {
+    setNotifications((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, read: true } : item))
+    );
+  };
+
+  const markAllRead = () => {
+    setNotifications((prev) => prev.map((item) => ({ ...item, read: true })));
+  };
+
+  const clearAll = () => {
+    setNotifications([]);
+  };
+
+  const deleteNotification = (id) => {
+    setNotifications((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const toggleResolve = (id) => {
+    setNotifications((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, resolved: !item.resolved } : item))
+    );
+  };
+
+  const addCustomNotification = (alert) => {
+    setNotifications((prev) => [alert, ...prev]);
+    setToasts((prev) => [alert, ...prev.slice(0, 3)]);
+    playNotificationChime();
+    sendBrowserNotification(alert.title, alert.message);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== alert.id));
+    }, 5000);
+  };
+
+  const dismissToast = (id) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  };
+
+  const handleAddDriver = (newDriver) => {
+    setDrivers((prev) => [newDriver, ...prev]);
+  };
+
+  const handlePlanTripForDriver = (driver) => {
+    setPreselectedDriverId(driver.id);
+    setActive('routes');
+    setSidebarOpen(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleAssignTrip = ({ driverId, origin, destination, cargo, distance, eta, remark }) => {
+    setDrivers((prev) =>
+      prev.map((d) => {
+        if (d.id !== driverId) return d;
+        const prevTrip = d.currentTrip;
+        const cleanRemark = remark ? remark.trim() : '';
+        const newTrip = {
+          id: `TRIP-${Math.floor(1000 + Math.random() * 9000)}`,
+          origin,
+          destination,
+          cargo: cargo || 'Commercial Freight',
+          distance: distance || 'Calculated Route',
+          departure: 'Just now',
+          eta: eta || 'On Schedule',
+          progress: 10,
+          speed: Math.round(d.vehicle.maxSpeed * 0.8),
+          traffic: 'Smooth Flow',
+          status: 'In Transit',
+          remark: cleanRemark,
+        };
+        const updatedLastTrip = prevTrip
+          ? {
+              id: prevTrip.id,
+              origin: prevTrip.origin,
+              destination: prevTrip.destination,
+              distance: prevTrip.distance,
+              duration: 'Completed',
+              completedAt: 'Earlier today',
+              status: 'Delivered',
+              fuelEfficiency: d.lastTrip?.fuelEfficiency || '5.2 km/L',
+              remark: prevTrip.remark || '',
+            }
+          : d.lastTrip;
+
+        const updatedRecent = prevTrip
+          ? [
+              {
+                id: prevTrip.id,
+                route: `${prevTrip.origin.split(',')[0]} to ${prevTrip.destination.split(',')[0]}`,
+                distance: prevTrip.distance,
+                duration: 'Completed',
+                date: 'Earlier today',
+                status: 'Completed',
+              },
+              ...(d.recentTrips || []),
+            ]
+          : d.recentTrips;
+
+        return {
+          ...d,
+          status: 'on_trip',
+          currentTrip: newTrip,
+          lastTrip: updatedLastTrip,
+          recentTrips: updatedRecent,
+        };
+      })
+    );
+  };
+
+  const handleSendDriverAlert = ({ driverId, driverName, vehiclePlate, vehicleModel, title, message, severity, category }) => {
+    setDrivers((prev) =>
+      prev.map((d) => {
+        if (d.id !== driverId) return d;
+        return {
+          ...d,
+          alertHistory: [
+            {
+              id: `da-${Date.now()}`,
+              title,
+              message,
+              severity,
+              time: 'Just now',
+            },
+            ...(d.alertHistory || []),
+          ],
+        };
+      })
+    );
+
+    dispatchFleetNotification({
+      title: `Direct Alert to ${driverName} (${vehiclePlate})`,
+      message: `${title}: ${message}`,
+      severity: severity || 'warning',
+      category: category || 'Speed',
+      vehicleId: vehiclePlate,
+    });
+  };
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
+  const criticalCount = notifications.filter((n) => n.severity === 'critical' && !n.resolved).length;
 
   return (
     <div className="admin-shell">
@@ -169,7 +350,11 @@ export default function App() {
               <p>{group}</p>
               {modules.filter((item) => item.group === group).map((item) => (
                 <button className={active === item.id ? 'active' : ''} type="button" key={item.id} onClick={() => selectModule(item.id)}>
-                  <Icon name={item.icon} /><span>{item.label}</span>
+                  <Icon name={item.icon} />
+                  <span>{item.label}</span>
+                  {item.id === 'alerts' && unreadCount > 0 && (
+                    <span className="sidebar-alert-badge">{unreadCount}</span>
+                  )}
                 </button>
               ))}
             </div>
@@ -191,15 +376,64 @@ export default function App() {
           </div>
           <div className="topbar-actions">
             <label className="global-search"><Icon name="search" size={17}/><input aria-label="Search workspace" placeholder="Search workspace" /></label>
-            <button className="icon-button" type="button" aria-label="Notifications"><Icon name="bell" /></button>
+            <NotificationCenter
+              notifications={notifications}
+              onMarkRead={markRead}
+              onMarkAllRead={markAllRead}
+              onClearAll={clearAll}
+              onDeleteNotification={deleteNotification}
+              onSelectAlertsPage={() => selectModule('alerts')}
+            />
             <button className="profile-button" type="button" aria-label="Workspace profile"><span>FR</span><div><strong>FleetRoute</strong><small>Administrator</small></div></button>
           </div>
         </header>
 
         <main className="content">
-          {active === 'overview' ? <Overview /> : active === 'routes' ? <RoutePlanner /> : <ModulePage moduleId={active} />}
+          {active === 'overview' ? (
+            <Overview
+              unreadAlertsCount={unreadCount}
+              criticalAlertsCount={criticalCount}
+              totalDriversCount={drivers.length}
+              activeTripsCount={drivers.filter((d) => d.status === 'on_trip').length}
+            />
+          ) : active === 'routes' ? (
+            <RoutePlanner
+              drivers={drivers}
+              onAssignTrip={handleAssignTrip}
+              onAddDriver={handleAddDriver}
+              preselectedDriverId={preselectedDriverId}
+            />
+          ) : active === 'drivers' ? (
+            <DriversPage
+              drivers={drivers}
+              onAddDriver={handleAddDriver}
+              onAssignTrip={handleAssignTrip}
+              onSendDriverAlert={handleSendDriverAlert}
+              onPlanTripForDriver={handlePlanTripForDriver}
+            />
+          ) : active === 'trips' ? (
+            <TripsPage
+              drivers={drivers}
+              onAssignTrip={handleAssignTrip}
+              onSendDriverAlert={handleSendDriverAlert}
+              onSelectRoutes={() => selectModule('routes')}
+            />
+          ) : active === 'alerts' ? (
+            <AlertsPage
+              notifications={notifications}
+              onAddNotification={addCustomNotification}
+              onToggleResolve={toggleResolve}
+              onToggleRead={markRead}
+              onDeleteNotification={deleteNotification}
+              onClearAll={clearAll}
+            />
+          ) : (
+            <ModulePage moduleId={active} />
+          )}
         </main>
       </div>
+
+      <NotificationToasts toasts={toasts} onDismissToast={dismissToast} />
     </div>
   );
 }
