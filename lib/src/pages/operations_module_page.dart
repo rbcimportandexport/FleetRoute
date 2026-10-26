@@ -454,7 +454,7 @@ class _RecordCard extends StatelessWidget {
             driver.password.isEmpty ? 'Unset' : 'Active',
           ),
         TruckModel vehicle => (
-            vehicle.name,
+            vehicle.code,
             '${vehicle.code} · ${vehicle.capacity}${vehicle.imei.isNotEmpty ? " · IMEI: ${vehicle.maskedImei}" : ""}',
             vehicle.isMoving
                 ? '${vehicle.currentSpeed.toStringAsFixed(0)} km/h · ${vehicle.isIgnitionOn ? "ACC ON" : "ACC OFF"}'
@@ -569,7 +569,7 @@ class _RecordCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      vehicle.name.isNotEmpty ? vehicle.name : vehicle.code,
+                      vehicle.code,
                       style: const TextStyle(
                         fontWeight: FontWeight.w800,
                         fontSize: 15,
