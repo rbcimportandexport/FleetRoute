@@ -35,11 +35,12 @@ class FirebaseBootstrapService {
       } else {
         await Firebase.initializeApp();
       }
-      // FlutterFire normally uses local persistence on web, but setting it
-      // explicitly prevents browser/session defaults from logging the user
-      // out whenever the page is refreshed or the tab is reopened.
+      // Keep Firebase identity isolated per browser tab. LOCAL persistence is
+      // shared by every tab on the same origin and causes an Admin tab to turn
+      // into the last Driver account after refresh. SESSION survives refresh
+      // while keeping each tab independent.
       if (kIsWeb) {
-        await FirebaseAuth.instance.setPersistence(Persistence.LOCAL);
+        await FirebaseAuth.instance.setPersistence(Persistence.SESSION);
       }
       _initialized = true;
       _initializationError = null;

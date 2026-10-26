@@ -514,8 +514,11 @@ class PlannerController extends ChangeNotifier {
 
       // Firebase Auth server session restoration is used only when this tab
       // does not already own an authenticated identity.
-      final restoredUser =
-          tabUser ?? await FirebaseAuthService.instance.restoreSession();
+      // On web never guess this tab's identity from a shared legacy Firebase
+      // session. A tab without its own snapshot must log in once, which is
+      // safer than opening another tab's Admin/Driver account.
+      final restoredUser = tabUser ??
+          (kIsWeb ? null : await FirebaseAuthService.instance.restoreSession());
       if (restoredUser != null) {
         isLoggedIn = true;
         loggedInEmail = restoredUser.email;
@@ -544,7 +547,8 @@ class PlannerController extends ChangeNotifier {
         final savedRole = await _storage.getString(_authRoleKey) ?? '';
         final savedToken =
             await _secureStorage.read(key: _sessionTokenKey) ?? '';
-        final validLocalSession = savedLoggedIn &&
+        final validLocalSession = !kIsWeb &&
+            savedLoggedIn &&
             AppSecurityService.verifySessionToken(
               email: savedEmail,
               role: savedRole,
@@ -4213,6 +4217,23 @@ class PlannerController extends ChangeNotifier {
 
   Future<void> _saveAuthSession() async {
     try {
+      // Save the current identity in this tab before using shared/plugin
+      // storage. A plugin failure must never prevent per-tab isolation.
+      if (kIsWeb &&
+          isLoggedIn &&
+          loggedInEmail != null &&
+          loggedInRole != null) {
+        final tabToken = AppSecurityService.createSessionToken(
+          email: loggedInEmail!,
+          role: loggedInRole!,
+        );
+        TabSessionStorage.write({
+          'email': loggedInEmail!,
+          'name': loggedInName ?? loggedInEmail!,
+          'role': loggedInRole!,
+          'token': tabToken,
+        });
+      }
       await _storage.setBool(_isLoggedInKey, isLoggedIn);
       if (loggedInEmail != null) {
         await _storage.setString(_authEmailKey, loggedInEmail!);
@@ -4234,21 +4255,6 @@ class PlannerController extends ChangeNotifier {
           key: _sessionTokenKey,
           value: _currentSessionToken,
         );
-      }
-      if (kIsWeb &&
-          isLoggedIn &&
-          loggedInEmail != null &&
-          loggedInRole != null) {
-        final tabToken = AppSecurityService.createSessionToken(
-          email: loggedInEmail!,
-          role: loggedInRole!,
-        );
-        TabSessionStorage.write({
-          'email': loggedInEmail!,
-          'name': loggedInName ?? loggedInEmail!,
-          'role': loggedInRole!,
-          'token': tabToken,
-        });
       }
     } catch (e) {
       debugPrint('Warning: unable to persist auth session to storage: $e');
