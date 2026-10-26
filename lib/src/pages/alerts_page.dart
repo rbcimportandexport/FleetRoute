@@ -34,6 +34,7 @@ class _AlertsPageState extends State<AlertsPage> {
     return widget.controller.alerts.indexed
         .where((entry) {
           final alert = entry.$2;
+          if (alert.category == 'compliance') return false;
           final matchesQuery = query.isEmpty ||
               alert.title.toLowerCase().contains(query) ||
               alert.details.toLowerCase().contains(query) ||
@@ -541,9 +542,11 @@ class _AlertsPageState extends State<AlertsPage> {
   }
 
   Widget _buildModernHeader() {
-    final unreadCount =
-        widget.controller.alerts.where((alert) => !alert.isRead).length;
-    final totalCount = widget.controller.alerts.length;
+    final visibleAlerts = widget.controller.alerts
+        .where((alert) => alert.category != 'compliance')
+        .toList();
+    final unreadCount = visibleAlerts.where((alert) => !alert.isRead).length;
+    final totalCount = visibleAlerts.length;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),

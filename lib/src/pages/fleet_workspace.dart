@@ -11,6 +11,7 @@ import 'attendance_page.dart';
 import 'billing_page.dart';
 import 'dashboard_page.dart';
 import 'driver_portal_page.dart';
+import 'document_gallery_page.dart';
 import 'expenses_page.dart';
 import 'operations_module_page.dart';
 import 'reports_page.dart';
@@ -28,6 +29,8 @@ enum WorkspaceSection {
   billing,
   reports,
   alerts,
+  driverDocuments,
+  vehicleDocuments,
 }
 
 extension WorkspaceSectionView on WorkspaceSection {
@@ -50,6 +53,8 @@ extension WorkspaceSectionView on WorkspaceSection {
         WorkspaceSection.reports =>
           AppLocalizationService.instance.tr('reports'),
         WorkspaceSection.alerts => AppLocalizationService.instance.tr('alerts'),
+        WorkspaceSection.driverDocuments => 'Driver Docs',
+        WorkspaceSection.vehicleDocuments => 'Vehicle Docs',
       };
 
   IconData get icon => switch (this) {
@@ -63,6 +68,8 @@ extension WorkspaceSectionView on WorkspaceSection {
         WorkspaceSection.billing => Icons.payments_outlined,
         WorkspaceSection.reports => Icons.assessment_outlined,
         WorkspaceSection.alerts => Icons.notifications_none_rounded,
+        WorkspaceSection.driverDocuments => Icons.badge_outlined,
+        WorkspaceSection.vehicleDocuments => Icons.folder_copy_outlined,
       };
 }
 
@@ -198,6 +205,14 @@ class _FleetWorkspaceState extends State<FleetWorkspace> {
       WorkspaceSection.billing => BillingPage(controller: controller),
       WorkspaceSection.reports => ReportsPage(controller: controller),
       WorkspaceSection.alerts => AlertsPage(controller: controller),
+      WorkspaceSection.driverDocuments => DocumentGalleryPage(
+          controller: controller,
+          mode: DocumentGalleryMode.driver,
+        ),
+      WorkspaceSection.vehicleDocuments => DocumentGalleryPage(
+          controller: controller,
+          mode: DocumentGalleryMode.vehicle,
+        ),
     };
   }
 
@@ -262,7 +277,8 @@ class _FleetWorkspaceState extends State<FleetWorkspace> {
                                   children: [
                                     const Icon(Icons.notifications_none_rounded,
                                         color: AppColors.iconColor),
-                                    if (controller.alerts.any((a) => !a.isResolved))
+                                    if (controller.alerts.any((a) =>
+                                        !a.isResolved && a.category != 'compliance'))
                                       Positioned(
                                         top: -2,
                                         right: -2,
