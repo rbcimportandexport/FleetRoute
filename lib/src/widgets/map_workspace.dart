@@ -659,7 +659,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
           _googleMapController?.animateCamera(
               gm.CameraUpdate.newLatLngZoom(_googlePoint(point), 16));
         }
-        _showCompleteVehicleDetails(vehicle);
+        _showVehicleIdentity(vehicle);
       },
     );
   }
@@ -1581,7 +1581,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
             height: 52,
             alignment: Alignment.center,
             child: GestureDetector(
-              onTap: () => _showCompleteVehicleDetails(truck),
+              onTap: () => _showVehicleIdentity(truck),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -1730,7 +1730,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
               ? 'Moving · ${truck.currentSpeed} km/h'
               : 'Stationary',
         ),
-        onTap: () => _showCompleteVehicleDetails(truck),
+        onTap: () => _showVehicleIdentity(truck),
       ));
     }
     return markers;
@@ -3324,6 +3324,67 @@ class _MapWorkspaceState extends State<MapWorkspace> {
           ),
         );
       },
+    );
+  }
+
+  void _showVehicleIdentity(TruckModel truck) {
+    final assignedNames = widget.controller.drivers
+        .where((driver) =>
+            driver.assignedVehicle.trim().toUpperCase() ==
+            truck.code.trim().toUpperCase())
+        .map((driver) => driver.name.trim())
+        .where((name) => name.isNotEmpty)
+        .join(' / ');
+    final driverName = assignedNames.isNotEmpty
+        ? assignedNames
+        : (truck.assignedDriver.trim().isNotEmpty
+            ? truck.assignedDriver.trim()
+            : 'Driver not assigned');
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Row(
+            children: [
+              const CircleAvatar(
+                radius: 22,
+                backgroundColor: AppColors.primaryLight,
+                foregroundColor: AppColors.primary,
+                child: Icon(Icons.local_shipping_rounded, size: 24),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(truck.code,
+                        style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.navy)),
+                    const SizedBox(height: 4),
+                    Text(driverName,
+                        style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.slate)),
+                  ],
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close_rounded),
+                onPressed: () => Navigator.pop(sheetContext),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

@@ -1369,7 +1369,56 @@ class _RecordCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (record is TruckModel) {
-      return _buildTruckCard(context, record as TruckModel);
+      final vehicle = record as TruckModel;
+      final assignedNames = controller.drivers
+          .where((driver) =>
+              driver.assignedVehicle.trim().toUpperCase() ==
+              vehicle.code.trim().toUpperCase())
+          .map((driver) => driver.name.trim())
+          .where((name) => name.isNotEmpty)
+          .join(' / ');
+      final driverName = assignedNames.isNotEmpty
+          ? assignedNames
+          : (vehicle.assignedDriver.trim().isNotEmpty
+              ? vehicle.assignedDriver.trim()
+              : 'Driver not assigned');
+      return Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: AppColors.border),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          children: [
+            const CircleAvatar(
+              radius: 20,
+              backgroundColor: AppColors.primaryLight,
+              foregroundColor: AppColors.primary,
+              child: Icon(Icons.local_shipping_rounded, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(vehicle.code,
+                      style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.navy)),
+                  const SizedBox(height: 3),
+                  Text(driverName,
+                      style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.slate)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
     }
     if (record is DriverProfile) {
       return _buildDriverCard(context, record as DriverProfile);

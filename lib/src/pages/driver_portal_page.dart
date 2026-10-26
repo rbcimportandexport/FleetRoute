@@ -206,10 +206,6 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                           driverName, vehicleNumber, driver?.phone ?? ''),
                       const SizedBox(height: 14),
 
-                      // Complete registered vehicle information for this driver.
-                      _buildCompleteVehicleDetails(_activeTruck, vehicleNumber),
-                      const SizedBox(height: 14),
-
                       // 1B. Driver Attendance & Duty Presence (Requirement 1: Start/End Duty, Duplicate Guard, Working Hours)
                       _buildDriverAttendanceCard(
                           driver, driverName, vehicleNumber, activeTrip),
