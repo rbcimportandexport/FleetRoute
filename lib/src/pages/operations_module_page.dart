@@ -10,6 +10,7 @@ import '../widgets/seatbelt_records_dialog.dart';
 import '../widgets/trip_map_dialog.dart';
 import 'alerts_page.dart';
 import 'driver_portal_page.dart';
+import 'fastag_history_page.dart';
 
 enum OperationsModule { drivers, vehicles, trips, alerts }
 
@@ -741,9 +742,10 @@ class _RecordCard extends StatelessWidget {
                       ),
                     ),
                     TextButton.icon(
-                      onPressed: () => showDialog<void>(
-                        context: context,
-                        builder: (_) => _FastagHistoryDialog(vehicle: vehicle),
+                      onPressed: () => FastagHistoryPage.open(
+                        context,
+                        controller: controller,
+                        vehicleCode: vehicle.code,
                       ),
                       icon: const Icon(Icons.history_rounded, size: 14),
                       label: Text(
