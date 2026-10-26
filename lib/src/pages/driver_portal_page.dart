@@ -117,6 +117,159 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
     );
   }
 
+  String _photoDayDateTime(DateTime timestamp) {
+    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final hour = timestamp.hour == 0
+        ? 12
+        : (timestamp.hour > 12 ? timestamp.hour - 12 : timestamp.hour);
+    final minute = timestamp.minute.toString().padLeft(2, '0');
+    final period = timestamp.hour >= 12 ? 'PM' : 'AM';
+    return '${days[timestamp.weekday - 1]}, ${timestamp.day} ${months[timestamp.month - 1]} ${timestamp.year}  •  $hour:$minute $period';
+  }
+
+  void _showCategoryPhotos(
+    BuildContext context, {
+    required String title,
+    required List<SeatbeltRecord> records,
+    required VoidCallback uploadAction,
+  }) {
+    final sortedRecords = [...records]
+      ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: .88,
+          maxChildSize: .96,
+          builder: (context, scrollController) => Column(
+            children: [
+              Container(
+                width: 42,
+                height: 4,
+                margin: const EdgeInsets.only(top: 10, bottom: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFCBD5E1),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 8, 10),
+                child: Row(
+                  children: [
+                    const AppIconBadge(icon: Icons.photo_library_outlined, size: 20, padding: 8),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(title,
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: AppColors.navy)),
+                          Text('${sortedRecords.length} uploaded image${sortedRecords.length == 1 ? '' : 's'}',
+                              style: const TextStyle(fontSize: 10.5, color: AppColors.slate)),
+                        ],
+                      ),
+                    ),
+                    if (!widget.adminPreview)
+                      TextButton.icon(
+                        onPressed: () {
+                          Navigator.pop(sheetContext);
+                          Future<void>.delayed(const Duration(milliseconds: 180), uploadAction);
+                        },
+                        icon: const Icon(Icons.add_a_photo_outlined, size: 17),
+                        label: const Text('Upload'),
+                      ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(sheetContext),
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1, color: Color(0xFFE2E8F0)),
+              Expanded(
+                child: sortedRecords.isEmpty
+                    ? ListView(
+                        controller: scrollController,
+                        children: [
+                          const SizedBox(height: 90),
+                          const Icon(Icons.photo_library_outlined, size: 54, color: Color(0xFF94A3B8)),
+                          const SizedBox(height: 12),
+                          const Center(
+                            child: Text('Abhi koi image upload nahi hui.',
+                                style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.slate)),
+                          ),
+                        ],
+                      )
+                    : ListView.separated(
+                        controller: scrollController,
+                        padding: const EdgeInsets.fromLTRB(14, 14, 14, 30),
+                        itemCount: sortedRecords.length,
+                        separatorBuilder: (_, __) => const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          child: Divider(height: 1, thickness: 1, color: Color(0xFFDDE5EC)),
+                        ),
+                        itemBuilder: (context, index) {
+                          final record = sortedRecords[index];
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(14),
+                                child: Container(
+                                  height: 230,
+                                  color: const Color(0xFFF1F5F9),
+                                  child: _buildThumbnail(record.photoBase64, fit: BoxFit.contain),
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(7),
+                                    decoration: const BoxDecoration(color: Color(0xFFDCFCE7), shape: BoxShape.circle),
+                                    child: const Icon(Icons.schedule_rounded, size: 16, color: AppColors.primary),
+                                  ),
+                                  const SizedBox(width: 9),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(_photoDayDateTime(record.timestamp),
+                                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.navy)),
+                                        const SizedBox(height: 3),
+                                        Text('${record.driverName}  •  ${record.vehicleNumber}',
+                                            style: const TextStyle(fontSize: 10.5, color: AppColors.slate)),
+                                        if (record.location.trim().isNotEmpty) ...[
+                                          const SizedBox(height: 3),
+                                          Text('Location: ${record.location}',
+                                              style: const TextStyle(fontSize: 10.5, color: AppColors.slate)),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                  const Icon(Icons.check_circle_rounded, size: 18, color: AppColors.primary),
+                                ],
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   String _getNextSundayDate() {
     final now = DateTime.now();
     final daysUntilSunday = (DateTime.sunday - now.weekday) % 7;
@@ -3090,8 +3243,17 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
             break;
           }
         }
+        final categoryRecords = records.where((record) {
+          final searchable = record.notes.toLowerCase();
+          return item.keys.any(searchable.contains);
+        }).toList();
         return InkWell(
-          onTap: item.action,
+          onTap: () => _showCategoryPhotos(
+            context,
+            title: item.title,
+            records: categoryRecords,
+            uploadAction: item.action,
+          ),
           borderRadius: BorderRadius.circular(16),
           child: Container(
             padding: const EdgeInsets.all(13),
@@ -3443,14 +3605,14 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
     );
   }
 
-  Widget _buildThumbnail(String photo) {
+  Widget _buildThumbnail(String photo, {BoxFit fit = BoxFit.cover}) {
     try {
       String clean = photo;
       if (clean.contains(',')) clean = clean.split(',').last;
       final bytes = base64Decode(clean.trim());
       return Image.memory(
         bytes,
-        fit: BoxFit.cover,
+        fit: fit,
         errorBuilder: (_, __, ___) =>
             const Icon(Icons.image_outlined, size: 24, color: AppColors.slate),
       );
