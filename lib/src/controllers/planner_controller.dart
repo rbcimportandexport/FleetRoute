@@ -14,6 +14,7 @@ import '../services/firebase_backend_service.dart';
 import '../services/fleet_admin_service.dart';
 import '../services/protrack_gps_service.dart';
 import '../services/safety_notification_service.dart';
+import '../services/tab_session_storage.dart';
 import '../services/whatsapp_otp_service.dart';
 
 enum MapViewStyle { street, satellite, streetlight }
@@ -483,15 +484,48 @@ class PlannerController extends ChangeNotifier {
       final expenseJson = await _storage.getString(_expensesKey);
       final billingJson = await _storage.getString(_billingKey);
       final proofsJson = await _storage.getString(_deliveryProofsKey);
-      // Firebase Auth server session restoration
-      final restoredUser = await FirebaseAuthService.instance.restoreSession();
+      // A browser tab keeps its own signed identity. Firebase/local storage is
+      // shared between tabs, so restoring it first would make an Admin tab
+      // switch to the Driver account (or vice versa) after refresh.
+      final tabSession = kIsWeb ? TabSessionStorage.read() : null;
+      AuthenticatedFleetUser? tabUser;
+      if (tabSession != null) {
+        final email = tabSession['email']?.toString() ?? '';
+        final name = tabSession['name']?.toString() ?? '';
+        final role = tabSession['role']?.toString() ?? '';
+        final token = tabSession['token']?.toString() ?? '';
+        if ((role == 'admin' || role == 'driver') &&
+            AppSecurityService.verifySessionToken(
+              email: email,
+              role: role,
+              token: token,
+              maxAge: const Duration(days: 36500),
+            )) {
+          tabUser = AuthenticatedFleetUser(
+            uid: 'tab_${email.toLowerCase()}',
+            email: email,
+            name: name.isEmpty ? email : name,
+            role: role,
+          );
+        } else {
+          TabSessionStorage.clear();
+        }
+      }
+
+      // Firebase Auth server session restoration is used only when this tab
+      // does not already own an authenticated identity.
+      final restoredUser =
+          tabUser ?? await FirebaseAuthService.instance.restoreSession();
       if (restoredUser != null) {
         isLoggedIn = true;
         loggedInEmail = restoredUser.email;
         loggedInName = restoredUser.name;
         loggedInRole = restoredUser.role;
         currentRole = restoredUser.role;
-        _currentSessionToken = await FirebaseAuthService.instance.idToken();
+        _currentSessionToken = tabUser != null
+            ? tabSession!['token']?.toString()
+            : await FirebaseAuthService.instance.idToken();
+        _isWhatsAppSession = tabUser != null;
         if (restoredUser.role == 'driver') {
           activeDriverEmail = restoredUser.email;
           activeDriverName = restoredUser.name;
@@ -4201,6 +4235,21 @@ class PlannerController extends ChangeNotifier {
           value: _currentSessionToken,
         );
       }
+      if (kIsWeb &&
+          isLoggedIn &&
+          loggedInEmail != null &&
+          loggedInRole != null) {
+        final tabToken = AppSecurityService.createSessionToken(
+          email: loggedInEmail!,
+          role: loggedInRole!,
+        );
+        TabSessionStorage.write({
+          'email': loggedInEmail!,
+          'name': loggedInName ?? loggedInEmail!,
+          'role': loggedInRole!,
+          'token': tabToken,
+        });
+      }
     } catch (e) {
       debugPrint('Warning: unable to persist auth session to storage: $e');
     }
@@ -4208,6 +4257,7 @@ class PlannerController extends ChangeNotifier {
 
   Future<void> _clearAuthSession() async {
     try {
+      if (kIsWeb) TabSessionStorage.clear();
       _currentSessionToken = null;
       _isWhatsAppSession = false;
       activeDriverEmail = null;
