@@ -1,0 +1,106 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function role() {
+      return signedIn() ? request.auth.token.role : null;
+    }
+
+    function isAdmin() {
+      return role() == 'admin' || role() == 'super_admin';
+    }
+
+    function isDriver() {
+      return role() == 'driver';
+    }
+
+    function ownsExisting() {
+      return signedIn() && resource.data.ownerUid == request.auth.uid;
+    }
+
+    function ownsIncoming() {
+      return signedIn() && request.resource.data.ownerUid == request.auth.uid;
+    }
+
+    function ownerUnchanged() {
+      return request.resource.data.ownerUid == resource.data.ownerUid;
+    }
+
+    function validLocation(data) {
+      return data.latitude is number && data.longitude is number &&
+        data.latitude >= -90 && data.latitude <= 90 &&
+        data.longitude >= -180 && data.longitude <= 180;
+    }
+
+    match /seatbelt_records/{recordId} {
+      allow read: if isAdmin() || ownsExisting();
+      allow create: if isAdmin() ||
+        (isDriver() && ownsIncoming() &&
+         request.resource.data.driverId in [request.auth.uid, request.auth.token.email]);
+      allow update: if isAdmin() ||
+        (isDriver() && ownsExisting() && ownsIncoming() && ownerUnchanged() &&
+         request.resource.data.isApproved == resource.data.isApproved);
+      allow delete: if isAdmin();
+    }
+
+    match /drivers/{driverUid} {
+      allow read: if isAdmin() || (signedIn() && request.auth.uid == driverUid);
+      // Driver accounts/profiles are managed only by the Admin SDK function.
+      allow write: if false;
+    }
+
+    match /fleet_telemetry/{vehicleCode} {
+      allow read: if isAdmin() ||
+        (isDriver() && request.auth.token.assignedVehicle == vehicleCode);
+      allow create, update: if validLocation(request.resource.data) &&
+        (isAdmin() ||
+         (isDriver() && request.auth.token.assignedVehicle == vehicleCode && ownsIncoming()));
+      allow delete: if isAdmin();
+    }
+
+    match /attendance_records/{recordId} {
+      allow read: if isAdmin() || ownsExisting();
+      allow create: if isAdmin() || (isDriver() && ownsIncoming());
+      allow update: if isAdmin() ||
+        (isDriver() && ownsExisting() && ownsIncoming() && ownerUnchanged());
+      allow delete: if isAdmin();
+    }
+
+    match /trips/{tripId} {
+      allow read: if isAdmin() || ownsExisting() ||
+        (isDriver() && resource.data.assignedDriver == request.auth.token.email);
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /expenses/{expenseId} {
+      allow read: if isAdmin() || ownsExisting();
+      allow create: if isAdmin() ||
+        (isDriver() && ownsIncoming() && request.resource.data.status == 'pending');
+      allow update: if isAdmin() ||
+        (isDriver() && ownsExisting() && ownsIncoming() && ownerUnchanged() &&
+         resource.data.status == 'pending' && request.resource.data.status == 'pending');
+      allow delete: if isAdmin();
+    }
+
+    match /billing_records/{billingId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /delivery_proofs/{proofId} {
+      allow read: if isAdmin() || ownsExisting();
+      allow create: if isAdmin() ||
+        (isDriver() && ownsIncoming() &&
+         request.resource.data.driverId == request.auth.uid);
+      allow update: if isAdmin() ||
+        (isDriver() && ownsExisting() && ownsIncoming() && ownerUnchanged());
+      allow delete: if isAdmin();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

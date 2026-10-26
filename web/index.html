@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base href="$FLUTTER_BASE_HREF">
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="Transport One fleet route planner">
+  <meta name="theme-color" content="#1769e8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="manifest.json">
+  <title>Transport One</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overscroll-behavior-y: none;
+      overscroll-behavior-x: none;
+      touch-action: manipulation;
+      scroll-behavior: smooth;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+  </style>
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyArJB3w8s8l66nuhGLbLy6LvZi5EgqXscQ"></script>
+</head>
+<body>
+  <script>
+    // Pre-Trip Safety & Driver Verification External Notification Engine
+    window.TransportSafety = {
+      requestPermission: async function() {
+        if ('Notification' in window) {
+          try {
+            return await Notification.requestPermission();
+          } catch(e) {}
+        }
+        return 'denied';
+      },
+      showNotification: function(title, body, isRejected) {
+        if ('Notification' in window) {
+          if (Notification.permission === 'granted') {
+            try {
+              new Notification(title, {
+                body: body,
+                icon: 'favicon.png',
+                tag: 'safety-alert-' + Date.now(),
+                requireInteraction: isRejected ? true : false
+              });
+            } catch (e) {
+              console.warn('Notification error:', e);
+            }
+          } else if (Notification.permission !== 'denied') {
+            Notification.requestPermission().then(function(perm) {
+              if (perm === 'granted') {
+                new Notification(title, {
+                  body: body,
+                  icon: 'favicon.png'
+                });
+              }
+            });
+          }
+        }
+        try {
+          var AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) {
+            var ctx = new AudioCtx();
+            var osc = ctx.createOscillator();
+            var gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            if (isRejected) {
+              osc.type = 'sawtooth';
+              osc.frequency.setValueAtTime(660, ctx.currentTime);
+              osc.frequency.setValueAtTime(440, ctx.currentTime + 0.16);
+              osc.frequency.setValueAtTime(660, ctx.currentTime + 0.32);
+              gain.gain.setValueAtTime(0.3, ctx.currentTime);
+              gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.6);
+              osc.start(ctx.currentTime);
+              osc.stop(ctx.currentTime + 0.6);
+            } else {
+              osc.type = 'sine';
+              osc.frequency.setValueAtTime(523.25, ctx.currentTime);
+              osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.1);
+              osc.frequency.setValueAtTime(783.99, ctx.currentTime + 0.22);
+              gain.gain.setValueAtTime(0.25, ctx.currentTime);
+              gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.45);
+              osc.start(ctx.currentTime);
+              osc.stop(ctx.currentTime + 0.45);
+            }
+          }
+        } catch(err) {
+          console.warn('Audio buzzer error:', err);
+        }
+      },
+      pickDriverPhoto: function(useCamera, callback) {
+        var input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        if (useCamera) {
+          input.setAttribute('capture', 'user');
+        }
+        input.onchange = function(e) {
+          if (!e.target.files || !e.target.files[0]) return;
+          var file = e.target.files[0];
+          var reader = new FileReader();
+          reader.onload = function(evt) {
+            if (typeof callback === 'function') {
+              callback(evt.target.result);
+            }
+          };
+          reader.readAsDataURL(file);
+        };
+        input.click();
+      }
+    };
+  </script>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>

@@ -1,0 +1,56 @@
+name: transport_one
+description: A responsive fleet route planner for India.
+publish_to: "none"
+version: 1.4.4+32
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  crypto: ^3.0.6
+  cloud_firestore: ^6.8.0
+  firebase_auth: ^6.5.7
+  firebase_core: ^4.13.0
+  flutter_map: ^8.3.2
+  flutter_secure_storage: ^11.2.0
+  geolocator: ^14.1.1
+  google_maps_flutter: ^2.14.0
+  http: ^1.6.0
+  latlong2: ^0.10.1
+  shared_preferences: ^2.5.6
+  url_launcher: ^6.3.3
+  image_picker: ^1.1.2
+  flutter_local_notifications: ^22.3.2
+  excel: ^4.0.6
+  file_saver: ^0.7.0
+  pdf: ^3.12.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  shared_preferences_platform_interface: ^2.4.1
+
+dependency_overrides:
+  shared_preferences_android: 2.4.28
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/product_catalog/
+    - assets/product_catalog/rama/bed/
+    - assets/product_catalog/rama/chair/
+    - assets/product_catalog/rama/mani-pedi/
+    - assets/product_catalog/rama/massager/
+    - assets/product_catalog/rama/shampoo-station/
+    - assets/product_catalog/rama/stool/
+    - assets/product_catalog/rama/trolley/
+    - assets/product_catalog/rbc/bed/
+    - assets/product_catalog/rbc/chair/
+    - assets/product_catalog/rbc/mani-pedi/
+    - assets/product_catalog/rbc/massager/
+    - assets/product_catalog/rbc/shampoo-chair/
+    - assets/product_catalog/rbc/stool/
+    - assets/product_catalog/rbc/trolley/

@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "transport-one-otp",
+  "main": "src/index.js",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "preview_urls": false,
+  "vars": {
+    "INTERAKT_TEMPLATE_NAME": "transport_auth_otp",
+    "INTERAKT_TEMPLATE_LANGUAGE": "en"
+  },
+  "kv_namespaces": [
+    {
+      "binding": "OTP_STORE",
+      "id": "8e53148714d640fa8f8a350820cce42f"
+    }
+  ]
+}

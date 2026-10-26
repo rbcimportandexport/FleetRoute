@@ -1,41 +1,25 @@
-# Dependencies
-node_modules/
-/.pnp
-.pnp.js
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+**/build/
+/coverage/
+**/.gradle/
+**/.kotlin/
+android/local.properties
+android/secrets.properties
+android/key.properties
+**/key.properties
+*.jks
+*.iml
+# Widget Preview related
+.widget_preview/
+.auth-audit.json
+**/.wrangler/
 
-# Testing
-/coverage
-
-# Production Build
-/client/dist
-/dist
-/build
-
-# Environment files
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
-# Logs
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-*.log
-
-# Editor & OS files
-.DS_Store
-Thumbs.db
-.vscode/
+# Local IDE, logs, and generated release artifacts
 .idea/
-
-# Database files
-data/
-server/.data/
-.data/
-*.sqlite
-*.sqlite3
-server/data/
-mongodb_data/
-*.lock
+firebase-debug.log
+*.apk
