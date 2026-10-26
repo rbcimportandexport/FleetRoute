@@ -77,8 +77,13 @@ void main() {
     await tester.tap(find.text('Driver & Vehicle'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Assigned Vehicle & Telemetry'), findsOneWidget);
-    expect(find.text('ID / Phone: 8007755389'), findsOneWidget);
+    expect(find.text('DADARAO'), findsWidgets);
+    expect(find.text('Mob: 8007755389'), findsOneWidget);
+    expect(find.text('Quick Photo Upload'), findsOneWidget);
+    expect(find.text('Driver License & Insurance Validity'), findsOneWidget);
+    expect(find.text('Tyre Change'), findsOneWidget);
+    expect(find.text('Daily Fluids Check'), findsOneWidget);
+    expect(find.text('Weekly Sunday Cleaning Schedule'), findsOneWidget);
     expect(find.textContaining('GJ19Y2720'), findsWidgets);
     expect(find.textContaining('Tata Fleet Truck'), findsWidgets);
   });

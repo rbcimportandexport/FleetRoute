@@ -20,17 +20,54 @@ class DriverPortalPage extends StatefulWidget {
   const DriverPortalPage({
     required this.controller,
     required this.onNavigate,
+    this.driverOverride,
+    this.adminPreview = false,
     super.key,
   });
 
   final PlannerController controller;
   final ValueChanged<WorkspaceSection> onNavigate;
+  final DriverProfile? driverOverride;
+  final bool adminPreview;
+
+  static Future<void> openDriverDashboard(
+    BuildContext context, {
+    required PlannerController controller,
+    required DriverProfile driver,
+  }) {
+    return Navigator.push<void>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => DriverPortalPage(
+          controller: controller,
+          driverOverride: driver,
+          adminPreview: true,
+          onNavigate: (_) {},
+        ),
+      ),
+    );
+  }
 
   @override
   State<DriverPortalPage> createState() => _DriverPortalPageState();
 }
 
 class _DriverPortalPageState extends State<DriverPortalPage> {
+  DriverProfile? get _activeDriver =>
+      widget.driverOverride ?? widget.controller.currentDriver;
+
+  TruckModel? get _activeTruck {
+    final code = _activeDriver?.assignedVehicle.trim().toLowerCase() ?? '';
+    if (code.isEmpty) return null;
+    for (final truck in widget.controller.truckModels) {
+      if (truck.code.trim().toLowerCase() == code ||
+          truck.name.trim().toLowerCase() == code) {
+        return truck;
+      }
+    }
+    return null;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -40,6 +77,7 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
   }
 
   void _checkWeeklyReminders() {
+    if (widget.adminPreview) return;
     final now = DateTime.now();
     final driver = widget.controller.currentDriver;
     final vehicle = driver?.assignedVehicle.trim() ?? '';
@@ -59,6 +97,15 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
   }
 
   void _openPhotoCapture(BuildContext context, {required String category}) {
+    if (widget.adminPreview) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+              'Admin preview mein upload band hai. Driver apne account se upload karega.'),
+        ),
+      );
+      return;
+    }
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -100,150 +147,161 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
         return AnimatedBuilder(
           animation: widget.controller,
           builder: (context, _) {
-            final driver = widget.controller.currentDriver;
+            final driver = _activeDriver;
             final driverName =
                 driver?.name ?? widget.controller.loggedInName ?? 'Driver';
-        final vehicleNumber = driver?.assignedVehicle.trim().isNotEmpty == true
-            ? driver!.assignedVehicle.trim()
-            : 'Not assigned';
-        final isSunday = DateTime.now().weekday == DateTime.sunday;
-        final driverRecords = widget.controller.seatbeltRecords.where((r) {
-          final tVehicle =
-              vehicleNumber.replaceAll(RegExp(r'[\s\-]'), '').toUpperCase();
-          final rVehicle =
-              r.vehicleNumber.replaceAll(RegExp(r'[\s\-]'), '').toUpperCase();
-          final tDriver = driverName.trim().toLowerCase();
-          final rDriver = r.driverName.trim().toLowerCase();
-          return (rVehicle.isNotEmpty && rVehicle == tVehicle) ||
-              (rDriver.isNotEmpty && rDriver == tDriver);
-        }).toList();
-
-        // Resolve active assigned trip for driver/vehicle
-        TripRecord? activeTrip;
-        for (final t in widget.controller.trips) {
-          final vMatch = t.assignedVehicle.isNotEmpty &&
-              t.assignedVehicle
-                      .replaceAll(RegExp(r'[\s\-]'), '')
-                      .toUpperCase() ==
+            final vehicleNumber =
+                driver?.assignedVehicle.trim().isNotEmpty == true
+                    ? driver!.assignedVehicle.trim()
+                    : 'Not assigned';
+            final isSunday = DateTime.now().weekday == DateTime.sunday;
+            final driverRecords = widget.controller.seatbeltRecords.where((r) {
+              final tVehicle =
                   vehicleNumber.replaceAll(RegExp(r'[\s\-]'), '').toUpperCase();
-          final dMatch = t.assignedDriver.isNotEmpty &&
-              t.assignedDriver.trim().toLowerCase() ==
-                  driverName.trim().toLowerCase();
-          if (vMatch || dMatch) {
-            if (t.status != 'delivered') {
-              activeTrip = t;
-              break;
+              final rVehicle = r.vehicleNumber
+                  .replaceAll(RegExp(r'[\s\-]'), '')
+                  .toUpperCase();
+              final tDriver = driverName.trim().toLowerCase();
+              final rDriver = r.driverName.trim().toLowerCase();
+              return (rVehicle.isNotEmpty && rVehicle == tVehicle) ||
+                  (rDriver.isNotEmpty && rDriver == tDriver);
+            }).toList();
+
+            // Resolve active assigned trip for driver/vehicle
+            TripRecord? activeTrip;
+            for (final t in widget.controller.trips) {
+              final vMatch = t.assignedVehicle.isNotEmpty &&
+                  t.assignedVehicle
+                          .replaceAll(RegExp(r'[\s\-]'), '')
+                          .toUpperCase() ==
+                      vehicleNumber
+                          .replaceAll(RegExp(r'[\s\-]'), '')
+                          .toUpperCase();
+              final dMatch = t.assignedDriver.isNotEmpty &&
+                  t.assignedDriver.trim().toLowerCase() ==
+                      driverName.trim().toLowerCase();
+              if (vMatch || dMatch) {
+                if (t.status != 'delivered') {
+                  activeTrip = t;
+                  break;
+                }
+              }
             }
-          }
-        }
-        activeTrip ??= widget.controller.trips.isNotEmpty
-            ? widget.controller.trips.first
-            : null;
+            activeTrip ??=
+                !widget.adminPreview && widget.controller.trips.isNotEmpty
+                    ? widget.controller.trips.first
+                    : null;
 
-        return Scaffold(
-          backgroundColor: AppColors.canvas,
-          body: SafeArea(
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 90),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // 1. Driver & Vehicle Profile Header (Clean White Card)
-                  _buildDriverHeader(
-                      driverName, vehicleNumber, driver?.phone ?? ''),
-                  const SizedBox(height: 14),
-
-                  // 1B. Driver Attendance & Duty Presence (Requirement 1: Start/End Duty, Duplicate Guard, Working Hours)
-                  _buildDriverAttendanceCard(
-                      driver, driverName, vehicleNumber, activeTrip),
-                  const SizedBox(height: 14),
-
-                  // 2. Active Trip Sheet & Milestone Actions (Trip #, Loading/Unloading, POD, Expenses)
-                  if (activeTrip != null) ...[
-                    _buildActiveTripSheetCard(
-                        activeTrip, vehicleNumber, driverName),
-                    const SizedBox(height: 14),
-                  ],
-
-                  // 3. Driver Compliance (Driving License & Driver Insurance Validity)
-                  _buildDriverDocumentsCard(driver),
-                  const SizedBox(height: 14),
-
-                  // 4. Tyre Change & Daily Fluids Check Actions
-                  _buildOperationsActionRow(vehicleNumber),
-                  const SizedBox(height: 14),
-
-                  // 5. Weekly Sunday Cleaning Card (Same Green Icon Badge)
-                  _buildSundayCleaningCard(isSunday, vehicleNumber),
-                  const SizedBox(height: 12),
-
-                  // 6. Police / RTO Memo Quick Banner (Same Green Icon Badge)
-                  _buildMemoQuickActionBanner(vehicleNumber),
-                  const SizedBox(height: 14),
-
-                  // 7. Maintenance & Insurance Notification Cards (Same Green Icon Badges)
-                  _buildMaintenanceAndInsuranceSection(vehicleNumber),
-                  const SizedBox(height: 20),
-
-                  // 5. Easy One-Tap Photo Action Center Header
-                  Row(
+            return Scaffold(
+              backgroundColor: AppColors.canvas,
+              body: SafeArea(
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 90),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const AppIconBadge(
-                        icon: Icons.camera_alt_rounded,
-                        size: 18,
-                        padding: 6,
-                        radius: 8,
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              AppLocalizationService.instance.tr('quick_upload_title'),
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.navy,
-                                fontFamily: 'sans-serif',
-                              ),
-                              overflow: TextOverflow.ellipsis,
+                      // 1. Driver & Vehicle Profile Header (Clean White Card)
+                      _buildDriverHeader(
+                          driverName, vehicleNumber, driver?.phone ?? ''),
+                      const SizedBox(height: 14),
+
+                      // Complete registered vehicle information for this driver.
+                      _buildCompleteVehicleDetails(_activeTruck, vehicleNumber),
+                      const SizedBox(height: 14),
+
+                      // 1B. Driver Attendance & Duty Presence (Requirement 1: Start/End Duty, Duplicate Guard, Working Hours)
+                      _buildDriverAttendanceCard(
+                          driver, driverName, vehicleNumber, activeTrip),
+                      const SizedBox(height: 14),
+
+                      // 2. Active Trip Sheet & Milestone Actions (Trip #, Loading/Unloading, POD, Expenses)
+                      if (activeTrip != null) ...[
+                        _buildActiveTripSheetCard(
+                            activeTrip, vehicleNumber, driverName),
+                        const SizedBox(height: 14),
+                      ],
+
+                      // 3. Driver Compliance (Driving License & Driver Insurance Validity)
+                      _buildDriverDocumentsCard(driver),
+                      const SizedBox(height: 14),
+
+                      // 4. Tyre Change & Daily Fluids Check Actions
+                      _buildOperationsActionRow(vehicleNumber),
+                      const SizedBox(height: 14),
+
+                      // 5. Weekly Sunday Cleaning Card (Same Green Icon Badge)
+                      _buildSundayCleaningCard(isSunday, vehicleNumber),
+                      const SizedBox(height: 12),
+
+                      // 6. Police / RTO Memo Quick Banner (Same Green Icon Badge)
+                      _buildMemoQuickActionBanner(vehicleNumber),
+                      const SizedBox(height: 14),
+
+                      // 7. Maintenance & Insurance Notification Cards (Same Green Icon Badges)
+                      _buildMaintenanceAndInsuranceSection(vehicleNumber),
+                      const SizedBox(height: 20),
+
+                      // 5. Easy One-Tap Photo Action Center Header
+                      Row(
+                        children: [
+                          const AppIconBadge(
+                            icon: Icons.camera_alt_rounded,
+                            size: 18,
+                            padding: 6,
+                            radius: 8,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  AppLocalizationService.instance
+                                      .tr('quick_upload_title'),
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.navy,
+                                    fontFamily: 'sans-serif',
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  AppLocalizationService.instance
+                                      .tr('quick_upload_subtitle'),
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.slate,
+                                    fontFamily: 'sans-serif',
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 2),
-                            Text(
-                              AppLocalizationService.instance.tr('quick_upload_subtitle'),
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: AppColors.slate,
-                                fontFamily: 'sans-serif',
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
+                      const SizedBox(height: 12),
+
+                      // 6. Action Grid - Every icon has the EXACT same color & badge
+                      _buildPhotoActionGrid(context),
+                      const SizedBox(height: 18),
+
+                      // 7. GPS Navigation Quick Launcher (Same Green Icon Badge)
+                      _buildNavigationLauncher(activeTrip),
+                      const SizedBox(height: 18),
+
+                      // 8. Recent Uploaded Photos History
+                      _buildRecentPhotosGallery(driverRecords),
                     ],
                   ),
-                  const SizedBox(height: 12),
-
-                  // 6. Action Grid - Every icon has the EXACT same color & badge
-                  _buildPhotoActionGrid(context),
-                  const SizedBox(height: 18),
-
-                  // 7. GPS Navigation Quick Launcher (Same Green Icon Badge)
-                  _buildNavigationLauncher(activeTrip),
-                  const SizedBox(height: 18),
-
-                  // 8. Recent Uploaded Photos History
-                  _buildRecentPhotosGallery(driverRecords),
-                ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         );
-      },
-    );
       },
     );
   }
@@ -356,10 +414,14 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                 ),
               ),
               InkWell(
-                onTap: () => _confirmLogout(context),
+                onTap: () => widget.adminPreview
+                    ? Navigator.pop(context)
+                    : _confirmLogout(context),
                 borderRadius: BorderRadius.circular(10),
-                child: const AppIconBadge(
-                  icon: Icons.logout_rounded,
+                child: AppIconBadge(
+                  icon: widget.adminPreview
+                      ? Icons.arrow_back_rounded
+                      : Icons.logout_rounded,
                   size: 18,
                   padding: 7,
                   radius: 10,
@@ -430,6 +492,113 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCompleteVehicleDetails(
+      TruckModel? truck, String assignedVehicle) {
+    String value(String raw) => raw.trim().isEmpty ? 'Not configured' : raw;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border, width: 1.2),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              AppIconBadge(
+                icon: Icons.local_shipping_outlined,
+                size: 18,
+                padding: 7,
+                radius: 9,
+              ),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Complete Vehicle Details',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.navy,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (truck == null)
+            Text(
+              assignedVehicle == 'Not assigned'
+                  ? 'No vehicle assigned to this driver.'
+                  : 'Vehicle $assignedVehicle is assigned, but its master record was not found.',
+              style: const TextStyle(color: AppColors.slate, fontSize: 12),
+            )
+          else
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                _vehicleDetail('Vehicle Number', truck.code),
+                _vehicleDetail('Vehicle Name / Model', truck.name),
+                _vehicleDetail('Vehicle Type', value(truck.vehicleModel)),
+                _vehicleDetail('Owner', value(truck.ownerName)),
+                _vehicleDetail('Status', value(truck.vehicleStatus)),
+                _vehicleDetail('Capacity', value(truck.capacity)),
+                _vehicleDetail('Axles', value(truck.axles)),
+                _vehicleDetail('Odometer', '${truck.currentOdometerKm} km'),
+                _vehicleDetail('Next Service', '${truck.nextServiceKm} km'),
+                _vehicleDetail('Speed Limit', '${truck.maxSpeed} km/h'),
+                _vehicleDetail('FASTag Balance',
+                    'Rs ${truck.fastagBalance.toStringAsFixed(0)}'),
+                _vehicleDetail('GPS / Tracker',
+                    truck.hasValidGpsFix ? 'Connected' : 'No live fix'),
+                _vehicleDetail('Last GPS Update', value(truck.lastGpsUpdate)),
+                _vehicleDetail('Insurance No.', value(truck.insuranceNumber)),
+                _vehicleDetail(
+                    'Insurance Expiry', value(truck.insuranceExpiry)),
+                _vehicleDetail('PUC No.', value(truck.pucNumber)),
+                _vehicleDetail('PUC Expiry', value(truck.pucExpiry)),
+                _vehicleDetail('Fitness No.', value(truck.fitnessNumber)),
+                _vehicleDetail('Fitness Expiry', value(truck.fitnessExpiry)),
+                _vehicleDetail('RC Expiry', value(truck.rcExpiry)),
+                _vehicleDetail(
+                    'Permit Expiry', value(truck.allIndiaPermitExpiry)),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _vehicleDetail(String label, String value) {
+    return Container(
+      width: 165,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: AppColors.primarySoft,
+        borderRadius: BorderRadius.circular(9),
+        border: Border.all(color: AppColors.primaryBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label,
+              style: const TextStyle(fontSize: 10, color: AppColors.slate)),
+          const SizedBox(height: 3),
+          Text(value,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.navy)),
         ],
       ),
     );
@@ -519,7 +688,8 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                       children: [
                         Flexible(
                           child: Text(
-                            AppLocalizationService.instance.tr('duty_attendance_title'),
+                            AppLocalizationService.instance
+                                .tr('duty_attendance_title'),
                             style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w800,
@@ -547,7 +717,8 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                           child: Text(
                             isOnDuty
                                 ? AppLocalizationService.instance.tr('on_duty')
-                                : AppLocalizationService.instance.tr('off_duty'),
+                                : AppLocalizationService.instance
+                                    .tr('off_duty'),
                             style: TextStyle(
                               fontSize: 9.5,
                               fontWeight: FontWeight.w800,
@@ -793,7 +964,8 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                 },
                 borderRadius: BorderRadius.circular(6),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
                   decoration: BoxDecoration(
                     color: AppColors.primaryLight,
                     borderRadius: BorderRadius.circular(6),
@@ -1344,7 +1516,8 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                     launchUrl(url, mode: LaunchMode.externalApplication);
                   },
                   icon: const Icon(Icons.navigation_rounded, size: 13),
-                  label: Text(AppLocalizationService.instance.tr('google_maps')),
+                  label:
+                      Text(AppLocalizationService.instance.tr('google_maps')),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.primaryDark,
                     side: const BorderSide(color: AppColors.primaryBorder),
@@ -1378,7 +1551,8 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                     }
                   },
                   icon: const Icon(Icons.phone_rounded, size: 13),
-                  label: Text(AppLocalizationService.instance.tr('call_customer')),
+                  label:
+                      Text(AppLocalizationService.instance.tr('call_customer')),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.navy,
                     side: const BorderSide(color: AppColors.border),
@@ -1609,7 +1783,8 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
-                      AppLocalizationService.instance.tr('driver_docs_subtitle'),
+                      AppLocalizationService.instance
+                          .tr('driver_docs_subtitle'),
                       style: const TextStyle(
                         fontSize: 10.5,
                         color: AppColors.slate,
@@ -1636,7 +1811,8 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        AppLocalizationService.instance.tr('driving_license_label'),
+                        AppLocalizationService.instance
+                            .tr('driving_license_label'),
                         style: const TextStyle(
                           fontSize: 9.5,
                           fontWeight: FontWeight.w700,
@@ -1680,7 +1856,8 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        AppLocalizationService.instance.tr('driver_insurance_label'),
+                        AppLocalizationService.instance
+                            .tr('driver_insurance_label'),
                         style: const TextStyle(
                           fontSize: 9.5,
                           fontWeight: FontWeight.w700,
@@ -1763,7 +1940,8 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                           overflow: TextOverflow.ellipsis,
                         ),
                         Text(
-                          AppLocalizationService.instance.tr('report_km_position'),
+                          AppLocalizationService.instance
+                              .tr('report_km_position'),
                           style: const TextStyle(
                             fontSize: 9.5,
                             color: AppColors.slate,
@@ -1822,7 +2000,8 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                           overflow: TextOverflow.ellipsis,
                         ),
                         Text(
-                          AppLocalizationService.instance.tr('fluids_check_desc'),
+                          AppLocalizationService.instance
+                              .tr('fluids_check_desc'),
                           style: const TextStyle(
                             fontSize: 9.5,
                             color: AppColors.slate,
@@ -2611,7 +2790,8 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        AppLocalizationService.instance.tr('maintenance_and_insurance'),
+                        AppLocalizationService.instance
+                            .tr('maintenance_and_insurance'),
                         style: const TextStyle(
                           fontWeight: FontWeight.w800,
                           fontSize: 13,
@@ -2646,7 +2826,8 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
-                          AppLocalizationService.instance.tr('upload_meter_photo'),
+                          AppLocalizationService.instance
+                              .tr('upload_meter_photo'),
                           style: const TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
@@ -2695,7 +2876,8 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        AppLocalizationService.instance.tr('insurance_puc_title'),
+                        AppLocalizationService.instance
+                            .tr('insurance_puc_title'),
                         style: const TextStyle(
                           fontWeight: FontWeight.w800,
                           fontSize: 13,
@@ -2758,12 +2940,22 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
         subtitle: 'Pre-trip selfie check',
         hindi: AppLocalizationService.instance.tr('seatbelt_photo'),
         icon: Icons.airline_seat_recline_extra_rounded,
-        action: () => SeatbeltVerificationDialog.show(
-              context,
-              controller: widget.controller,
-              vehicleNumber:
-                  widget.controller.currentDriver?.assignedVehicle ?? '',
-            ),
+        action: () {
+          if (widget.adminPreview) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                    'Seatbelt photo driver apne account se capture karega.'),
+              ),
+            );
+            return;
+          }
+          SeatbeltVerificationDialog.show(
+            context,
+            controller: widget.controller,
+            vehicleNumber: _activeDriver?.assignedVehicle ?? '',
+          );
+        },
       ),
       (
         title: AppLocalizationService.instance.tr('sunday_cleaning'),
@@ -2949,7 +3141,8 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                   widget.controller.setOrigin(activeTrip.origin.trim());
                 }
                 if (activeTrip.destination.trim().isNotEmpty) {
-                  widget.controller.setDestination(activeTrip.destination.trim());
+                  widget.controller
+                      .setDestination(activeTrip.destination.trim());
                 }
               }
               widget.onNavigate(WorkspaceSection.planner);

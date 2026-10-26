@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import '../controllers/planner_controller.dart';
 import '../models/planner_models.dart';
 import '../theme/app_theme.dart';
-import '../widgets/driver_report_detail_dialog.dart';
 import '../widgets/seatbelt_verification_dialog.dart';
+import 'driver_portal_page.dart';
 
 class SeatbeltGalleryPage extends StatefulWidget {
   const SeatbeltGalleryPage({
@@ -167,12 +167,10 @@ class _SeatbeltGalleryPageState extends State<SeatbeltGalleryPage> {
       );
       return;
     }
-    showDialog<void>(
-      context: context,
-      builder: (_) => DriverReportDetailDialog(
-        driver: driver,
-        controller: widget.controller,
-      ),
+    DriverPortalPage.openDriverDashboard(
+      context,
+      controller: widget.controller,
+      driver: driver,
     );
   }
 

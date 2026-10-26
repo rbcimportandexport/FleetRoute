@@ -6,10 +6,10 @@ import '../controllers/planner_controller.dart';
 import '../models/planner_models.dart';
 import '../services/safety_notification_service.dart';
 import '../theme/app_theme.dart';
-import '../widgets/driver_report_detail_dialog.dart';
 import '../widgets/seatbelt_records_dialog.dart';
 import '../widgets/trip_map_dialog.dart';
 import 'alerts_page.dart';
+import 'driver_portal_page.dart';
 
 enum OperationsModule { drivers, vehicles, trips, alerts }
 
@@ -1018,12 +1018,10 @@ class _RecordCard extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
-        onTap: () => showDialog<void>(
-          context: context,
-          builder: (_) => DriverReportDetailDialog(
-            driver: driver,
-            controller: controller,
-          ),
+        onTap: () => DriverPortalPage.openDriverDashboard(
+          context,
+          controller: controller,
+          driver: driver,
         ),
         child: Container(
           decoration: BoxDecoration(
@@ -1211,16 +1209,14 @@ class _RecordCard extends StatelessWidget {
                 runSpacing: 6,
                 children: [
                   OutlinedButton.icon(
-                    onPressed: () => showDialog<void>(
-                      context: context,
-                      builder: (_) => DriverReportDetailDialog(
-                        driver: driver,
-                        controller: controller,
-                      ),
+                    onPressed: () => DriverPortalPage.openDriverDashboard(
+                      context,
+                      controller: controller,
+                      driver: driver,
                     ),
-                    icon: const Icon(Icons.picture_as_pdf_outlined,
+                    icon: const Icon(Icons.dashboard_customize_outlined,
                         size: 14, color: Color(0xFFDC2626)),
-                    label: const Text('View Report & PDF',
+                    label: const Text('Full Driver Dashboard',
                         style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
