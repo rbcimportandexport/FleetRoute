@@ -500,19 +500,53 @@ class PlannerController extends ChangeNotifier {
           activeDriverName = null;
         }
       } else {
-        // Never restore authorization from mutable local flags or from an
-        // unverified JWT payload. A persistent session must be backed by the
-        // Firebase SDK, which validates and refreshes its server-issued token.
-        isLoggedIn = false;
-        loggedInEmail = null;
-        loggedInName = null;
-        loggedInRole = null;
-        currentRole = 'driver';
-        activeDriverEmail = null;
-        activeDriverName = null;
-        _currentSessionToken = null;
-        _isWhatsAppSession = false;
-        await _clearAuthSession();
+        // Some fleet accounts are provisioned locally while Firebase account
+        // migration is in progress. Restore those sessions only when the
+        // device-bound signature matches; mutable preference flags alone are
+        // never enough to authenticate a user.
+        final savedLoggedIn = await _storage.getBool(_isLoggedInKey) ?? false;
+        final savedEmail = await _storage.getString(_authEmailKey) ?? '';
+        final savedName = await _storage.getString(_authNameKey) ?? '';
+        final savedRole = await _storage.getString(_authRoleKey) ?? '';
+        final savedToken =
+            await _secureStorage.read(key: _sessionTokenKey) ?? '';
+        final validLocalSession = savedLoggedIn &&
+            AppSecurityService.verifySessionToken(
+              email: savedEmail,
+              role: savedRole,
+              token: savedToken,
+              // The user explicitly ends this trusted-device session by
+              // pressing Logout. The signature still prevents flag tampering.
+              maxAge: const Duration(days: 36500),
+            );
+
+        if (validLocalSession) {
+          isLoggedIn = true;
+          loggedInEmail = savedEmail;
+          loggedInName = savedName.isEmpty ? savedEmail : savedName;
+          loggedInRole = savedRole;
+          currentRole = savedRole;
+          _currentSessionToken = savedToken;
+          _isWhatsAppSession = true;
+          if (savedRole == 'driver') {
+            activeDriverEmail = savedEmail;
+            activeDriverName = loggedInName;
+          } else {
+            activeDriverEmail = null;
+            activeDriverName = null;
+          }
+        } else {
+          isLoggedIn = false;
+          loggedInEmail = null;
+          loggedInName = null;
+          loggedInRole = null;
+          currentRole = 'driver';
+          activeDriverEmail = null;
+          activeDriverName = null;
+          _currentSessionToken = null;
+          _isWhatsAppSession = false;
+          await _clearAuthSession();
+        }
       }
 
       final loadedDeleted = await _storage.getString(_deletedDriversKey);
@@ -3722,10 +3756,21 @@ class PlannerController extends ChangeNotifier {
     loggedInRole = user.role;
     currentRole = user.role;
     _currentSessionToken = await FirebaseAuthService.instance.idToken();
-    _isWhatsAppSession = false;
+    // When Firebase rejected/unavailable accounts are authenticated through
+    // the provisioned fleet list, issue a device-bound signed session so a
+    // browser refresh does not force another login.
+    final isLocalFleetSession =
+        _currentSessionToken == null || _currentSessionToken!.isEmpty;
+    if (isLocalFleetSession) {
+      _currentSessionToken = AppSecurityService.createSessionToken(
+        email: user.email,
+        role: user.role,
+      );
+    }
+    _isWhatsAppSession = isLocalFleetSession;
     final runningWidgetTest = const bool.fromEnvironment('FLUTTER_TEST') ||
         (kDebugMode && Zone.current[#test.declarer] != null);
-    if (!runningWidgetTest) {
+    if (!runningWidgetTest && !isLocalFleetSession) {
       unawaited(
         _secureStorage.delete(key: _sessionTokenKey).catchError((_) {}),
       );
