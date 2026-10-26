@@ -3510,28 +3510,36 @@ class _MapWorkspaceState extends State<MapWorkspace> {
               if (!_isNavigating)
                 Positioned(
                   left: 14,
+                  right: compact ? 14 : null,
                   top: 14,
                   child: compact
-                      ? _CompactMapBar(
-                          controller: widget.controller,
-                          activePinMode: _activePinMode,
-                          trafficEnabled: _trafficEnabled,
-                          onToggleTraffic: _toggleLiveTraffic,
-                          hasRoute: hasRoute,
-                          onFitRoute: _fitRoute,
-                          onClearRoute: _clearRoute,
-                          onShowFleet: _showFleetLocation,
-                          onSetLocation: _openSetLocationSheet,
-                          onSetPickup: () {
-                            setState(() => _activePinMode = 'pickup');
-                            _showMessage(
-                                'Pickup Mode ON: Map par tap karein pickup badalne ke liye (Green Pin).');
-                          },
-                          onSetDrop: () {
-                            setState(() => _activePinMode = 'drop');
-                            _showMessage(
-                                'Drop Mode ON: Map par tap karein drop point set karne ke liye (Red Pin).');
-                          },
+                      ? Align(
+                          alignment: Alignment.topLeft,
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: _CompactMapBar(
+                              controller: widget.controller,
+                              activePinMode: _activePinMode,
+                              trafficEnabled: _trafficEnabled,
+                              onToggleTraffic: _toggleLiveTraffic,
+                              hasRoute: hasRoute,
+                              onFitRoute: _fitRoute,
+                              onClearRoute: _clearRoute,
+                              onShowFleet: _showFleetLocation,
+                              onSetLocation: _openSetLocationSheet,
+                              onSetPickup: () {
+                                setState(() => _activePinMode = 'pickup');
+                                _showMessage(
+                                    'Pickup Mode ON: Map par tap karein pickup badalne ke liye (Green Pin).');
+                              },
+                              onSetDrop: () {
+                                setState(() => _activePinMode = 'drop');
+                                _showMessage(
+                                    'Drop Mode ON: Map par tap karein drop point set karne ke liye (Red Pin).');
+                              },
+                            ),
+                          ),
                         )
                       : ConstrainedBox(
                           constraints: BoxConstraints(
