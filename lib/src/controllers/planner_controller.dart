@@ -570,15 +570,15 @@ class PlannerController extends ChangeNotifier {
         drivers.clear();
       }
 
-      final realVehicleCodes = defaultFleetVehicles
-          .map((v) => v.code.toUpperCase())
-          .toSet();
+      final realVehicleCodes =
+          defaultFleetVehicles.map((v) => v.code.toUpperCase()).toSet();
 
       final loadedTrucks = _decodeRecords(truckJson, TruckModel.fromJson);
       if (loadedTrucks != null && loadedTrucks.isNotEmpty) {
         truckModels
           ..clear()
-          ..addAll(loadedTrucks.where((t) => realVehicleCodes.contains(t.code.toUpperCase())));
+          ..addAll(loadedTrucks
+              .where((t) => realVehicleCodes.contains(t.code.toUpperCase())));
         // Also ensure all default fleet vehicles exist
         for (final def in defaultFleetVehicles) {
           final exists = truckModels.any(
@@ -3269,8 +3269,18 @@ class PlannerController extends ChangeNotifier {
       seatbeltRecords.removeRange(50, seatbeltRecords.length);
     }
     notifyListeners();
-    await _saveSeatbeltRecords();
-    await FirebaseBackendService.instance.syncSeatbeltRecord(record: record);
+    // Browser storage has a small quota. A failed local write must not discard
+    // the in-memory record or prevent the Firestore backup from being tried.
+    try {
+      await _saveSeatbeltRecords();
+    } catch (error) {
+      debugPrint('[SeatbeltRecords] Local persistence warning: $error');
+    }
+    try {
+      await FirebaseBackendService.instance.syncSeatbeltRecord(record: record);
+    } catch (error) {
+      debugPrint('[SeatbeltRecords] Remote sync warning: $error');
+    }
     await logActivity(
       title: record.isApproved
           ? 'Seatbelt Photo Approved'
@@ -3374,8 +3384,7 @@ class PlannerController extends ChangeNotifier {
 
     final normId = identifier.toLowerCase();
     final cleanDigits = identifier.replaceAll(RegExp(r'\D'), '');
-    final isSuperAdminCred =
-        (normId == 'rbcsaurabhyadav@gmail.com' ||
+    final isSuperAdminCred = (normId == 'rbcsaurabhyadav@gmail.com' ||
             normId == 'admin' ||
             cleanDigits.endsWith('9157661886')) &&
         (password == 'saurabh+098' ||
@@ -3540,10 +3549,7 @@ class PlannerController extends ChangeNotifier {
       }
       return 'Login failed. Internet aur credentials check karein.';
     }
-
   }
-
-
 
   Future<String?> register({
     required String name,

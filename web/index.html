@@ -105,9 +105,27 @@
           var file = e.target.files[0];
           var reader = new FileReader();
           reader.onload = function(evt) {
-            if (typeof callback === 'function') {
-              callback(evt.target.result);
-            }
+            var original = evt.target.result;
+            var image = new Image();
+            image.onload = function() {
+              try {
+                var maxSide = 960;
+                var scale = Math.min(1, maxSide / Math.max(image.width, image.height));
+                var canvas = document.createElement('canvas');
+                canvas.width = Math.max(1, Math.round(image.width * scale));
+                canvas.height = Math.max(1, Math.round(image.height * scale));
+                var context = canvas.getContext('2d');
+                context.drawImage(image, 0, 0, canvas.width, canvas.height);
+                var compressed = canvas.toDataURL('image/jpeg', 0.72);
+                if (typeof callback === 'function') callback(compressed);
+              } catch (_) {
+                if (typeof callback === 'function') callback(original);
+              }
+            };
+            image.onerror = function() {
+              if (typeof callback === 'function') callback(original);
+            };
+            image.src = original;
           };
           reader.readAsDataURL(file);
         };
