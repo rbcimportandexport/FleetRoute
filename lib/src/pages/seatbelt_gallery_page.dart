@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../controllers/planner_controller.dart';
 import '../models/planner_models.dart';
 import '../theme/app_theme.dart';
+import '../widgets/driver_report_detail_dialog.dart';
 import '../widgets/seatbelt_verification_dialog.dart';
 
 class SeatbeltGalleryPage extends StatefulWidget {
@@ -89,22 +90,46 @@ class _SeatbeltGalleryPageState extends State<SeatbeltGalleryPage> {
     return '${dt.day} $month ${dt.year}, $hour:$minute $ampm';
   }
 
-  List<SeatbeltRecord> _getRecords() {
-    var list = widget.controller.seatbeltRecords;
+  String _normal(String value) => value.trim().toLowerCase();
 
-    if (_viewMode == 'driver') {
-      final target = (_selectedDriverEmail ?? '').trim().toLowerCase();
-      if (target.isNotEmpty) {
-        final filtered = list.where((r) {
-          final rEmail = r.driverId.trim().toLowerCase();
-          final rName = r.driverName.trim().toLowerCase();
-          return rEmail == target || rName == target;
-        }).toList();
-        if (filtered.isNotEmpty) {
-          list = filtered;
-        }
+  bool _recordBelongsToDriver(SeatbeltRecord record, DriverProfile driver) {
+    final recordIds = <String>{
+      _normal(record.driverId),
+      _normal(record.driverName),
+    }..remove('');
+    final driverIds = <String>{
+      _normal(driver.email),
+      _normal(driver.phone),
+      _normal(driver.name),
+    }..remove('');
+    return recordIds.any(driverIds.contains);
+  }
+
+  List<SeatbeltRecord> _driverScopedRecords() {
+    final allRecords = widget.controller.seatbeltRecords;
+    if (_viewMode != 'driver') return List.of(allRecords);
+
+    final target = _normal(_selectedDriverEmail ?? '');
+    if (target.isEmpty) return <SeatbeltRecord>[];
+
+    DriverProfile? selectedDriver;
+    for (final driver in widget.controller.drivers) {
+      if (_normal(driver.email) == target) {
+        selectedDriver = driver;
+        break;
       }
     }
+    return allRecords.where((record) {
+      if (selectedDriver != null) {
+        return _recordBelongsToDriver(record, selectedDriver);
+      }
+      return _normal(record.driverId) == target ||
+          _normal(record.driverName) == target;
+    }).toList();
+  }
+
+  List<SeatbeltRecord> _getRecords() {
+    var list = _driverScopedRecords();
 
     if (_filterStatus == 'verified') {
       list = list.where((r) => r.isApproved).toList();
@@ -123,6 +148,32 @@ class _SeatbeltGalleryPageState extends State<SeatbeltGalleryPage> {
     }
 
     return list;
+  }
+
+  DriverProfile? _driverForRecord(SeatbeltRecord record) {
+    for (final driver in widget.controller.drivers) {
+      if (_recordBelongsToDriver(record, driver)) return driver;
+    }
+    return null;
+  }
+
+  void _showDriverAndVehicle(SeatbeltRecord record) {
+    final driver = _driverForRecord(record);
+    if (driver == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Is record ka driver profile nahi mila.'),
+        ),
+      );
+      return;
+    }
+    showDialog<void>(
+      context: context,
+      builder: (_) => DriverReportDetailDialog(
+        driver: driver,
+        controller: widget.controller,
+      ),
+    );
   }
 
   void _showFullPhoto(SeatbeltRecord record) {
@@ -230,8 +281,10 @@ class _SeatbeltGalleryPageState extends State<SeatbeltGalleryPage> {
                                 horizontal: 10, vertical: 5),
                             decoration: BoxDecoration(
                               color: record.isApproved
-                                  ? const Color(0xFF10B981).withValues(alpha: 0.2)
-                                  : const Color(0xFFEF4444).withValues(alpha: 0.2),
+                                  ? const Color(0xFF10B981)
+                                      .withValues(alpha: 0.2)
+                                  : const Color(0xFFEF4444)
+                                      .withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(
                                 color: record.isApproved
@@ -358,9 +411,9 @@ class _SeatbeltGalleryPageState extends State<SeatbeltGalleryPage> {
       animation: widget.controller,
       builder: (context, _) {
         final records = _getRecords();
-        final totalRecords = widget.controller.seatbeltRecords.length;
-        final approvedCount =
-            widget.controller.seatbeltRecords.where((r) => r.isApproved).length;
+        final scopedRecords = _driverScopedRecords();
+        final totalRecords = scopedRecords.length;
+        final approvedCount = scopedRecords.where((r) => r.isApproved).length;
         final rejectedCount = totalRecords - approvedCount;
         final drivers = widget.controller.drivers;
 
@@ -742,8 +795,7 @@ class _SeatbeltGalleryPageState extends State<SeatbeltGalleryPage> {
                           parent: AlwaysScrollableScrollPhysics(),
                         ),
                         itemCount: records.length,
-                        separatorBuilder: (_, __) =>
-                            const SizedBox(height: 12),
+                        separatorBuilder: (_, __) => const SizedBox(height: 12),
                         itemBuilder: (context, index) {
                           final record = records[index];
                           return _SeatbeltRecordCard(
@@ -755,6 +807,7 @@ class _SeatbeltGalleryPageState extends State<SeatbeltGalleryPage> {
                               height: 92,
                             ),
                             onTapPhoto: () => _showFullPhoto(record),
+                            onTapDriver: () => _showDriverAndVehicle(record),
                             canDelete: true,
                             onDelete: () => widget.controller
                                 .removeSeatbeltRecord(record.id),
@@ -865,6 +918,7 @@ class _SeatbeltRecordCard extends StatelessWidget {
     required this.formattedDate,
     required this.photoWidget,
     required this.onTapPhoto,
+    required this.onTapDriver,
     required this.canDelete,
     required this.onDelete,
   });
@@ -873,6 +927,7 @@ class _SeatbeltRecordCard extends StatelessWidget {
   final String formattedDate;
   final Widget photoWidget;
   final VoidCallback onTapPhoto;
+  final VoidCallback onTapDriver;
   final bool canDelete;
   final VoidCallback onDelete;
 
@@ -947,14 +1002,33 @@ class _SeatbeltRecordCard extends StatelessWidget {
                       Row(
                         children: [
                           Expanded(
-                            child: Text(
-                              record.driverName.isNotEmpty
-                                  ? record.driverName
-                                  : 'Assigned Driver',
-                              style: const TextStyle(
-                                fontSize: 14.5,
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.navy,
+                            child: InkWell(
+                              onTap: onTapDriver,
+                              borderRadius: BorderRadius.circular(6),
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 2),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Flexible(
+                                      child: Text(
+                                        record.driverName.isNotEmpty
+                                            ? record.driverName
+                                            : 'Assigned Driver',
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontSize: 14.5,
+                                          fontWeight: FontWeight.w800,
+                                          color: AppColors.navy,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    const Icon(Icons.open_in_new_rounded,
+                                        size: 13, color: Color(0xFF2563EB)),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
@@ -1105,10 +1179,30 @@ class _SeatbeltRecordCard extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.zoom_in_rounded, size: 14, color: primaryColor),
+                      Icon(Icons.zoom_in_rounded,
+                          size: 14, color: primaryColor),
                       const SizedBox(width: 3),
                       Text(
                         'View Full',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: primaryColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                InkWell(
+                  onTap: onTapDriver,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.badge_outlined, size: 14, color: primaryColor),
+                      const SizedBox(width: 3),
+                      Text(
+                        'Driver & Vehicle',
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,

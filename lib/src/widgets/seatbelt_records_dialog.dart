@@ -95,10 +95,9 @@ class _SeatbeltRecordsDialogState extends State<SeatbeltRecordsDialog> {
           final rName = r.driverName.trim().toLowerCase();
           return rEmail == target || rName == target;
         }).toList();
-        // If specific driver has records, use it; otherwise fallback to list if fleet has records
-        if (filtered.isNotEmpty) {
-          list = filtered;
-        }
+        // A selected driver with no records must show an empty state. Falling
+        // back to the fleet list leaks another driver's photos into this view.
+        list = filtered;
       }
     }
 
@@ -233,8 +232,10 @@ class _SeatbeltRecordsDialogState extends State<SeatbeltRecordsDialog> {
                                 horizontal: 10, vertical: 5),
                             decoration: BoxDecoration(
                               color: record.isApproved
-                                  ? const Color(0xFF10B981).withValues(alpha: 0.2)
-                                  : const Color(0xFFEF4444).withValues(alpha: 0.2),
+                                  ? const Color(0xFF10B981)
+                                      .withValues(alpha: 0.2)
+                                  : const Color(0xFFEF4444)
+                                      .withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(
                                 color: record.isApproved
@@ -395,7 +396,8 @@ class _SeatbeltRecordsDialogState extends State<SeatbeltRecordsDialog> {
                           color: const Color(0xFF3B82F6).withValues(alpha: 0.2),
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: const Color(0xFF60A5FA).withValues(alpha: 0.4),
+                            color:
+                                const Color(0xFF60A5FA).withValues(alpha: 0.4),
                           ),
                         ),
                         child: const Icon(
@@ -1148,7 +1150,8 @@ class _SeatbeltRecordCard extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.zoom_in_rounded, size: 14, color: primaryColor),
+                      Icon(Icons.zoom_in_rounded,
+                          size: 14, color: primaryColor),
                       const SizedBox(width: 3),
                       Text(
                         'View Full',
