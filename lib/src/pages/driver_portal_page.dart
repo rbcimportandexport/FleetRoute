@@ -282,15 +282,12 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                       const SizedBox(height: 12),
 
                       // 6. Action Grid - Every icon has the EXACT same color & badge
-                      _buildPhotoActionGrid(context),
+                      _buildPhotoActionGrid(context, driverRecords),
                       const SizedBox(height: 18),
 
                       // 7. GPS Navigation Quick Launcher (Same Green Icon Badge)
                       _buildNavigationLauncher(activeTrip),
                       const SizedBox(height: 18),
-
-                      // 8. Recent Uploaded Photos History
-                      _buildRecentPhotosGallery(driverRecords),
                     ],
                   ),
                 ),
@@ -2929,13 +2926,15 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
     );
   }
 
-  Widget _buildPhotoActionGrid(BuildContext context) {
+  Widget _buildPhotoActionGrid(
+      BuildContext context, List<SeatbeltRecord> records) {
     final actions = [
       (
         title: AppLocalizationService.instance.tr('seatbelt_photo'),
         subtitle: 'Pre-trip selfie check',
         hindi: AppLocalizationService.instance.tr('seatbelt_photo'),
         icon: Icons.airline_seat_recline_extra_rounded,
+        keys: const ['seatbelt', 'pre-trip cabin'],
         action: () {
           if (widget.adminPreview) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -2958,6 +2957,7 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
         subtitle: 'Wash & cleanliness photo',
         hindi: AppLocalizationService.instance.tr('sunday_cleaning'),
         icon: Icons.local_car_wash_rounded,
+        keys: const ['sunday vehicle cleaning'],
         action: () =>
             _openPhotoCapture(context, category: 'Sunday Vehicle Cleaning'),
       ),
@@ -2966,6 +2966,7 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
         subtitle: 'Traffic fine & RTO receipt',
         hindi: AppLocalizationService.instance.tr('police_memo'),
         icon: Icons.assignment_late_rounded,
+        keys: const ['police & rto memo', 'challan'],
         action: () => _openPhotoCapture(context, category: 'Police & RTO Memo'),
       ),
       (
@@ -2973,6 +2974,7 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
         subtitle: 'Odometer & tyre check',
         hindi: AppLocalizationService.instance.tr('meter_photo'),
         icon: Icons.build_circle_rounded,
+        keys: const ['vehicle maintenance', 'meter'],
         action: () =>
             _openPhotoCapture(context, category: 'Vehicle Maintenance'),
       ),
@@ -2981,6 +2983,7 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
         subtitle: 'Policy & PUC certificate',
         hindi: AppLocalizationService.instance.tr('insurance_puc'),
         icon: Icons.verified_user_rounded,
+        keys: const ['insurance & documents', 'puc'],
         action: () =>
             _openPhotoCapture(context, category: 'Insurance & Documents'),
       ),
@@ -2989,6 +2992,7 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
         subtitle: 'Transport & fuel bills',
         hindi: AppLocalizationService.instance.tr('fuel_receipt'),
         icon: Icons.receipt_long_rounded,
+        keys: const ['bilty & fuel receipts', 'diesel', 'toll'],
         action: () =>
             _openPhotoCapture(context, category: 'Bilty & Fuel Receipts'),
       ),
@@ -3006,6 +3010,14 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
       itemCount: actions.length,
       itemBuilder: (context, index) {
         final item = actions[index];
+        SeatbeltRecord? latestPhoto;
+        for (final record in records) {
+          final searchable = record.notes.toLowerCase();
+          if (item.keys.any(searchable.contains)) {
+            latestPhoto = record;
+            break;
+          }
+        }
         return InkWell(
           onTap: item.action,
           borderRadius: BorderRadius.circular(16),
@@ -3031,14 +3043,39 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     // Same Unified Green Icon Badge
-                    AppIconBadge(
-                      icon: item.icon,
-                      size: 20,
-                      padding: 8,
-                      radius: 10,
-                    ),
-                    const Icon(Icons.arrow_forward_ios_rounded,
-                        size: 13, color: AppColors.iconColor),
+                    if (latestPhoto != null)
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: SizedBox(
+                          width: 44,
+                          height: 44,
+                          child: _buildThumbnail(latestPhoto.photoBase64),
+                        ),
+                      )
+                    else
+                      AppIconBadge(
+                        icon: item.icon,
+                        size: 20,
+                        padding: 8,
+                        radius: 10,
+                      ),
+                    if (latestPhoto != null)
+                      const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.check_circle_rounded,
+                              size: 13, color: AppColors.iconColor),
+                          SizedBox(width: 3),
+                          Text('SAVED',
+                              style: TextStyle(
+                                  fontSize: 8.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.iconColor)),
+                        ],
+                      )
+                    else
+                      const Icon(Icons.arrow_forward_ios_rounded,
+                          size: 13, color: AppColors.iconColor),
                   ],
                 ),
                 Column(
