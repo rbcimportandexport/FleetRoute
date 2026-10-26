@@ -134,8 +134,8 @@
 .map-hint.pinning { color: #234f8f; border-color: #9fc2f3; }
 .live-map.pin-mode, .live-map.pin-mode.leaflet-grab { cursor: crosshair !important; }
 .route-marker-wrap { background: transparent; border: 0; }
-.route-marker { width: 32px; height: 32px; display: grid; place-items: center; color: #fff; background: var(--blue); border: 3px solid #fff; border-radius: 50% 50% 50% 5px; box-shadow: 0 3px 9px rgba(22,50,88,.28); font-size: 10px; font-weight: 700; transform: rotate(-45deg); }
-.route-marker.end { background: #153969; }
+.route-marker { width: 32px; height: 32px; display: grid; place-items: center; color: #fff; background: #16a34a; border: 3px solid #fff; border-radius: 50% 50% 50% 5px; box-shadow: 0 3px 9px rgba(22,50,88,.28); font-size: 10px; font-weight: 700; transform: rotate(-45deg); }
+.route-marker.end { background: #dc2626; }
 .route-marker b { display: block; font: 700 10px 'DM Sans', sans-serif; transform: rotate(45deg); }
 .leaflet-hybridRoads-pane, .leaflet-hybridLabels-pane { pointer-events: none; }
 .esri-hybrid-labels { filter: drop-shadow(0 0 1.5px rgba(0,0,0,0.9)) contrast(1.1); }
