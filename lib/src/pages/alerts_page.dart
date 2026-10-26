@@ -455,6 +455,40 @@ class _AlertsPageState extends State<AlertsPage> {
     }
   }
 
+  Future<void> _clearAllAlerts() async {
+    final count = widget.controller.alerts.length;
+    if (count == 0) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Clear all alerts?'),
+        content: Text(
+          'This will permanently remove all $count alerts. This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton.icon(
+            onPressed: () => Navigator.pop(context, true),
+            icon: const Icon(Icons.delete_sweep_rounded, size: 17),
+            label: const Text('Clear All'),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFDC2626),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    await widget.controller.clearAllAlerts();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('$count alerts cleared successfully.')),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
@@ -597,9 +631,8 @@ class _AlertsPageState extends State<AlertsPage> {
                         color: unreadCount > 0
                             ? const Color(0xFFDC2626)
                             : AppColors.slate,
-                        fontWeight: unreadCount > 0
-                            ? FontWeight.w600
-                            : FontWeight.w400,
+                        fontWeight:
+                            unreadCount > 0 ? FontWeight.w600 : FontWeight.w400,
                       ),
                     ),
                   ],
@@ -626,31 +659,55 @@ class _AlertsPageState extends State<AlertsPage> {
               ),
             ],
           ),
-          if (unreadCount > 0) ...[
+          if (totalCount > 0) ...[
             const SizedBox(height: 10),
             Align(
               alignment: Alignment.centerRight,
-              child: InkWell(
-                onTap: () => widget.controller.markAllAlertsRead(),
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.done_all_rounded,
-                          size: 14, color: Color(0xFF2563EB)),
-                      SizedBox(width: 4),
-                      Text(
-                        'Mark all as read',
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF2563EB),
+              child: Wrap(
+                spacing: 14,
+                runSpacing: 8,
+                children: [
+                  if (unreadCount > 0)
+                    InkWell(
+                      onTap: () => widget.controller.markAllAlertsRead(),
+                      child: const Padding(
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.done_all_rounded,
+                                size: 14, color: Color(0xFF2563EB)),
+                            SizedBox(width: 4),
+                            Text('Mark all as read',
+                                style: TextStyle(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFF2563EB))),
+                          ],
                         ),
                       ),
-                    ],
+                    ),
+                  InkWell(
+                    onTap: _clearAllAlerts,
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.delete_sweep_rounded,
+                              size: 15, color: Color(0xFFDC2626)),
+                          SizedBox(width: 4),
+                          Text('Clear All',
+                              style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFFDC2626))),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
             ),
           ],
@@ -675,8 +732,10 @@ class _AlertsPageState extends State<AlertsPage> {
             style: const TextStyle(fontSize: 13, color: AppColors.navy),
             decoration: InputDecoration(
               hintText: 'Search alerts by vehicle, challan #, or text...',
-              hintStyle: const TextStyle(fontSize: 12.5, color: AppColors.slate),
-              prefixIcon: const Icon(Icons.search_rounded, size: 18, color: AppColors.slate),
+              hintStyle:
+                  const TextStyle(fontSize: 12.5, color: AppColors.slate),
+              prefixIcon: const Icon(Icons.search_rounded,
+                  size: 18, color: AppColors.slate),
               suffixIcon: searchController.text.isNotEmpty
                   ? IconButton(
                       icon: const Icon(Icons.clear_rounded, size: 16),
@@ -687,7 +746,8 @@ class _AlertsPageState extends State<AlertsPage> {
                     )
                   : null,
               border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
               isDense: true,
             ),
           ),
@@ -698,40 +758,42 @@ class _AlertsPageState extends State<AlertsPage> {
           physics: const BouncingScrollPhysics(),
           child: Row(
             children: [
-              _buildFilterPill('all', 'All Alerts', Icons.notifications_none_rounded),
-          const SizedBox(width: 6),
-          _buildFilterPill('memo', 'Memos & Fines', Icons.receipt_long_rounded),
-          const SizedBox(width: 6),
-          _buildFilterPill('overspeed', 'Speed', Icons.speed_rounded),
-          const SizedBox(width: 6),
-          _buildFilterPill(
-              'seatbelt', 'Seatbelt', Icons.airline_seat_recline_extra_rounded),
-          const SizedBox(width: 6),
-          _buildFilterPill('safety', 'Safety', Icons.shield_outlined),
-          const SizedBox(width: 10),
-          ActionChip(
-            avatar: const Icon(Icons.photo_library_rounded,
-                size: 13, color: Color(0xFF2563EB)),
-            label: const Text(
-              'Seatbelt Photos',
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
-            ),
-            backgroundColor: const Color(0xFFEFF6FF),
-            side: const BorderSide(color: Color(0xFFBFDBFE)),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-            onPressed: () => SeatbeltRecordsDialog.show(
-              context,
-              controller: widget.controller,
-            ),
+              _buildFilterPill(
+                  'all', 'All Alerts', Icons.notifications_none_rounded),
+              const SizedBox(width: 6),
+              _buildFilterPill(
+                  'memo', 'Memos & Fines', Icons.receipt_long_rounded),
+              const SizedBox(width: 6),
+              _buildFilterPill('overspeed', 'Speed', Icons.speed_rounded),
+              const SizedBox(width: 6),
+              _buildFilterPill('seatbelt', 'Seatbelt',
+                  Icons.airline_seat_recline_extra_rounded),
+              const SizedBox(width: 6),
+              _buildFilterPill('safety', 'Safety', Icons.shield_outlined),
+              const SizedBox(width: 10),
+              ActionChip(
+                avatar: const Icon(Icons.photo_library_rounded,
+                    size: 13, color: Color(0xFF2563EB)),
+                label: const Text(
+                  'Seatbelt Photos',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+                ),
+                backgroundColor: const Color(0xFFEFF6FF),
+                side: const BorderSide(color: Color(0xFFBFDBFE)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                onPressed: () => SeatbeltRecordsDialog.show(
+                  context,
+                  controller: widget.controller,
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
-    ),
-  ],
-);
-}
+        ),
+      ],
+    );
+  }
 
   Widget _buildFilterPill(String key, String label, IconData icon) {
     final isSelected = selectedCategory == key;

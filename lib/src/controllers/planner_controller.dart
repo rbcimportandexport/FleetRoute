@@ -2999,6 +2999,20 @@ class PlannerController extends ChangeNotifier {
     );
   }
 
+  Future<void> clearAllAlerts() async {
+    if (alerts.isEmpty) return;
+    final removedCount = alerts.length;
+    alerts.clear();
+    notifyListeners();
+    await _saveAlerts();
+    await logActivity(
+      title: 'All Alerts Cleared',
+      details: '$removedCount alerts were permanently cleared.',
+      category: ActivityCategory.alert,
+      action: 'cleared_all',
+    );
+  }
+
   Future<void> toggleAlertRead(int index) async {
     if (index < 0 || index >= alerts.length) return;
     alerts[index] = alerts[index].copyWith(isRead: !alerts[index].isRead);
