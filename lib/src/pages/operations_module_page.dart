@@ -576,15 +576,16 @@ class _RecordCard extends StatelessWidget {
                         fontFamily: 'sans-serif',
                       ),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${vehicle.code} · ${vehicle.capacity} · ${vehicle.axles} axles${vehicle.imei.isNotEmpty ? " · IMEI: ${vehicle.maskedImei}" : ""}',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.slate,
-                        fontFamily: 'sans-serif',
+                    if (vehicle.code.isEmpty) const SizedBox(height: 2),
+                    if (vehicle.code.isEmpty)
+                      Text(
+                        '${vehicle.code} · ${vehicle.capacity} · ${vehicle.axles} axles${vehicle.imei.isNotEmpty ? " · IMEI: ${vehicle.maskedImei}" : ""}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.slate,
+                          fontFamily: 'sans-serif',
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ),
