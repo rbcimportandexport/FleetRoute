@@ -2437,80 +2437,142 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
 
     showDialog<void>(
       context: context,
+      barrierDismissible: false,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text(
-            'Daily Fluids & Safety Check',
-            style: TextStyle(
-              fontWeight: FontWeight.w800,
-              fontSize: 16,
-              color: AppColors.navy,
-              fontFamily: 'sans-serif',
-            ),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CheckboxListTile(
-                value: oil,
-                title: const Text('Engine Oil Level OK',
-                    style: TextStyle(
-                        fontFamily: 'sans-serif',
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700)),
-                subtitle: const Text('Dipstick check verified',
-                    style: TextStyle(fontSize: 11)),
-                activeColor: AppColors.primary,
-                onChanged: (v) => setDialogState(() => oil = v ?? true),
+        builder: (ctx, setDialogState) {
+          Widget checkRow({
+            required String title,
+            required String subtitle,
+            required bool value,
+            required ValueChanged<bool> onChanged,
+          }) {
+            return Semantics(
+              button: true,
+              checked: value,
+              child: InkWell(
+                onTap: () => onChanged(!value),
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(12, 9, 8, 9),
+                  decoration: BoxDecoration(
+                    color: value ? const Color(0xFFF0FDF4) : const Color(0xFFFEF2F2),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: value ? const Color(0xFFBBF7D0) : const Color(0xFFFECACA),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(title,
+                                style: const TextStyle(
+                                  fontFamily: 'sans-serif',
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.navy,
+                                )),
+                            const SizedBox(height: 2),
+                            Text(subtitle,
+                                style: const TextStyle(fontSize: 10.5, color: AppColors.slate)),
+                          ],
+                        ),
+                      ),
+                      Checkbox(
+                        value: value,
+                        activeColor: AppColors.primary,
+                        onChanged: (next) => onChanged(next ?? false),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              CheckboxListTile(
-                value: coolant,
-                title: const Text('Coolant Water Level OK',
-                    style: TextStyle(
-                        fontFamily: 'sans-serif',
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700)),
-                subtitle: const Text('Radiator reservoir filled',
-                    style: TextStyle(fontSize: 11)),
-                activeColor: AppColors.primary,
-                onChanged: (v) => setDialogState(() => coolant = v ?? true),
-              ),
-              CheckboxListTile(
-                value: battery,
-                title: const Text('Battery Terminal OK',
-                    style: TextStyle(
-                        fontFamily: 'sans-serif',
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700)),
-                subtitle: const Text('No loose wires, charged',
-                    style: TextStyle(fontSize: 11)),
-                activeColor: AppColors.primary,
-                onChanged: (v) => setDialogState(() => battery = v ?? true),
-              ),
-              CheckboxListTile(
-                value: brakes,
-                title: const Text('Brakes & Air Pressure OK',
-                    style: TextStyle(
-                        fontFamily: 'sans-serif',
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700)),
-                subtitle: const Text('Pedal & pressure normal',
-                    style: TextStyle(fontSize: 11)),
-                activeColor: AppColors.primary,
-                onChanged: (v) => setDialogState(() => brakes = v ?? true),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel',
-                  style: TextStyle(fontFamily: 'sans-serif')),
-            ),
-            FilledButton(
-              onPressed: () async {
+            );
+          }
+
+          final allOkay = oil && coolant && battery && brakes;
+          return Dialog(
+            insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            clipBehavior: Clip.antiAlias,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420, maxHeight: 620),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(16, 14, 8, 12),
+                    color: const Color(0xFFF0FDF4),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.fact_check_outlined, color: AppColors.primary),
+                        const SizedBox(width: 10),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Daily Fluids & Safety Check',
+                                  style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: AppColors.navy)),
+                              SizedBox(height: 2),
+                              Text('Check every item before submitting',
+                                  style: TextStyle(fontSize: 10.5, color: AppColors.slate)),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: 'Close',
+                          onPressed: () => Navigator.pop(ctx),
+                          icon: const Icon(Icons.close_rounded),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Flexible(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(14),
+                      child: Column(
+                        children: [
+                          checkRow(title: 'Engine Oil Level OK', subtitle: 'Dipstick check verified', value: oil,
+                              onChanged: (v) => setDialogState(() => oil = v)),
+                          const SizedBox(height: 8),
+                          checkRow(title: 'Coolant Water Level OK', subtitle: 'Radiator reservoir filled', value: coolant,
+                              onChanged: (v) => setDialogState(() => coolant = v)),
+                          const SizedBox(height: 8),
+                          checkRow(title: 'Battery Terminal OK', subtitle: 'No loose wires, battery charged', value: battery,
+                              onChanged: (v) => setDialogState(() => battery = v)),
+                          const SizedBox(height: 8),
+                          checkRow(title: 'Brakes & Air Pressure OK', subtitle: 'Pedal and pressure are normal', value: brakes,
+                              onChanged: (v) => setDialogState(() => brakes = v)),
+                          if (!allOkay) ...[
+                            const SizedBox(height: 10),
+                            const Row(
+                              children: [
+                                Icon(Icons.warning_amber_rounded, color: Color(0xFFDC2626), size: 17),
+                                SizedBox(width: 6),
+                                Expanded(child: Text('Unchecked item ko theek kiye bina report submit nahi hogi.',
+                                    style: TextStyle(fontSize: 10.5, color: Color(0xFFB91C1C), fontWeight: FontWeight.w700))),
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
+                    ),
+                    child: Row(
+                      children: [
+                        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: FilledButton.icon(
+                            onPressed: !allOkay ? null : () async {
                 await widget.controller.logActivity(
                   title: 'Daily Fluids Check Submitted',
                   details:
@@ -2529,12 +2591,22 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                   );
                 }
               },
-              style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
-              child: const Text('Sab Theek Hai',
-                  style: TextStyle(fontFamily: 'sans-serif')),
+                            icon: const Icon(Icons.check_circle_outline_rounded, size: 18),
+                            label: const Text('Sab Theek Hai', style: TextStyle(fontFamily: 'sans-serif')),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
