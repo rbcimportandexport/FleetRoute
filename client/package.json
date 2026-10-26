@@ -1,0 +1,11 @@
+{
+  "name": "transport-one-web-deploy",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
