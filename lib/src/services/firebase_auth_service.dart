@@ -198,8 +198,7 @@ class FirebaseAuthService {
       'invalid-credential' ||
       'wrong-password' =>
         'Wrong password. Kripya sahi password dalein.',
-      'user-not-found' =>
-        'Account nahi mila. Phone/Email check karein.',
+      'user-not-found' => 'Account nahi mila. Phone/Email check karein.',
       'email-already-in-use' =>
         'Yeh email / account pehle se registered hai. Kripya login karein.',
       'weak-password' => 'Password kam se kam 6-8 characters ka hona chahiye.',
@@ -224,7 +223,22 @@ class FirebaseAuthService {
 
   Future<AuthenticatedFleetUser?> restoreSession() async {
     if (!FirebaseBootstrapService.isInitialized) return null;
-    final user = FirebaseAuth.instance.currentUser;
+    final auth = FirebaseAuth.instance;
+    // On web, Firebase restores the IndexedDB/localStorage session
+    // asynchronously. Reading currentUser immediately at startup can briefly
+    // return null and incorrectly send an authenticated user to the login
+    // screen. The first auth-state event is emitted after hydration finishes.
+    User? user = auth.currentUser;
+    if (user == null && kIsWeb) {
+      try {
+        user = await auth
+            .authStateChanges()
+            .first
+            .timeout(const Duration(seconds: 8));
+      } on TimeoutException {
+        user = auth.currentUser;
+      }
+    }
     if (user == null) return null;
     final token = await user.getIdTokenResult();
     final claims = token.claims ?? const <String, dynamic>{};

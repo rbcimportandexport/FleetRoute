@@ -1,4 +1,5 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../firebase_options.dart';
@@ -33,6 +34,12 @@ class FirebaseBootstrapService {
         );
       } else {
         await Firebase.initializeApp();
+      }
+      // FlutterFire normally uses local persistence on web, but setting it
+      // explicitly prevents browser/session defaults from logging the user
+      // out whenever the page is refreshed or the tab is reopened.
+      if (kIsWeb) {
+        await FirebaseAuth.instance.setPersistence(Persistence.LOCAL);
       }
       _initialized = true;
       _initializationError = null;
