@@ -13,7 +13,6 @@ import '../widgets/cargo_workflow_dialogs.dart';
 import '../widgets/delivery_proof_dialog.dart';
 import '../widgets/driver_trip_history_dialog.dart';
 import '../widgets/seatbelt_records_dialog.dart';
-import '../widgets/seatbelt_verification_dialog.dart';
 import '../widgets/trip_detail_report_dialog.dart';
 
 class DriverPortalPage extends StatefulWidget {
@@ -3160,22 +3159,8 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
         hindi: AppLocalizationService.instance.tr('seatbelt_photo'),
         icon: Icons.airline_seat_recline_extra_rounded,
         keys: const ['seatbelt', 'pre-trip cabin'],
-        action: () {
-          if (widget.adminPreview) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                    'Seatbelt photo driver apne account se capture karega.'),
-              ),
-            );
-            return;
-          }
-          SeatbeltVerificationDialog.show(
-            context,
-            controller: widget.controller,
-            vehicleNumber: _activeDriver?.assignedVehicle ?? '',
-          );
-        },
+        action: () =>
+            _openPhotoCapture(context, category: 'Driver Seatbelt Photo'),
       ),
       (
         title: AppLocalizationService.instance.tr('sunday_cleaning'),
