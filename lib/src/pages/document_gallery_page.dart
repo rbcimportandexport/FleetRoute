@@ -41,7 +41,74 @@ class DocumentGalleryPage extends StatelessWidget {
     return separator > 0 ? notes.substring(0, separator).trim() : notes;
   }
 
+  String _value(String value) => value.trim().isEmpty ? 'Not configured' : value.trim();
+
+  TruckModel? _vehicleFor(String code) {
+    for (final vehicle in controller.truckModels) {
+      if (vehicle.code.trim().toLowerCase() == code.trim().toLowerCase()) return vehicle;
+    }
+    return null;
+  }
+
+  Widget _detailTile(String label, String value) {
+    return Container(
+      constraints: const BoxConstraints(minHeight: 58),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0FDF4),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFBBF7D0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: const TextStyle(fontSize: 9.5, color: AppColors.slate)),
+          const SizedBox(height: 4),
+          Text(value, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.navy)),
+        ],
+      ),
+    );
+  }
+
+  Widget _vehicleDetails(TruckModel vehicle) {
+    final details = <(String, String)>[
+      ('FASTag Balance', 'Rs ${vehicle.fastagBalance.toStringAsFixed(0)}'),
+      ('GPS / Tracker', vehicle.hasValidGpsFix ? 'Connected' : 'No live fix'),
+      ('Last GPS Update', _value(vehicle.lastGpsUpdate)),
+      ('Insurance No.', _value(vehicle.insuranceNumber)),
+      ('Insurance Expiry', _value(vehicle.insuranceExpiry)),
+      ('PUC No.', _value(vehicle.pucNumber)),
+      ('PUC Expiry', _value(vehicle.pucExpiry)),
+      ('Fitness No.', _value(vehicle.fitnessNumber)),
+      ('Fitness Expiry', _value(vehicle.fitnessExpiry)),
+      ('RC Expiry', _value(vehicle.rcExpiry)),
+      ('Permit Expiry', _value(vehicle.allIndiaPermitExpiry)),
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Vehicle & Document Details',
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: AppColors.navy)),
+        const SizedBox(height: 10),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final tileWidth = (constraints.maxWidth - 10) / 2;
+            return Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                for (final detail in details)
+                  SizedBox(width: tileWidth, child: _detailTile(detail.$1, detail.$2)),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+
   void _openGallery(BuildContext context, String title, List<SeatbeltRecord> records) {
+    final vehicle = _isDriver ? null : _vehicleFor(title);
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -73,11 +140,42 @@ class DocumentGalleryPage extends StatelessWidget {
               ),
               const Divider(height: 1),
               Expanded(
-                child: records.isEmpty
-                    ? const Center(child: Text('No document photo uploaded yet.', style: TextStyle(color: AppColors.slate)))
-                    : GridView.builder(
-                        controller: scrollController,
-                        padding: const EdgeInsets.all(14),
+                child: ListView(
+                  controller: scrollController,
+                  padding: const EdgeInsets.all(14),
+                  children: [
+                    if (vehicle != null) ...[
+                      _vehicleDetails(vehicle),
+                      const SizedBox(height: 20),
+                    ],
+                    Row(
+                      children: [
+                        const Expanded(
+                          child: Text('Uploaded Document Photos',
+                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: AppColors.navy)),
+                        ),
+                        Text('${records.length}',
+                            style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.primary)),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    if (records.isEmpty)
+                      Container(
+                        padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                        ),
+                        child: const Center(
+                          child: Text('No document photo uploaded yet.',
+                              style: TextStyle(color: AppColors.slate)),
+                        ),
+                      )
+                    else
+                      GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
                         gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                           maxCrossAxisExtent: 280,
                           mainAxisExtent: 230,
@@ -121,6 +219,8 @@ class DocumentGalleryPage extends StatelessWidget {
                           );
                         },
                       ),
+                  ],
+                ),
               ),
             ],
           ),
