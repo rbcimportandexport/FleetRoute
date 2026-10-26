@@ -649,15 +649,18 @@ class _MapWorkspaceState extends State<MapWorkspace> {
           style: TextStyle(
               fontWeight: FontWeight.w900,
               color: online ? Colors.green : Colors.red)),
-      onTap: !vehicle.hasCoordinates
-          ? null
-          : () {
-              Navigator.pop(sheetContext);
-              final point = LatLng(vehicle.latitude!, vehicle.longitude!);
-              _mapController.move(point, 16);
-              _googleMapController?.animateCamera(
-                  gm.CameraUpdate.newLatLngZoom(_googlePoint(point), 16));
-            },
+      onTap: () async {
+        Navigator.pop(sheetContext);
+        await Future<void>.delayed(const Duration(milliseconds: 220));
+        if (!mounted) return;
+        if (vehicle.hasCoordinates) {
+          final point = LatLng(vehicle.latitude!, vehicle.longitude!);
+          _mapController.move(point, 16);
+          _googleMapController?.animateCamera(
+              gm.CameraUpdate.newLatLngZoom(_googlePoint(point), 16));
+        }
+        _showCompleteVehicleDetails(vehicle);
+      },
     );
   }
 
@@ -1578,7 +1581,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
             height: 52,
             alignment: Alignment.center,
             child: GestureDetector(
-              onTap: () => _showVehicleTelematicsModal(truck),
+              onTap: () => _showCompleteVehicleDetails(truck),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -1727,7 +1730,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
               ? 'Moving · ${truck.currentSpeed} km/h'
               : 'Stationary',
         ),
-        onTap: () => _showVehicleTelematicsModal(truck),
+        onTap: () => _showCompleteVehicleDetails(truck),
       ));
     }
     return markers;
@@ -3323,6 +3326,144 @@ class _MapWorkspaceState extends State<MapWorkspace> {
       },
     );
   }
+
+  void _showCompleteVehicleDetails(TruckModel truck) {
+    String value(String raw) =>
+        raw.trim().isEmpty ? 'Not configured' : raw.trim();
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: FractionallySizedBox(
+          heightFactor: 0.92,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 14, 10, 10),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(7),
+                      decoration: BoxDecoration(
+                        color: AppColors.primarySoft,
+                        borderRadius: BorderRadius.circular(9),
+                        border: Border.all(color: AppColors.primaryBorder),
+                      ),
+                      child: const Icon(Icons.local_shipping_outlined,
+                          size: 18, color: AppColors.primary),
+                    ),
+                    const SizedBox(width: 10),
+                    const Expanded(
+                      child: Text('Complete Vehicle Details',
+                          style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.navy)),
+                    ),
+                    IconButton(
+                      tooltip: 'Close',
+                      icon: const Icon(Icons.close_rounded, size: 22),
+                      onPressed: () => Navigator.pop(sheetContext),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: LayoutBuilder(builder: (context, constraints) {
+                    final width = (constraints.maxWidth - 10) / 2;
+                    return Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: [
+                        _vehicleDetailCard('Vehicle Number', truck.code, width),
+                        _vehicleDetailCard(
+                            'Vehicle Name / Model', truck.name, width),
+                        _vehicleDetailCard(
+                            'Vehicle Type', value(truck.vehicleModel), width),
+                        _vehicleDetailCard(
+                            'Owner', value(truck.ownerName), width),
+                        _vehicleDetailCard(
+                            'Status', value(truck.vehicleStatus), width),
+                        _vehicleDetailCard(
+                            'Capacity', value(truck.capacity), width),
+                        _vehicleDetailCard('Axles', value(truck.axles), width),
+                        _vehicleDetailCard(
+                            'Odometer', '${truck.currentOdometerKm} km', width),
+                        _vehicleDetailCard(
+                            'Next Service', '${truck.nextServiceKm} km', width),
+                        _vehicleDetailCard(
+                            'Speed Limit', '${truck.maxSpeed} km/h', width),
+                        _vehicleDetailCard(
+                            'FASTag Balance',
+                            'Rs ${truck.fastagBalance.toStringAsFixed(0)}',
+                            width),
+                        _vehicleDetailCard(
+                            'GPS / Tracker',
+                            truck.hasValidGpsFix ? 'Connected' : 'No live fix',
+                            width),
+                        _vehicleDetailCard('Last GPS Update',
+                            value(truck.lastGpsUpdate), width),
+                        _vehicleDetailCard('Insurance No.',
+                            value(truck.insuranceNumber), width),
+                        _vehicleDetailCard('Insurance Expiry',
+                            value(truck.insuranceExpiry), width),
+                        _vehicleDetailCard(
+                            'PUC No.', value(truck.pucNumber), width),
+                        _vehicleDetailCard(
+                            'PUC Expiry', value(truck.pucExpiry), width),
+                        _vehicleDetailCard(
+                            'Fitness No.', value(truck.fitnessNumber), width),
+                        _vehicleDetailCard('Fitness Expiry',
+                            value(truck.fitnessExpiry), width),
+                        _vehicleDetailCard(
+                            'RC Expiry', value(truck.rcExpiry), width),
+                        _vehicleDetailCard('Permit Expiry',
+                            value(truck.allIndiaPermitExpiry), width),
+                      ],
+                    );
+                  }),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _vehicleDetailCard(String label, String value, double width) =>
+      Container(
+        width: width,
+        constraints: const BoxConstraints(minHeight: 66),
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: AppColors.primarySoft,
+          borderRadius: BorderRadius.circular(9),
+          border: Border.all(color: AppColors.primaryBorder),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label,
+                style: const TextStyle(fontSize: 10, color: AppColors.slate)),
+            const SizedBox(height: 3),
+            Text(value,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.navy)),
+          ],
+        ),
+      );
 
   @override
   Widget build(BuildContext context) {
