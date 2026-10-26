@@ -1114,22 +1114,111 @@ class PlannerController extends ChangeNotifier {
   Timer? _gpsAutoPollTimer;
   final Map<String, DateTime> _lastOverspeedAlerts = {};
   StreamSubscription<Position>? _foregroundLocationSubscription;
+  StreamSubscription<List<Map<String, dynamic>>>? _fleetTelemetrySubscription;
 
   void startGpsAutoPolling({Duration interval = const Duration(seconds: 15)}) {
     _gpsAutoPollTimer?.cancel();
+    _foregroundLocationSubscription?.cancel();
+    _fleetTelemetrySubscription?.cancel();
     // Do not launch background periodic timers in unit/widget test environments
     if (const bool.fromEnvironment('FLUTTER_TEST') ||
         (kDebugMode && Zone.current[#test.declarer] != null)) {
       return;
     }
-    _gpsAutoPollTimer = Timer.periodic(interval, (_) {
-      if (!isGpsSyncing && truckModels.any((t) => t.imei.trim().isNotEmpty)) {
-        syncProtrackGps(allowSimulationFallback: false);
-      }
-    });
+    if (isAdmin) {
+      _fleetTelemetrySubscription = FirebaseBackendService.instance
+          .watchFleetTelemetry()
+          .listen(_applyFleetTelemetry, onError: (Object error) {
+        lastGpsSyncError = 'Live driver location sync failed: $error';
+        notifyListeners();
+      });
+    } else if (isDriver) {
+      unawaited(_startDriverMobileLocationSharing());
+    }
+  }
 
-    // P1.8: Do not activate phone GPS merely to trigger remote Protrack polling.
-    // Remote GPS tracker telematics are fetched exclusively over network timer.
+  Future<void> _startDriverMobileLocationSharing() async {
+    final driver = selectedDriver;
+    final vehicleCode = driver?.assignedVehicle.trim().toUpperCase() ?? '';
+    if (driver == null || vehicleCode.isEmpty) return;
+    if (!await Geolocator.isLocationServiceEnabled()) {
+      lastGpsSyncError = 'Driver phone location service OFF hai.';
+      notifyListeners();
+      return;
+    }
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      lastGpsSyncError = 'Driver ne live location permission allow nahi ki.';
+      notifyListeners();
+      return;
+    }
+
+    Future<void> publish(Position position) async {
+      final speed = (position.speed * 3.6).clamp(0.0, 220.0);
+      await FirebaseBackendService.instance.syncVehicleTelemetry(
+        vehicleCode: vehicleCode,
+        latitude: position.latitude,
+        longitude: position.longitude,
+        speed: speed,
+        isIgnitionOn: speed > 1,
+        driverId: driver.email,
+        driverName: driver.name,
+      );
+    }
+
+    try {
+      await publish(await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 20),
+        ),
+      ));
+    } catch (error) {
+      debugPrint('Initial driver mobile GPS fix failed: $error');
+    }
+    _foregroundLocationSubscription = Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 15,
+      ),
+    ).listen((position) => unawaited(publish(position)),
+        onError: (Object error) {
+      lastGpsSyncError = 'Driver mobile GPS error: $error';
+      notifyListeners();
+    });
+  }
+
+  void _applyFleetTelemetry(List<Map<String, dynamic>> updates) {
+    var changed = false;
+    for (final data in updates) {
+      final code = (data['vehicleCode'] ?? data['id'] ?? '')
+          .toString()
+          .trim()
+          .toUpperCase();
+      final index = truckModels.indexWhere((t) => t.code.toUpperCase() == code);
+      final lat = data['latitude'];
+      final lng = data['longitude'];
+      if (index < 0 || lat is! num || lng is! num) continue;
+      truckModels[index] = truckModels[index].copyWith(
+        currentLat: lat.toDouble(),
+        currentLng: lng.toDouble(),
+        currentSpeed: (data['speed'] as num?)?.toDouble() ?? 0,
+        isIgnitionOn: data['isIgnitionOn'] == true,
+        lastGpsUpdate: data['lastUpdate']?.toString() ?? '',
+        hasValidGpsFix: true,
+        isDemoTelemetry: false,
+      );
+      changed = true;
+    }
+    if (changed) {
+      lastGpsSyncTime = DateTime.now();
+      lastGpsSyncError = null;
+      notifyListeners();
+    }
   }
 
   void stopGpsAutoPolling() {
@@ -1137,6 +1226,8 @@ class PlannerController extends ChangeNotifier {
     _gpsAutoPollTimer = null;
     _foregroundLocationSubscription?.cancel();
     _foregroundLocationSubscription = null;
+    _fleetTelemetrySubscription?.cancel();
+    _fleetTelemetrySubscription = null;
   }
 
   Future<Map<String, dynamic>> syncProtrackGps({

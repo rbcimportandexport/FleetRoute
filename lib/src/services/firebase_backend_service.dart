@@ -82,6 +82,8 @@ class FirebaseBackendService {
     required double longitude,
     required double speed,
     required bool isIgnitionOn,
+    String driverId = '',
+    String driverName = '',
     http.Client? client,
   }) {
     if (latitude < -90 ||
@@ -99,9 +101,26 @@ class FirebaseBackendService {
           'longitude': longitude,
           'speed': speed.clamp(0, 220),
           'isIgnitionOn': isIgnitionOn,
+          'driverId': driverId,
+          'driverName': driverName,
           'lastUpdate': FieldValue.serverTimestamp(),
         },
         client: client);
+  }
+
+  Stream<List<Map<String, dynamic>>> watchFleetTelemetry() {
+    if (!isConfigured) return const Stream.empty();
+    return FirebaseFirestore.instance
+        .collection('fleet_telemetry')
+        .snapshots()
+        .map((snapshot) => snapshot.docs.map((doc) {
+              final data = <String, dynamic>{'id': doc.id, ...doc.data()};
+              final lastUpdate = data['lastUpdate'];
+              if (lastUpdate is Timestamp) {
+                data['lastUpdate'] = lastUpdate.toDate().toIso8601String();
+              }
+              return data;
+            }).toList(growable: false));
   }
 
   Future<bool> syncAttendanceRecord({

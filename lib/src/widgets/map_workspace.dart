@@ -586,25 +586,79 @@ class _MapWorkspaceState extends State<MapWorkspace> {
   }
 
   Future<void> _showFleetLocation() async {
-    final hasCoords =
-        widget.controller.truckModels.any((t) => t.hasCoordinates);
-    if (!hasCoords) {
-      _showMessage('Real GPS sync ho raha hai...');
-      final res = await widget.controller
-          .syncProtrackGps(allowSimulationFallback: false);
-      if (res['success'] == true) {
-        _showMessage('Fleet GPS successfully sync ho gaya.');
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) _fitFleet();
-        });
-      } else {
-        final errMsg = res['message']?.toString() ?? 'GPS sync nahi ho paya.';
-        _showMessage(errMsg);
-      }
-    } else {
-      _fitFleet();
-      _showMessage('Fleet ki sabhi gadiyon par map zoom ho gaya.');
-    }
+    _fitFleet();
+    if (!mounted) return;
+    await _openFleetDriverSheet();
+  }
+
+  Future<void> _openFleetDriverSheet() => showModalBottomSheet<void>(
+        context: context,
+        showDragHandle: true,
+        builder: (sheetContext) => AnimatedBuilder(
+          animation: widget.controller,
+          builder: (context, _) {
+            final vehicles = widget.controller.truckModels;
+            final online =
+                vehicles.where((v) => v.hasCoordinates && !v.isGpsStale).length;
+            return SafeArea(
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(children: [
+                    const Expanded(
+                      child: Text('All Drivers Live Location',
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.w800)),
+                    ),
+                    Text(
+                        '$online Online · ${vehicles.length - online} Offline'),
+                  ]),
+                ),
+                const Divider(height: 1),
+                Flexible(
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: vehicles.length,
+                    itemBuilder: (_, index) =>
+                        _fleetDriverTile(sheetContext, vehicles[index]),
+                  ),
+                ),
+              ]),
+            );
+          },
+        ),
+      );
+
+  Widget _fleetDriverTile(BuildContext sheetContext, TruckModel vehicle) {
+    final online = vehicle.hasCoordinates && !vehicle.isGpsStale;
+    final drivers = widget.controller.drivers
+        .where((d) =>
+            d.assignedVehicle.trim().toUpperCase() ==
+            vehicle.code.trim().toUpperCase())
+        .map((d) => d.name)
+        .join(' / ');
+    return ListTile(
+      leading: Icon(Icons.person_pin_circle_rounded,
+          color: online ? Colors.green : Colors.red),
+      title: Text(drivers.isEmpty ? vehicle.assignedDriver : drivers),
+      subtitle: Text(vehicle.code +
+          (online
+              ? ' · Live ${vehicle.currentSpeed.toStringAsFixed(0)} km/h'
+              : ' · Offline / no recent GPS')),
+      trailing: Text(online ? 'ONLINE' : 'OFFLINE',
+          style: TextStyle(
+              fontWeight: FontWeight.w900,
+              color: online ? Colors.green : Colors.red)),
+      onTap: !vehicle.hasCoordinates
+          ? null
+          : () {
+              Navigator.pop(sheetContext);
+              final point = LatLng(vehicle.latitude!, vehicle.longitude!);
+              _mapController.move(point, 16);
+              _googleMapController?.animateCamera(
+                  gm.CameraUpdate.newLatLngZoom(_googlePoint(point), 16));
+            },
+    );
   }
 
   // ==================== LIVE NAVIGATION ENGINE ====================
