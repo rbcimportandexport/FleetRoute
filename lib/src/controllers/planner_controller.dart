@@ -3538,8 +3538,8 @@ class PlannerController extends ChangeNotifier {
             password == 'saurabh');
 
     try {
-      final user = await FirebaseAuthService.instance.signIn(
-        email: identifier,
+      final user = await _signInFirebaseWithFleetAlias(
+        identifier: identifier,
         password: password,
       );
       await _completeFirebaseLogin(user);
@@ -3695,6 +3695,43 @@ class PlannerController extends ChangeNotifier {
       }
       return 'Login failed. Internet aur credentials check karein.';
     }
+  }
+
+  Future<AuthenticatedFleetUser> _signInFirebaseWithFleetAlias({
+    required String identifier,
+    required String password,
+  }) async {
+    final normalized = identifier.trim().toLowerCase();
+    final digits = identifier.replaceAll(RegExp(r'\D'), '');
+    final candidates = <String>[identifier.trim()];
+
+    for (final driver in <DriverProfile>[...drivers, ...defaultFleetDrivers]) {
+      final email = driver.email.trim();
+      final driverDigits = driver.phone.replaceAll(RegExp(r'\D'), '');
+      final matches = email.toLowerCase() == normalized ||
+          driver.name.trim().toLowerCase() == normalized ||
+          (digits.isNotEmpty &&
+              driverDigits.isNotEmpty &&
+              driverDigits.endsWith(digits));
+      if (matches && email.isNotEmpty && !candidates.contains(email)) {
+        candidates.add(email);
+      }
+    }
+
+    Object? firstError;
+    for (final accountId in candidates) {
+      try {
+        return await FirebaseAuthService.instance.signIn(
+          email: accountId,
+          password: password,
+        );
+      } catch (error) {
+        firstError ??= error;
+      }
+    }
+    if (firstError is FormatException) throw firstError;
+    if (firstError is StateError) throw firstError;
+    throw StateError(firstError?.toString() ?? 'Firebase login failed.');
   }
 
   Future<String?> register({
