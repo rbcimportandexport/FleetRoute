@@ -17,6 +17,7 @@ import '../services/incoming_intent_service.dart';
 import '../services/map_tile_service.dart';
 import '../services/reverse_geocoding_service.dart';
 import '../services/route_traffic_service.dart';
+import '../services/safety_notification_service.dart';
 import '../theme/app_theme.dart';
 import 'pre_trip_customer_details_dialog.dart';
 import 'seatbelt_verification_dialog.dart';
@@ -586,6 +587,23 @@ class _MapWorkspaceState extends State<MapWorkspace> {
     } catch (_) {}
   }
 
+  bool _isVehicleOnline(TruckModel vehicle) =>
+      vehicle.hasCoordinates &&
+      vehicle.hasValidGpsFix &&
+      !vehicle.isDemoTelemetry &&
+      !vehicle.isGpsStale;
+
+  String _fleetLastUpdate(TruckModel vehicle) {
+    final updated = vehicle.lastGpsTime;
+    if (updated == null) return 'Last location time unavailable';
+    final local = updated.toLocal();
+    final day = local.day.toString().padLeft(2, '0');
+    final month = local.month.toString().padLeft(2, '0');
+    final hour = local.hour.toString().padLeft(2, '0');
+    final minute = local.minute.toString().padLeft(2, '0');
+    return 'Last location: $day/$month/${local.year} $hour:$minute';
+  }
+
   void _resetMapCompass() {
     final camera = _lastGoogleCameraPosition;
     if (camera == null) return;
@@ -602,6 +620,22 @@ class _MapWorkspaceState extends State<MapWorkspace> {
   }
 
   Future<void> _showFleetLocation() async {
+    final vehicles = widget.controller.truckModels;
+    final online = vehicles.where(_isVehicleOnline).length;
+    final offline = vehicles.length - online;
+
+    SafetyNotificationService.requestPermission();
+    if (vehicles.isNotEmpty) {
+      final allOnline = online == vehicles.length;
+      SafetyNotificationService.notifyDriverSafety(
+        title: allOnline ? 'All Fleet Vehicles Online' : 'Fleet GPS Status',
+        body: allOnline
+            ? 'All $online vehicles are online and sharing live location.'
+            : '$online online, $offline offline. Offline vehicles are shown at their last known location.',
+        isRejected: !allOnline,
+      );
+    }
+
     _fitFleet();
     if (!mounted) return;
     await _openFleetDriverSheet();
@@ -614,8 +648,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
           animation: widget.controller,
           builder: (context, _) {
             final vehicles = widget.controller.truckModels;
-            final online =
-                vehicles.where((v) => v.hasCoordinates && !v.isGpsStale).length;
+            final online = vehicles.where(_isVehicleOnline).length;
             return SafeArea(
               child: Column(mainAxisSize: MainAxisSize.min, children: [
                 Padding(
@@ -646,7 +679,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
       );
 
   Widget _fleetDriverTile(BuildContext sheetContext, TruckModel vehicle) {
-    final online = vehicle.hasCoordinates && !vehicle.isGpsStale;
+    final online = _isVehicleOnline(vehicle);
     final drivers = widget.controller.drivers
         .where((d) =>
             d.assignedVehicle.trim().toUpperCase() ==
@@ -656,11 +689,18 @@ class _MapWorkspaceState extends State<MapWorkspace> {
     return ListTile(
       leading: Icon(Icons.person_pin_circle_rounded,
           color: online ? Colors.green : Colors.red),
-      title: Text(drivers.isEmpty ? vehicle.assignedDriver : drivers),
-      subtitle: Text(vehicle.code +
-          (online
-              ? ' · Live ${vehicle.currentSpeed.toStringAsFixed(0)} km/h'
-              : ' · Offline / no recent GPS')),
+      title: Text(drivers.isEmpty
+          ? (vehicle.assignedDriver.trim().isEmpty
+              ? 'Driver not assigned'
+              : vehicle.assignedDriver)
+          : drivers),
+      subtitle: Text(
+        online
+            ? '${vehicle.code} · LIVE · ${vehicle.currentSpeed.toStringAsFixed(0)} km/h'
+            : vehicle.hasCoordinates
+                ? '${vehicle.code} · OFFLINE · ${_fleetLastUpdate(vehicle)}'
+                : '${vehicle.code} · OFFLINE · No GPS location recorded',
+      ),
       trailing: Text(online ? 'ONLINE' : 'OFFLINE',
           style: TextStyle(
               fontWeight: FontWeight.w900,
@@ -3749,6 +3789,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                               hasRoute: hasRoute,
                               onFitRoute: _fitRoute,
                               onClearRoute: _clearRoute,
+                              onShowFleet: _showFleetLocation,
                               onSetLocation: _openSetLocationSheet,
                               onSetPickup: () {
                                 setState(() => _activePinMode = 'pickup');
@@ -3823,6 +3864,11 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                                 active: _trafficEnabled,
                                 activeColor: const Color(0xFF10B981),
                                 onTap: _toggleLiveTraffic,
+                              ),
+                              _MapButton(
+                                icon: Icons.local_shipping_rounded,
+                                label: 'Fleet GPS',
+                                onTap: _showFleetLocation,
                               ),
                               if (hasRoute ||
                                   _effectiveOrigin != null ||
@@ -5563,6 +5609,7 @@ class _CompactMapBar extends StatelessWidget {
     required this.hasRoute,
     required this.onFitRoute,
     required this.onClearRoute,
+    required this.onShowFleet,
     required this.onSetLocation,
     required this.onSetPickup,
     required this.onSetDrop,
@@ -5575,6 +5622,7 @@ class _CompactMapBar extends StatelessWidget {
   final bool hasRoute;
   final VoidCallback onFitRoute;
   final VoidCallback onClearRoute;
+  final VoidCallback onShowFleet;
   final VoidCallback onSetLocation;
   final VoidCallback onSetPickup;
   final VoidCallback onSetDrop;
@@ -5781,6 +5829,14 @@ class _CompactMapBar extends StatelessWidget {
             active: controller.pinMode,
             activeColor: const Color(0xFF2563EB),
             onTap: controller.togglePinMode,
+          ),
+          const SizedBox(width: 4),
+          _CompactIconButton(
+            icon: Icons.local_shipping_rounded,
+            tooltip: 'All Drivers Live Location',
+            active: true,
+            activeColor: const Color(0xFF0F766E),
+            onTap: onShowFleet,
           ),
           if (hasRoute) ...[
             const SizedBox(width: 4),
