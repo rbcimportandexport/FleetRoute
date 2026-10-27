@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../controllers/planner_controller.dart';
@@ -51,32 +50,6 @@ class _LoginPageState extends State<LoginPage> {
   @override
   void initState() {
     super.initState();
-    _loadSavedPhone();
-  }
-
-  Future<void> _loadSavedPhone() async {
-    final savedPhone = await widget.controller.getLastPhone();
-    if (savedPhone != null && savedPhone.isNotEmpty && mounted) {
-      if (_phoneController.text.isEmpty) {
-        setState(() {
-          _phoneController.text = savedPhone;
-        });
-      }
-    } else if (mounted && _phoneController.text.isEmpty) {
-      final runningWidgetTest = const bool.fromEnvironment('FLUTTER_TEST') ||
-          (kDebugMode && Zone.current[#test.declarer] != null);
-      if (!runningWidgetTest) {
-        setState(() {
-          if (_useOtpMode) {
-            _phoneController.text = '9157661886';
-          } else {
-            _phoneController.text = 'rbcsaurabhyadav@gmail.com';
-          }
-          _passwordController.text = 'saurabh+098';
-          _selectedRole = 'driver';
-        });
-      }
-    }
   }
 
   void _startResendTimer() {
@@ -567,13 +540,9 @@ class _LoginPageState extends State<LoginPage> {
                                                 setState(() {
                                                   _useOtpMode = true;
                                                   _errorMessage = null;
-                                                  // If currently showing email, replace with mobile number
                                                   if (_phoneController.text
-                                                          .contains('@') ||
-                                                      _phoneController
-                                                          .text.isEmpty) {
-                                                    _phoneController.text =
-                                                        '9157661886';
+                                                      .contains('@')) {
+                                                    _phoneController.clear();
                                                   } else {
                                                     // Keep digits only
                                                     final digits =
@@ -668,12 +637,8 @@ class _LoginPageState extends State<LoginPage> {
                                                 setState(() {
                                                   _useOtpMode = false;
                                                   _errorMessage = null;
-                                                  // If currently showing phone number or empty, restore default email
-                                                  if (!_phoneController.text
-                                                      .contains('@')) {
-                                                    _phoneController.text =
-                                                        'rbcsaurabhyadav@gmail.com';
-                                                  }
+                                                  _phoneController.clear();
+                                                  _passwordController.clear();
                                                 });
                                               },
                                               borderRadius:
@@ -980,6 +945,7 @@ class _LoginPageState extends State<LoginPage> {
                                   const SizedBox(height: 6),
                                   TextField(
                                     controller: _phoneController,
+                                    autofillHints: const <String>[],
                                     keyboardType: (!_isSignUp && _useOtpMode)
                                         ? TextInputType.phone
                                         : TextInputType.emailAddress,
@@ -1139,6 +1105,7 @@ class _LoginPageState extends State<LoginPage> {
                                     const SizedBox(height: 6),
                                     TextField(
                                       controller: _passwordController,
+                                      autofillHints: const <String>[],
                                       obscureText: _obscurePassword,
                                       style: const TextStyle(
                                           color: AppColors.navy,
