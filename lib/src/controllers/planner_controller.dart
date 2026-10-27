@@ -1137,7 +1137,7 @@ class PlannerController extends ChangeNotifier {
         longitude: position.longitude,
         speed: speed,
         isIgnitionOn: hasRealMovement,
-        driverId: driver.email,
+        driverId: FirebaseBackendService.instance.currentEmail ?? driver.email,
         driverName: driver.name,
       );
       if (!synced) {

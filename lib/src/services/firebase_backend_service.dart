@@ -21,6 +21,9 @@ class FirebaseBackendService {
   String? get currentUid =>
       isConfigured ? FirebaseAuth.instance.currentUser?.uid : null;
 
+  String? get currentEmail =>
+      isConfigured ? FirebaseAuth.instance.currentUser?.email : null;
+
   Future<bool> _put(
     String collection,
     String rawDocumentId,
