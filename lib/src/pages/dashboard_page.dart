@@ -9,6 +9,7 @@ import '../services/protrack_gps_service.dart';
 import '../services/route_traffic_service.dart';
 import '../theme/app_theme.dart';
 import 'fleet_workspace.dart';
+import 'driver_portal_page.dart';
 import 'operations_module_page.dart';
 import '../widgets/trip_map_dialog.dart';
 
@@ -553,7 +554,11 @@ class _DashboardPageState extends State<DashboardPage>
         ? 'D'
         : driver.name.trim().substring(0, 1).toUpperCase();
     return InkWell(
-      onTap: () => widget.onNavigate(WorkspaceSection.drivers),
+      onTap: () => DriverPortalPage.openDriverDashboard(
+        context,
+        controller: widget.controller,
+        driver: driver,
+      ),
       child: Row(children: [
         CircleAvatar(
           backgroundColor: const Color(0xFFE4F7EE),
