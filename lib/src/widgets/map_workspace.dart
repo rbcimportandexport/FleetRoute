@@ -3591,46 +3591,209 @@ class _MapWorkspaceState extends State<MapWorkspace> {
         : (truck.assignedDriver.trim().isNotEmpty
             ? truck.assignedDriver.trim()
             : 'Driver not assigned');
+    final isOnDuty = widget.controller.isVehicleDriverOnDuty(truck.code);
+    final isOnline = _isVehicleOnline(truck);
+    final speed = truck.currentSpeed.toStringAsFixed(0);
+    const depotJolva = LatLng(21.1648, 73.0028);
+    final lat = truck.latitude ?? (_pinnedOrigin?.latitude ?? depotJolva.latitude);
+    final lng = truck.longitude ?? (_pinnedOrigin?.longitude ?? depotJolva.longitude);
+    final vehiclePoint = LatLng(lat, lng);
+
     showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (sheetContext) => SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Row(
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const CircleAvatar(
-                radius: 22,
-                backgroundColor: AppColors.primaryLight,
-                foregroundColor: AppColors.primary,
-                child: Icon(Icons.local_shipping_rounded, size: 24),
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _showCompleteVehicleDetails(truck);
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 24,
+                        backgroundColor: isOnline ? const Color(0xFFDCFCE7) : const Color(0xFFF1F5F9),
+                        foregroundColor: isOnline ? const Color(0xFF16A34A) : AppColors.slate,
+                        child: const Icon(Icons.local_shipping_rounded, size: 26),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  truck.code,
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.navy,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: isOnline ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    isOnline ? 'ONLINE' : 'OFFLINE',
+                                    style: TextStyle(
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.w800,
+                                      color: isOnline ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              driverName,
+                              style: const TextStyle(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.slate,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded),
+                        onPressed: () => Navigator.pop(sheetContext),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              // Live Telematics Details Strip
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    Text(truck.code,
-                        style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.navy)),
-                    const SizedBox(height: 4),
-                    Text(driverName,
-                        style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.slate)),
+                    Column(
+                      children: [
+                        const Text('Speed', style: TextStyle(fontSize: 11, color: AppColors.slate)),
+                        const SizedBox(height: 2),
+                        Text('$speed km/h',
+                            style: const TextStyle(
+                                fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.navy)),
+                      ],
+                    ),
+                    Container(height: 24, width: 1, color: const Color(0xFFCBD5E1)),
+                    Column(
+                      children: [
+                        const Text('GPS Fix', style: TextStyle(fontSize: 11, color: AppColors.slate)),
+                        const SizedBox(height: 2),
+                        Text(
+                          truck.hasValidGpsFix ? 'Live Satellite' : (isOnDuty ? 'Base / Office' : 'Stationary'),
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: truck.hasValidGpsFix ? const Color(0xFF16A34A) : AppColors.navy,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Container(height: 24, width: 1, color: const Color(0xFFCBD5E1)),
+                    Column(
+                      children: [
+                        const Text('Ignition', style: TextStyle(fontSize: 11, color: AppColors.slate)),
+                        const SizedBox(height: 2),
+                        Text(
+                          truck.isIgnitionOn ? 'ACC ON' : 'ACC OFF',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: truck.isIgnitionOn ? const Color(0xFF16A34A) : AppColors.slate,
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
-              IconButton(
-                icon: const Icon(Icons.close_rounded),
-                onPressed: () => Navigator.pop(sheetContext),
+              const SizedBox(height: 14),
+              // Action Buttons
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        side: const BorderSide(color: Color(0xFF2563EB)),
+                      ),
+                      icon: const Icon(Icons.my_location_rounded, size: 18, color: Color(0xFF2563EB)),
+                      label: const Text('Track on Map',
+                          style: TextStyle(
+                              color: Color(0xFF2563EB), fontWeight: FontWeight.w700, fontSize: 13)),
+                      onPressed: () {
+                        Navigator.pop(sheetContext);
+                        try {
+                          _mapController.move(vehiclePoint, 16.5);
+                        } catch (_) {}
+                        try {
+                          _googleMapController?.animateCamera(
+                              gm.CameraUpdate.newLatLngZoom(_googlePoint(vehiclePoint), 16.5));
+                        } catch (_) {}
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF16A34A),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      icon: const Icon(Icons.info_outline_rounded, size: 18, color: Colors.white),
+                      label: const Text('View All Details',
+                          style: TextStyle(
+                              color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13)),
+                      onPressed: () {
+                        Navigator.pop(sheetContext);
+                        _showCompleteVehicleDetails(truck);
+                      },
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
