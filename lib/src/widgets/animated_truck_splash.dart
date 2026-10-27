@@ -64,14 +64,15 @@ class _AnimatedTruckSplashState extends State<AnimatedTruckSplash>
           ),
         ),
         child: SafeArea(
+          left: false,
+          right: false,
           child: LayoutBuilder(
             builder: (context, constraints) {
-              final roadWidth = math.min(constraints.maxWidth - 40, 430.0);
+              final roadWidth = constraints.maxWidth;
               return Center(
                 child: SingleChildScrollView(
                   physics: const NeverScrollableScrollPhysics(),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
+                  padding: const EdgeInsets.symmetric(vertical: 28),
                   child: FadeTransition(
                     opacity: _fadeIn,
                     child: SlideTransition(
@@ -168,77 +169,44 @@ class _AnimatedTruckSplashState extends State<AnimatedTruckSplash>
   Widget _buildRoadAnimation(double roadWidth) {
     return SizedBox(
       width: roadWidth,
-      height: 96,
+      height: 126,
       child: AnimatedBuilder(
         animation: _driveController,
         builder: (context, _) {
           final progress = _driveController.value;
-          final truckLeft = progress * (roadWidth - 54);
+          final truckLeft = progress * (roadWidth - 126);
           final edgeOpacity =
               (math.sin(progress * math.pi) * 1.5).clamp(0.0, 1.0);
           return Stack(
             clipBehavior: Clip.none,
             children: [
               Positioned(
-                left: 8,
-                right: 8,
-                bottom: 21,
-                child: Container(
-                  height: 9,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE2EAE6),
-                    borderRadius: BorderRadius.circular(99),
-                    boxShadow: const [
-                      BoxShadow(
-                          color: Color(0x120F3D2F),
-                          blurRadius: 8,
-                          offset: Offset(0, 4)),
-                    ],
-                  ),
+                left: 0,
+                right: 0,
+                bottom: 10,
+                height: 70,
+                child: CustomPaint(
+                  painter: _RealRoadPainter(progress),
                 ),
               ),
-              ...List.generate(7, (index) {
-                final segmentWidth = roadWidth / 9;
-                final offset = ((progress * segmentWidth * 3) +
-                        index * segmentWidth * 1.45) %
-                    roadWidth;
-                return Positioned(
-                  left: offset,
-                  bottom: 24.5,
-                  child: Container(
-                    width: segmentWidth * .62,
-                    height: 2,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(99),
-                    ),
-                  ),
-                );
-              }),
               const Positioned(
-                left: 1,
-                bottom: 11,
+                left: 5,
+                bottom: 0,
                 child:
                     _RoadPoint(icon: Icons.trip_origin_rounded, label: 'READY'),
               ),
               const Positioned(
-                right: 0,
-                bottom: 11,
+                right: 5,
+                bottom: 0,
                 child:
                     _RoadPoint(icon: Icons.location_on_rounded, label: 'LIVE'),
               ),
               Positioned(
                 left: truckLeft,
-                bottom: 31,
+                bottom: 42,
                 child: Opacity(
                   opacity: edgeOpacity,
-                  child: Transform.translate(
-                    offset: Offset(
-                      0,
-                      math.sin(progress * math.pi * 14) * 1.1,
-                    ),
-                    child: const _MovingTruck(),
-                  ),
+                  child: const _MovingTruck(),
                 ),
               ),
             ],
@@ -291,22 +259,101 @@ class _MovingTruck extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 50,
-      height: 42,
-      alignment: Alignment.center,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.all(Radius.circular(13)),
-        boxShadow: [
-          BoxShadow(
-              color: Color(0x2910B981), blurRadius: 13, offset: Offset(0, 6)),
+    return SizedBox(
+      width: 126,
+      height: 58,
+      child: Stack(
+        alignment: Alignment.bottomCenter,
+        children: [
+          Positioned(
+            bottom: 0,
+            child: Container(
+              width: 94,
+              height: 7,
+              decoration: BoxDecoration(
+                color: const Color(0x4D10271F),
+                borderRadius: BorderRadius.circular(99),
+                boxShadow: const [
+                  BoxShadow(color: Color(0x3810271F), blurRadius: 9),
+                ],
+              ),
+            ),
+          ),
+          Positioned.fill(
+            bottom: 2,
+            child: Image.asset(
+              'assets/images/splash_truck.png',
+              fit: BoxFit.contain,
+              filterQuality: FilterQuality.high,
+              errorBuilder: (_, __, ___) => const Icon(
+                Icons.local_shipping_rounded,
+                size: 45,
+                color: AppColors.primary,
+              ),
+            ),
+          ),
         ],
       ),
-      child: const Icon(Icons.local_shipping_rounded,
-          size: 32, color: AppColors.primary),
     );
   }
+}
+
+class _RealRoadPainter extends CustomPainter {
+  const _RealRoadPainter(this.progress);
+
+  final double progress;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final road = RRect.fromRectAndRadius(
+      Rect.fromLTWH(0, 8, size.width, 48),
+      Radius.zero,
+    );
+    canvas.drawShadow(Path()..addRRect(road), const Color(0x551B332A), 8, true);
+
+    final asphalt = Paint()
+      ..shader = const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [Color(0xFF747D78), Color(0xFF454D49), Color(0xFF626B66)],
+      ).createShader(road.outerRect);
+    canvas.drawRRect(road, asphalt);
+
+    final edgePaint = Paint()
+      ..color = const Color(0xFFF6F8F7)
+      ..strokeWidth = 2;
+    canvas.drawLine(const Offset(8, 14), Offset(size.width - 8, 14), edgePaint);
+    canvas.drawLine(const Offset(8, 50), Offset(size.width - 8, 50), edgePaint);
+
+    final dashPaint = Paint()
+      ..color = const Color(0xFFF7F9F8)
+      ..strokeWidth = 3
+      ..strokeCap = StrokeCap.round;
+    const dashWidth = 32.0;
+    const gap = 24.0;
+    const cycle = dashWidth + gap;
+    canvas.save();
+    canvas.clipRRect(road);
+    for (double x = 18; x < size.width - 8; x += cycle) {
+      canvas.drawLine(
+        Offset(x, 32),
+        Offset(math.min(x + dashWidth, size.width - 8), 32),
+        dashPaint,
+      );
+    }
+    canvas.restore();
+
+    final texture = Paint()..color = const Color(0x17333D38);
+    for (var i = 0; i < 36; i++) {
+      final x = (i * 47.0) % size.width;
+      final y = 18 + ((i * 19) % 28);
+      canvas.drawCircle(Offset(x, y.toDouble()), .7, texture);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _RealRoadPainter oldDelegate) =>
+      oldDelegate.progress != progress;
 }
 
 class _RoadPoint extends StatelessWidget {

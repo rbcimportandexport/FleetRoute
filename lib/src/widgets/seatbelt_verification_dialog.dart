@@ -289,6 +289,8 @@ class _SeatbeltVerificationDialogState extends State<SeatbeltVerificationDialog>
       // Commercial truck / passenger cabin cameras can be left-hand, right-hand, or selfie mirrored.
       var bestHitRatio = 0.0;
       var bestContinuousRun = 0;
+      var bestBandRatio = 0.0;
+      var bestBandRun = 0;
       var bestOffset = 0;
       final offsetHitRatios = <int, double>{};
 
@@ -298,6 +300,10 @@ class _SeatbeltVerificationDialogState extends State<SeatbeltVerificationDialog>
             for (var offset = -48; offset <= 48; offset += 4) {
               var hits = 0;
               var run = 0;
+              var bandHits = 0;
+              var bandRun = 0;
+              var longestBandRun = 0;
+              var bandMisses = 0;
               var longestRun = 0;
               var samples = 0;
 
@@ -320,8 +326,29 @@ class _SeatbeltVerificationDialogState extends State<SeatbeltVerificationDialog>
 
                 // A genuine seatbelt strap creates distinct edge or contrast against clothing
                 final isStrapPixel = (contrast >= contrastThresh) ||
-                    (diffA >= contrastThresh + 2 && diffB >= contrastThresh - 2) ||
-                    (diffB >= contrastThresh + 2 && diffA >= contrastThresh - 2);
+                    (diffA >= contrastThresh + 2 &&
+                        diffB >= contrastThresh - 2) ||
+                    (diffB >= contrastThresh + 2 &&
+                        diffA >= contrastThresh - 2);
+
+                // Seatbelts are often 10-25 px wide after down-scaling. A
+                // centre-only edge check can sit entirely inside that band
+                // and miss it, so compare the belt core with wider shoulders.
+                var isWideStrapBand = false;
+                for (final halfWidth in [9, 13, 17]) {
+                  if (x - halfWidth < 2 || x + halfWidth > 157) continue;
+                  final inner = (luminanceAt(x - 2, y) +
+                          luminanceAt(x, y) +
+                          luminanceAt(x + 2, y)) /
+                      3;
+                  final outer = (luminanceAt(x - halfWidth, y) +
+                          luminanceAt(x + halfWidth, y)) /
+                      2;
+                  if ((inner - outer).abs() >= 11.0) {
+                    isWideStrapBand = true;
+                    break;
+                  }
+                }
 
                 samples++;
                 if (isStrapPixel) {
@@ -330,6 +357,21 @@ class _SeatbeltVerificationDialogState extends State<SeatbeltVerificationDialog>
                   if (run > longestRun) longestRun = run;
                 } else {
                   run = 0;
+                }
+
+                if (isWideStrapBand) {
+                  bandHits++;
+                  bandRun++;
+                  bandMisses = 0;
+                  if (bandRun > longestBandRun) longestBandRun = bandRun;
+                } else if (bandMisses < 2 && bandRun > 0) {
+                  // Buckle, clothing folds and arm overlap may briefly hide
+                  // an otherwise continuous shoulder-to-waist strap.
+                  bandMisses++;
+                  bandRun++;
+                } else {
+                  bandRun = 0;
+                  bandMisses = 0;
                 }
               }
 
@@ -342,6 +384,11 @@ class _SeatbeltVerificationDialogState extends State<SeatbeltVerificationDialog>
                 }
                 if (longestRun > bestContinuousRun) {
                   bestContinuousRun = longestRun;
+                }
+                final bandRatio = bandHits / samples;
+                if (bandRatio > bestBandRatio) bestBandRatio = bandRatio;
+                if (longestBandRun > bestBandRun) {
+                  bestBandRun = longestBandRun;
                 }
               }
             }
@@ -356,14 +403,15 @@ class _SeatbeltVerificationDialogState extends State<SeatbeltVerificationDialog>
           parallelHighContrastStripes++;
         }
       }
-      if (parallelHighContrastStripes >= 4) {
+      if (parallelHighContrastStripes >= 7 && bestBandRatio < 0.28) {
         return const _SeatbeltAnalysis(
           false,
           'Parallel stripes ya grill pattern detect hua. Sirf ek continuous seatbelt strap honi chahiye.',
         );
       }
 
-      final strapDetected = bestHitRatio >= 0.38 && bestContinuousRun >= 5;
+      final strapDetected = (bestHitRatio >= 0.31 && bestContinuousRun >= 5) ||
+          (bestBandRatio >= 0.28 && bestBandRun >= 8);
       if (!strapDetected) {
         return const _SeatbeltAnalysis(
           false,
