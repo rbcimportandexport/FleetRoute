@@ -3862,6 +3862,10 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                         locating: _locating,
                         onPressed: _showCurrentLocation,
                       ),
+                      const SizedBox(height: 12),
+                      _FleetGpsButton(
+                        onPressed: _showFleetLocation,
+                      ),
                     ],
                   ),
                 ),
@@ -5301,6 +5305,24 @@ class _LocationButton extends StatelessWidget {
               child: CircularProgressIndicator(strokeWidth: 2),
             )
           : const Icon(Icons.my_location_rounded, size: 19),
+    );
+  }
+}
+
+class _FleetGpsButton extends StatelessWidget {
+  const _FleetGpsButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return FloatingActionButton.small(
+      heroTag: 'fleet-gps-location',
+      onPressed: onPressed,
+      backgroundColor: Colors.white,
+      foregroundColor: const Color(0xFFF97316),
+      tooltip: 'All Drivers Live Location',
+      child: const Icon(Icons.gps_fixed_rounded, size: 20),
     );
   }
 }
