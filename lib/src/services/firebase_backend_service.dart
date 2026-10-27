@@ -129,6 +129,18 @@ class FirebaseBackendService {
   }) =>
       _put('attendance_records', record.id, record.toJson(), client: client);
 
+  Stream<List<AttendanceRecord>> watchAttendanceRecords() {
+    if (!isConfigured) return const Stream.empty();
+    return FirebaseFirestore.instance
+        .collection('attendance_records')
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => AttendanceRecord.fromJson(
+                  <String, dynamic>{'id': doc.id, ...doc.data()},
+                ))
+            .toList(growable: false));
+  }
+
   Future<bool> syncTripRecord({
     required TripRecord record,
     http.Client? client,

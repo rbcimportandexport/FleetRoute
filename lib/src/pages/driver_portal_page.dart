@@ -978,6 +978,9 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                     if (isOnDuty) {
                       final err = await widget.controller
                           .markEndDuty(driverId: driverId);
+                      if (err == null) {
+                        widget.controller.stopGpsAutoPolling();
+                      }
                       if (!mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
@@ -994,6 +997,9 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                         driverName: driverName,
                         tripId: activeTrip?.reference ?? '',
                       );
+                      if (err == null) {
+                        widget.controller.startGpsAutoPolling();
+                      }
                       if (!mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(

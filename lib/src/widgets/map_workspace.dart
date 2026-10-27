@@ -588,10 +588,11 @@ class _MapWorkspaceState extends State<MapWorkspace> {
   }
 
   bool _isVehicleOnline(TruckModel vehicle) =>
-      vehicle.hasCoordinates &&
-      vehicle.hasValidGpsFix &&
-      !vehicle.isDemoTelemetry &&
-      !vehicle.isGpsStale;
+      widget.controller.isVehicleDriverOnDuty(vehicle.code) ||
+      (vehicle.hasCoordinates &&
+          vehicle.hasValidGpsFix &&
+          !vehicle.isDemoTelemetry &&
+          !vehicle.isGpsStale);
 
   String _fleetLastUpdate(TruckModel vehicle) {
     final updated = vehicle.lastGpsTime;
@@ -737,7 +738,9 @@ class _MapWorkspaceState extends State<MapWorkspace> {
           : drivers),
       subtitle: Text(
         online
-            ? '${vehicle.code} · LIVE · ${vehicle.currentSpeed.toStringAsFixed(0)} km/h'
+            ? vehicle.hasCoordinates && !vehicle.isGpsStale
+                ? '${vehicle.code} · LIVE GPS · ${vehicle.currentSpeed.toStringAsFixed(0)} km/h'
+                : '${vehicle.code} · ON DUTY · Waiting for GPS fix'
             : vehicle.hasCoordinates
                 ? '${vehicle.code} · OFFLINE · ${_fleetLastUpdate(vehicle)}'
                 : '${vehicle.code} · OFFLINE · No GPS location recorded',

@@ -1033,11 +1033,13 @@ class PlannerController extends ChangeNotifier {
   StreamSubscription<Position>? _foregroundLocationSubscription;
   Position? _lastPublishedDriverPosition;
   StreamSubscription<List<Map<String, dynamic>>>? _fleetTelemetrySubscription;
+  StreamSubscription<List<AttendanceRecord>>? _attendanceSubscription;
 
   void startGpsAutoPolling({Duration interval = const Duration(seconds: 15)}) {
     _gpsAutoPollTimer?.cancel();
     _foregroundLocationSubscription?.cancel();
     _fleetTelemetrySubscription?.cancel();
+    _attendanceSubscription?.cancel();
     // Do not launch background periodic timers in unit/widget test environments
     if (const bool.fromEnvironment('FLUTTER_TEST') ||
         (kDebugMode && Zone.current[#test.declarer] != null)) {
@@ -1050,9 +1052,30 @@ class PlannerController extends ChangeNotifier {
         lastGpsSyncError = 'Live driver location sync failed: $error';
         notifyListeners();
       });
+      _attendanceSubscription = FirebaseBackendService.instance
+          .watchAttendanceRecords()
+          .listen(_applyRemoteAttendance, onError: (Object error) {
+        debugPrint('Live attendance sync failed: $error');
+      });
     } else if (isDriver) {
-      unawaited(_startDriverMobileLocationSharing());
+      final driver = selectedDriver;
+      final driverId = driver == null
+          ? ''
+          : (driver.name.trim().isNotEmpty
+              ? driver.name.trim()
+              : driver.email.trim());
+      if (driverId.isNotEmpty && getActiveDuty(driverId) != null) {
+        unawaited(_startDriverMobileLocationSharing());
+      }
     }
+  }
+
+  void _applyRemoteAttendance(List<AttendanceRecord> records) {
+    attendanceRecords
+      ..clear()
+      ..addAll(records);
+    attendanceRecords.sort((a, b) => b.startTime.compareTo(a.startTime));
+    notifyListeners();
   }
 
   Future<void> _startDriverMobileLocationSharing() async {
@@ -1173,6 +1196,32 @@ class PlannerController extends ChangeNotifier {
     _lastPublishedDriverPosition = null;
     _fleetTelemetrySubscription?.cancel();
     _fleetTelemetrySubscription = null;
+    _attendanceSubscription?.cancel();
+    _attendanceSubscription = null;
+  }
+
+  bool isVehicleDriverOnDuty(String vehicleCode) {
+    final code = vehicleCode.trim().toUpperCase();
+    final assigned = drivers
+        .where((driver) => driver.assignedVehicle.trim().toUpperCase() == code);
+    for (final driver in assigned) {
+      final identities = <String>{
+        driver.name.trim().toLowerCase(),
+        driver.email.trim().toLowerCase(),
+        driver.phone.replaceAll(RegExp(r'\D'), ''),
+      }..removeWhere((value) => value.isEmpty);
+      final active = attendanceRecords.any((record) {
+        if (record.endTime.trim().isNotEmpty) return false;
+        final recordId = record.driverId.trim().toLowerCase();
+        final recordName = record.driverName.trim().toLowerCase();
+        final recordDigits = record.driverId.replaceAll(RegExp(r'\D'), '');
+        return identities.contains(recordId) ||
+            identities.contains(recordName) ||
+            (recordDigits.isNotEmpty && identities.contains(recordDigits));
+      });
+      if (active) return true;
+    }
+    return false;
   }
 
   Future<Map<String, dynamic>> syncProtrackGps({
