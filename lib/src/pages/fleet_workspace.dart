@@ -618,10 +618,11 @@ class _Sidebar extends StatelessWidget {
                           ? const [
                               WorkspaceSection.dashboard,
                               WorkspaceSection.planner,
-                              WorkspaceSection.attendance,
                               WorkspaceSection.alerts,
                             ]
-                          : WorkspaceSection.values))
+                          : WorkspaceSection.values.where(
+                              (section) => section != WorkspaceSection.attendance,
+                            )))
                         Padding(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 10, vertical: 2),
