@@ -135,6 +135,24 @@ class FirebaseBackendService {
   }) =>
       _put('trips', record.reference, record.toJson(), client: client);
 
+  Future<bool> deleteTripRecord(String reference) async {
+    if (!isConfigured) return false;
+    final documentId =
+        reference.trim().replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
+    if (documentId.isEmpty) return false;
+    try {
+      await FirebaseFirestore.instance
+          .collection('trips')
+          .doc(documentId)
+          .delete()
+          .timeout(const Duration(seconds: 12));
+      return true;
+    } catch (error) {
+      debugPrint('[FirebaseSync] trips delete failed: $error');
+      return false;
+    }
+  }
+
   Future<bool> syncExpenseRecord({
     required ExpenseRecord record,
     http.Client? client,

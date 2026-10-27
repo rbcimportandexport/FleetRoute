@@ -117,8 +117,29 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
   }
 
   String _photoDayDateTime(DateTime timestamp) {
-    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const days = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday'
+    ];
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
     final hour = timestamp.hour == 0
         ? 12
         : (timestamp.hour > 12 ? timestamp.hour - 12 : timestamp.hour);
@@ -162,16 +183,24 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                 padding: const EdgeInsets.fromLTRB(16, 0, 8, 10),
                 child: Row(
                   children: [
-                    const AppIconBadge(icon: Icons.photo_library_outlined, size: 20, padding: 8),
+                    const AppIconBadge(
+                        icon: Icons.photo_library_outlined,
+                        size: 20,
+                        padding: 8),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(title,
-                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: AppColors.navy)),
-                          Text('${sortedRecords.length} uploaded image${sortedRecords.length == 1 ? '' : 's'}',
-                              style: const TextStyle(fontSize: 10.5, color: AppColors.slate)),
+                              style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                  color: AppColors.navy)),
+                          Text(
+                              '${sortedRecords.length} uploaded image${sortedRecords.length == 1 ? '' : 's'}',
+                              style: const TextStyle(
+                                  fontSize: 10.5, color: AppColors.slate)),
                         ],
                       ),
                     ),
@@ -179,7 +208,8 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                       TextButton.icon(
                         onPressed: () {
                           Navigator.pop(sheetContext);
-                          Future<void>.delayed(const Duration(milliseconds: 180), uploadAction);
+                          Future<void>.delayed(
+                              const Duration(milliseconds: 180), uploadAction);
                         },
                         icon: const Icon(Icons.add_a_photo_outlined, size: 17),
                         label: const Text('Upload'),
@@ -198,11 +228,14 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                         controller: scrollController,
                         children: [
                           const SizedBox(height: 90),
-                          const Icon(Icons.photo_library_outlined, size: 54, color: Color(0xFF94A3B8)),
+                          const Icon(Icons.photo_library_outlined,
+                              size: 54, color: Color(0xFF94A3B8)),
                           const SizedBox(height: 12),
                           const Center(
                             child: Text('Abhi koi image upload nahi hui.',
-                                style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.slate)),
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.slate)),
                           ),
                         ],
                       )
@@ -212,7 +245,10 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                         itemCount: sortedRecords.length,
                         separatorBuilder: (_, __) => const Padding(
                           padding: EdgeInsets.symmetric(vertical: 12),
-                          child: Divider(height: 1, thickness: 1, color: Color(0xFFDDE5EC)),
+                          child: Divider(
+                              height: 1,
+                              thickness: 1,
+                              color: Color(0xFFDDE5EC)),
                         ),
                         itemBuilder: (context, index) {
                           final record = sortedRecords[index];
@@ -224,7 +260,8 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                                 child: Container(
                                   height: 230,
                                   color: const Color(0xFFF1F5F9),
-                                  child: _buildThumbnail(record.photoBase64, fit: BoxFit.contain),
+                                  child: _buildThumbnail(record.photoBase64,
+                                      fit: BoxFit.contain),
                                 ),
                               ),
                               const SizedBox(height: 10),
@@ -233,28 +270,44 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                                 children: [
                                   Container(
                                     padding: const EdgeInsets.all(7),
-                                    decoration: const BoxDecoration(color: Color(0xFFDCFCE7), shape: BoxShape.circle),
-                                    child: const Icon(Icons.schedule_rounded, size: 16, color: AppColors.primary),
+                                    decoration: const BoxDecoration(
+                                        color: Color(0xFFDCFCE7),
+                                        shape: BoxShape.circle),
+                                    child: const Icon(Icons.schedule_rounded,
+                                        size: 16, color: AppColors.primary),
                                   ),
                                   const SizedBox(width: 9),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
-                                        Text(_photoDayDateTime(record.timestamp),
-                                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.navy)),
+                                        Text(
+                                            _photoDayDateTime(record.timestamp),
+                                            style: const TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w800,
+                                                color: AppColors.navy)),
                                         const SizedBox(height: 3),
-                                        Text('${record.driverName}  •  ${record.vehicleNumber}',
-                                            style: const TextStyle(fontSize: 10.5, color: AppColors.slate)),
-                                        if (record.location.trim().isNotEmpty) ...[
+                                        Text(
+                                            '${record.driverName}  •  ${record.vehicleNumber}',
+                                            style: const TextStyle(
+                                                fontSize: 10.5,
+                                                color: AppColors.slate)),
+                                        if (record.location
+                                            .trim()
+                                            .isNotEmpty) ...[
                                           const SizedBox(height: 3),
                                           Text('Location: ${record.location}',
-                                              style: const TextStyle(fontSize: 10.5, color: AppColors.slate)),
+                                              style: const TextStyle(
+                                                  fontSize: 10.5,
+                                                  color: AppColors.slate)),
                                         ],
                                       ],
                                     ),
                                   ),
-                                  const Icon(Icons.check_circle_rounded, size: 18, color: AppColors.primary),
+                                  const Icon(Icons.check_circle_rounded,
+                                      size: 18, color: AppColors.primary),
                                 ],
                               ),
                             ],
@@ -1032,6 +1085,40 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
     );
   }
 
+  Future<void> _deleteActiveTrip(TripRecord trip) async {
+    final index = widget.controller.trips.indexOf(trip);
+    if (index < 0) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete this trip?'),
+        content: Text(
+          'Trip ${trip.effectiveTripNumber} permanently remove ho jayegi.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton.icon(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            icon: const Icon(Icons.delete_outline_rounded, size: 18),
+            label: const Text('Delete'),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFDC2626),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    await widget.controller.removeTrip(index);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Trip ${trip.effectiveTripNumber} deleted.')),
+    );
+  }
+
   Widget _buildActiveTripSheetCard(
       TripRecord trip, String vehicleNumber, String driverName) {
     final tripIndex = widget.controller.trips.indexOf(trip);
@@ -1159,6 +1246,19 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                         : const Color(0xFFB45309),
                     fontFamily: 'sans-serif',
                   ),
+                ),
+              ),
+              const SizedBox(width: 4),
+              IconButton(
+                onPressed: () => _deleteActiveTrip(trip),
+                tooltip: 'Delete trip',
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+                icon: const Icon(
+                  Icons.delete_outline_rounded,
+                  size: 18,
+                  color: Color(0xFFDC2626),
                 ),
               ),
             ],
@@ -2607,10 +2707,14 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                 child: Container(
                   padding: const EdgeInsets.fromLTRB(12, 9, 8, 9),
                   decoration: BoxDecoration(
-                    color: value ? const Color(0xFFF0FDF4) : const Color(0xFFFEF2F2),
+                    color: value
+                        ? const Color(0xFFF0FDF4)
+                        : const Color(0xFFFEF2F2),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: value ? const Color(0xFFBBF7D0) : const Color(0xFFFECACA),
+                      color: value
+                          ? const Color(0xFFBBF7D0)
+                          : const Color(0xFFFECACA),
                     ),
                   ),
                   child: Row(
@@ -2628,7 +2732,8 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                                 )),
                             const SizedBox(height: 2),
                             Text(subtitle,
-                                style: const TextStyle(fontSize: 10.5, color: AppColors.slate)),
+                                style: const TextStyle(
+                                    fontSize: 10.5, color: AppColors.slate)),
                           ],
                         ),
                       ),
@@ -2646,8 +2751,10 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
 
           final allOkay = oil && coolant && battery && brakes;
           return Dialog(
-            insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            insetPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             clipBehavior: Clip.antiAlias,
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 420, maxHeight: 620),
@@ -2659,17 +2766,22 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                     color: const Color(0xFFF0FDF4),
                     child: Row(
                       children: [
-                        const Icon(Icons.fact_check_outlined, color: AppColors.primary),
+                        const Icon(Icons.fact_check_outlined,
+                            color: AppColors.primary),
                         const SizedBox(width: 10),
                         const Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text('Daily Fluids & Safety Check',
-                                  style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: AppColors.navy)),
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: 16,
+                                      color: AppColors.navy)),
                               SizedBox(height: 2),
                               Text('Check every item before submitting',
-                                  style: TextStyle(fontSize: 10.5, color: AppColors.slate)),
+                                  style: TextStyle(
+                                      fontSize: 10.5, color: AppColors.slate)),
                             ],
                           ),
                         ),
@@ -2686,25 +2798,46 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                       padding: const EdgeInsets.all(14),
                       child: Column(
                         children: [
-                          checkRow(title: 'Engine Oil Level OK', subtitle: 'Dipstick check verified', value: oil,
+                          checkRow(
+                              title: 'Engine Oil Level OK',
+                              subtitle: 'Dipstick check verified',
+                              value: oil,
                               onChanged: (v) => setDialogState(() => oil = v)),
                           const SizedBox(height: 8),
-                          checkRow(title: 'Coolant Water Level OK', subtitle: 'Radiator reservoir filled', value: coolant,
-                              onChanged: (v) => setDialogState(() => coolant = v)),
+                          checkRow(
+                              title: 'Coolant Water Level OK',
+                              subtitle: 'Radiator reservoir filled',
+                              value: coolant,
+                              onChanged: (v) =>
+                                  setDialogState(() => coolant = v)),
                           const SizedBox(height: 8),
-                          checkRow(title: 'Battery Terminal OK', subtitle: 'No loose wires, battery charged', value: battery,
-                              onChanged: (v) => setDialogState(() => battery = v)),
+                          checkRow(
+                              title: 'Battery Terminal OK',
+                              subtitle: 'No loose wires, battery charged',
+                              value: battery,
+                              onChanged: (v) =>
+                                  setDialogState(() => battery = v)),
                           const SizedBox(height: 8),
-                          checkRow(title: 'Brakes & Air Pressure OK', subtitle: 'Pedal and pressure are normal', value: brakes,
-                              onChanged: (v) => setDialogState(() => brakes = v)),
+                          checkRow(
+                              title: 'Brakes & Air Pressure OK',
+                              subtitle: 'Pedal and pressure are normal',
+                              value: brakes,
+                              onChanged: (v) =>
+                                  setDialogState(() => brakes = v)),
                           if (!allOkay) ...[
                             const SizedBox(height: 10),
                             const Row(
                               children: [
-                                Icon(Icons.warning_amber_rounded, color: Color(0xFFDC2626), size: 17),
+                                Icon(Icons.warning_amber_rounded,
+                                    color: Color(0xFFDC2626), size: 17),
                                 SizedBox(width: 6),
-                                Expanded(child: Text('Unchecked item ko theek kiye bina report submit nahi hogi.',
-                                    style: TextStyle(fontSize: 10.5, color: Color(0xFFB91C1C), fontWeight: FontWeight.w700))),
+                                Expanded(
+                                    child: Text(
+                                        'Unchecked item ko theek kiye bina report submit nahi hogi.',
+                                        style: TextStyle(
+                                            fontSize: 10.5,
+                                            color: Color(0xFFB91C1C),
+                                            fontWeight: FontWeight.w700))),
                               ],
                             ),
                           ],
@@ -2720,31 +2853,38 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                     ),
                     child: Row(
                       children: [
-                        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+                        TextButton(
+                            onPressed: () => Navigator.pop(ctx),
+                            child: const Text('Cancel')),
                         const SizedBox(width: 8),
                         Expanded(
                           child: FilledButton.icon(
-                            onPressed: !allOkay ? null : () async {
-                await widget.controller.logActivity(
-                  title: 'Daily Fluids Check Submitted',
-                  details:
-                      'Vehicle $vehicleNumber: Engine Oil: $oil, Coolant: $coolant, Battery: $battery, Brakes: $brakes.',
-                  category: ActivityCategory.vehicle,
-                  action: 'verified',
-                );
-                if (ctx.mounted) {
-                  Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content:
-                          Text('Daily fluids inspection verified & saved!'),
-                      backgroundColor: AppColors.primary,
-                    ),
-                  );
-                }
-              },
-                            icon: const Icon(Icons.check_circle_outline_rounded, size: 18),
-                            label: const Text('Sab Theek Hai', style: TextStyle(fontFamily: 'sans-serif')),
+                            onPressed: !allOkay
+                                ? null
+                                : () async {
+                                    await widget.controller.logActivity(
+                                      title: 'Daily Fluids Check Submitted',
+                                      details:
+                                          'Vehicle $vehicleNumber: Engine Oil: $oil, Coolant: $coolant, Battery: $battery, Brakes: $brakes.',
+                                      category: ActivityCategory.vehicle,
+                                      action: 'verified',
+                                    );
+                                    if (ctx.mounted) {
+                                      Navigator.pop(ctx);
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                              'Daily fluids inspection verified & saved!'),
+                                          backgroundColor: AppColors.primary,
+                                        ),
+                                      );
+                                    }
+                                  },
+                            icon: const Icon(Icons.check_circle_outline_rounded,
+                                size: 18),
+                            label: const Text('Sab Theek Hai',
+                                style: TextStyle(fontFamily: 'sans-serif')),
                             style: FilledButton.styleFrom(
                               backgroundColor: AppColors.primary,
                               padding: const EdgeInsets.symmetric(vertical: 12),

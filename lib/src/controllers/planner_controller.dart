@@ -560,9 +560,17 @@ class PlannerController extends ChangeNotifier {
 
       final loadedTrips = _decodeRecords(tripJson, TripRecord.fromJson);
       trips.clear();
+      final legacyTripReferences = <String>{};
       if (loadedTrips != null && loadedTrips.isNotEmpty) {
         trips.addAll(loadedTrips);
+        legacyTripReferences.addAll(trips
+            .where((t) =>
+                t.reference.trim().toUpperCase() == 'TRIP-969538' ||
+                t.effectiveTripNumber.trim().toUpperCase() == 'TRIP-969538')
+            .map((t) => t.reference));
         trips.removeWhere((t) =>
+            t.reference.trim().toUpperCase() == 'TRIP-969538' ||
+            t.effectiveTripNumber.trim().toUpperCase() == 'TRIP-969538' ||
             t.reference == 'TRIP-2026-081' ||
             t.reference == 'TRIP-2026-079' ||
             t.tripNumber.startsWith('MOCK-') ||
@@ -570,6 +578,11 @@ class PlannerController extends ChangeNotifier {
             t.customerName == 'Reliance Logistics Hazira');
       }
       await _saveTrips();
+      for (final reference in legacyTripReferences) {
+        unawaited(
+          FirebaseBackendService.instance.deleteTripRecord(reference),
+        );
+      }
 
       final loadedAlerts = _decodeRecords(alertJson, OperationsAlert.fromJson);
       if (loadedAlerts != null) {
@@ -807,6 +820,8 @@ class PlannerController extends ChangeNotifier {
 
   Future<void> clearAllMockData() async {
     trips.removeWhere((t) =>
+        t.reference.trim().toUpperCase() == 'TRIP-969538' ||
+        t.effectiveTripNumber.trim().toUpperCase() == 'TRIP-969538' ||
         t.reference == 'TRIP-2026-081' ||
         t.reference == 'TRIP-2026-079' ||
         t.tripNumber.startsWith('MOCK-') ||
@@ -1510,6 +1525,12 @@ class PlannerController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setPinMode(bool enabled) {
+    if (pinMode == enabled) return;
+    pinMode = enabled;
+    notifyListeners();
+  }
+
   void clearRoute() {
     origin = '';
     destination = '';
@@ -1718,6 +1739,7 @@ class PlannerController extends ChangeNotifier {
     trips.removeAt(index);
     notifyListeners();
     await _saveTrips();
+    await FirebaseBackendService.instance.deleteTripRecord(removed.reference);
     await logActivity(
       title: 'Trip Deleted',
       details: 'Trip ${removed.reference} was removed.',

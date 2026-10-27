@@ -216,7 +216,12 @@ class _FleetWorkspaceState extends State<FleetWorkspace> {
     };
   }
 
-  void _select(WorkspaceSection value) => setState(() => selected = value);
+  void _select(WorkspaceSection value) {
+    if (value != WorkspaceSection.planner) {
+      controller.setPinMode(false);
+    }
+    setState(() => selected = value);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -231,7 +236,10 @@ class _FleetWorkspaceState extends State<FleetWorkspace> {
                 final desktop = constraints.maxWidth >= 820;
 
                 final mobileBottomSections = controller.isDriver
-                    ? const [WorkspaceSection.dashboard, WorkspaceSection.planner]
+                    ? const [
+                        WorkspaceSection.dashboard,
+                        WorkspaceSection.planner
+                      ]
                     : const [
                         WorkspaceSection.dashboard,
                         WorkspaceSection.planner,
@@ -240,7 +248,8 @@ class _FleetWorkspaceState extends State<FleetWorkspace> {
                         WorkspaceSection.alerts,
                       ];
 
-                final currentBottomIndex = mobileBottomSections.indexOf(selected);
+                final currentBottomIndex =
+                    mobileBottomSections.indexOf(selected);
                 final safeBottomIndex =
                     currentBottomIndex >= 0 ? currentBottomIndex : 0;
 
@@ -253,12 +262,15 @@ class _FleetWorkspaceState extends State<FleetWorkspace> {
                         ? null
                         : AppBar(
                             title: Text(
-                               controller.isDriver
+                              controller.isDriver
                                   ? (selected == WorkspaceSection.planner
-                                      ? AppLocalizationService.instance.tr('trip_navigation_title')
+                                      ? AppLocalizationService.instance
+                                          .tr('trip_navigation_title')
                                       : selected == WorkspaceSection.attendance
-                                          ? AppLocalizationService.instance.tr('attendance_history')
-                                          : AppLocalizationService.instance.tr('driver_desk_title'))
+                                          ? AppLocalizationService.instance
+                                              .tr('attendance_history')
+                                          : AppLocalizationService.instance
+                                              .tr('driver_desk_title'))
                                   : selected.label,
                               style: const TextStyle(
                                 fontWeight: FontWeight.w800,
@@ -278,7 +290,8 @@ class _FleetWorkspaceState extends State<FleetWorkspace> {
                                     const Icon(Icons.notifications_none_rounded,
                                         color: AppColors.iconColor),
                                     if (controller.alerts.any((a) =>
-                                        !a.isResolved && a.category != 'compliance'))
+                                        !a.isResolved &&
+                                        a.category != 'compliance'))
                                       Positioned(
                                         top: -2,
                                         right: -2,
@@ -294,7 +307,8 @@ class _FleetWorkspaceState extends State<FleetWorkspace> {
                                   ],
                                 ),
                                 tooltip: 'Alerts & Notifications',
-                                onPressed: () => _select(WorkspaceSection.alerts),
+                                onPressed: () =>
+                                    _select(WorkspaceSection.alerts),
                               ),
                               IconButton(
                                 icon: const Icon(Icons.verified_user_outlined,
@@ -420,7 +434,8 @@ class _FleetWorkspaceState extends State<FleetWorkspace> {
                       onTap: () => _select(sections[index]),
                       borderRadius: BorderRadius.circular(20),
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 1),
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 2, horizontal: 1),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -484,19 +499,20 @@ class _FleetWorkspaceState extends State<FleetWorkspace> {
                               SizedBox(
                                 height: 15,
                                 child: Text(
-                                label,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: active
-                                      ? const Color(0xFF7C3AED)
-                                      : const Color(0xFF64748B),
-                                  fontSize: controller.isDriver ? 9.5 : 9.0,
-                                  fontWeight:
-                                      active ? FontWeight.w800 : FontWeight.w600,
-                                  fontFamily: 'sans-serif',
-                                ),
+                                  label,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: active
+                                        ? const Color(0xFF7C3AED)
+                                        : const Color(0xFF64748B),
+                                    fontSize: controller.isDriver ? 9.5 : 9.0,
+                                    fontWeight: active
+                                        ? FontWeight.w800
+                                        : FontWeight.w600,
+                                    fontFamily: 'sans-serif',
+                                  ),
                                 ),
                               ),
                           ],
@@ -621,7 +637,8 @@ class _Sidebar extends StatelessWidget {
                               WorkspaceSection.alerts,
                             ]
                           : WorkspaceSection.values.where(
-                              (section) => section != WorkspaceSection.attendance,
+                              (section) =>
+                                  section != WorkspaceSection.attendance,
                             )))
                         Padding(
                           padding: const EdgeInsets.symmetric(
@@ -685,7 +702,8 @@ class _Sidebar extends StatelessWidget {
                                                     section ==
                                                         WorkspaceSection
                                                             .planner)
-                                                ? AppLocalizationService.instance
+                                                ? AppLocalizationService
+                                                    .instance
                                                     .tr('trip_and_route')
                                                 : (controller.isDriver &&
                                                         section ==

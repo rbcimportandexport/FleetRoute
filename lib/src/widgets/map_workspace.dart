@@ -2690,6 +2690,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                               onTap: () {
                                 Navigator.pop(bottomSheetContext);
                                 setState(() => _activePinMode = 'pickup');
+                                widget.controller.setPinMode(true);
                                 _showMessage(
                                     'Pickup Mode ON: Map par tap karke Pickup set karein (Green Pin).');
                               },
@@ -2726,6 +2727,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                               onTap: () {
                                 Navigator.pop(bottomSheetContext);
                                 setState(() => _activePinMode = 'drop');
+                                widget.controller.setPinMode(true);
                                 _showMessage(
                                     'Drop Mode ON: Map par tap karke Drop set karein (Red Pin).');
                               },
@@ -3114,7 +3116,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
   }
 
   Future<void> _handleMapTap(LatLng point) async {
-    if (_isNavigating) return;
+    if (_isNavigating || !widget.controller.pinMode) return;
 
     final coordString = _format(point);
 
@@ -3144,6 +3146,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
               'Drop Set: $locationName. Route ready! "Start" dabayein.');
         }
       });
+      widget.controller.setPinMode(false);
       return;
     }
 
@@ -3183,6 +3186,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
         widget.controller.setDestination(locationName);
       }
     });
+    widget.controller.setPinMode(false);
   }
 
   Future<void> _openExternalNav() async {
@@ -3748,11 +3752,13 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                               onSetLocation: _openSetLocationSheet,
                               onSetPickup: () {
                                 setState(() => _activePinMode = 'pickup');
+                                widget.controller.setPinMode(true);
                                 _showMessage(
                                     'Pickup Mode ON: Map par tap karein pickup badalne ke liye (Green Pin).');
                               },
                               onSetDrop: () {
                                 setState(() => _activePinMode = 'drop');
+                                widget.controller.setPinMode(true);
                                 _showMessage(
                                     'Drop Mode ON: Map par tap karein drop point set karne ke liye (Red Pin).');
                               },
@@ -3784,6 +3790,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                                 activeColor: const Color(0xFF10B981),
                                 onTap: () {
                                   setState(() => _activePinMode = 'pickup');
+                                  widget.controller.setPinMode(true);
                                   _showMessage(
                                       'Pickup Mode ON: Map par tap karein pickup badalne ke liye (Green Pin).');
                                 },
@@ -3795,6 +3802,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                                 activeColor: const Color(0xFFEF4444),
                                 onTap: () {
                                   setState(() => _activePinMode = 'drop');
+                                  widget.controller.setPinMode(true);
                                   _showMessage(
                                       'Drop Mode ON: Map par tap karein drop point set karne ke liye (Red Pin).');
                                 },
@@ -4108,6 +4116,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                                 borderRadius: BorderRadius.circular(14),
                                 onTap: () {
                                   setState(() => _activePinMode = 'pickup');
+                                  widget.controller.setPinMode(true);
                                   _showMessage(
                                       'Pickup Mode ON: Map par tap karein pickup badalne ke liye (Green Pin).');
                                 },
@@ -4144,6 +4153,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                                 borderRadius: BorderRadius.circular(14),
                                 onTap: () {
                                   setState(() => _activePinMode = 'drop');
+                                  widget.controller.setPinMode(true);
                                   _showMessage(
                                       'Drop Mode ON: Map par tap karein drop point set karne ke liye (Red Pin).');
                                 },
