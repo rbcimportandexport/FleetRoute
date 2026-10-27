@@ -593,14 +593,21 @@ class _MapWorkspaceState extends State<MapWorkspace> {
   }
 
   void _fitFleet() {
+    const depotJolva = LatLng(21.1648, 73.0028);
     final truckPoints = <LatLng>[];
     for (final truck in widget.controller.truckModels) {
       if (truck.hasCoordinates) {
         truckPoints.add(LatLng(truck.latitude!, truck.longitude!));
       }
     }
-    if (truckPoints.isEmpty && _userLocation != null) {
-      truckPoints.add(_userLocation!);
+    if (truckPoints.isEmpty) {
+      if (_userLocation != null) {
+        truckPoints.add(_userLocation!);
+      } else if (_pinnedOrigin != null) {
+        truckPoints.add(_pinnedOrigin!);
+      } else {
+        truckPoints.add(depotJolva);
+      }
     }
     if (truckPoints.isEmpty) return;
 
@@ -808,12 +815,28 @@ class _MapWorkspaceState extends State<MapWorkspace> {
         Navigator.pop(sheetContext);
         await Future<void>.delayed(const Duration(milliseconds: 220));
         if (!mounted) return;
-        if (vehicle.hasCoordinates) {
-          final point = LatLng(vehicle.latitude!, vehicle.longitude!);
+
+        final vIdx = widget.controller.truckModels.indexWhere(
+            (t) => t.code.toUpperCase() == vehicle.code.toUpperCase());
+        if (vIdx >= 0) {
+          widget.controller.selectTruck(vIdx);
+        }
+
+        const depotJolva = LatLng(21.1648, 73.0028);
+        final lat = vehicle.latitude ??
+            (_pinnedOrigin?.latitude ?? depotJolva.latitude);
+        final lng = vehicle.longitude ??
+            (_pinnedOrigin?.longitude ?? depotJolva.longitude);
+        final point = LatLng(lat, lng);
+
+        try {
           _mapController.move(point, 16);
+        } catch (_) {}
+        try {
           _googleMapController?.animateCamera(
               gm.CameraUpdate.newLatLngZoom(_googlePoint(point), 16));
-        }
+        } catch (_) {}
+
         _showVehicleIdentity(vehicle);
       },
     );
@@ -1879,36 +1902,62 @@ class _MapWorkspaceState extends State<MapWorkspace> {
         },
       ));
     }
+    // Depot base location for RBC Import & Export fleet (Jolva / Palsana, Surat)
+    const depotJolva = LatLng(21.1648, 73.0028);
+
     final activeAssignedCode = widget.controller.selectedDriver?.assignedVehicle.trim().toUpperCase() ??
         (widget.controller.isDriver && _selectedLiveTruck != null ? _selectedLiveTruck!.code.toUpperCase() : '');
     final currentSelectedCode = (widget.controller.truckModels.isNotEmpty && widget.controller.truckIndex != null && widget.controller.truckIndex! >= 0 && widget.controller.truckIndex! < widget.controller.truckModels.length)
         ? widget.controller.truckModels[widget.controller.truckIndex!].code.toUpperCase()
         : (_selectedLiveTruck?.code.toUpperCase() ?? (widget.controller.truckModels.isNotEmpty ? widget.controller.truckModels.first.code.toUpperCase() : ''));
 
-    for (final truck in widget.controller.truckModels) {
+    for (int tIdx = 0; tIdx < widget.controller.truckModels.length; tIdx++) {
+      final truck = widget.controller.truckModels[tIdx];
       final isDriverActiveVehicle = activeAssignedCode.isNotEmpty &&
           truck.code.toUpperCase() == activeAssignedCode;
       final isSelectedVehicle = truck.code.toUpperCase() == currentSelectedCode;
+      final isOnDuty = widget.controller.isVehicleDriverOnDuty(truck.code);
       final fallbackToUserLoc = (isDriverActiveVehicle || isSelectedVehicle) && _userLocation != null;
 
-      final truckLat = truck.latitude ?? (fallbackToUserLoc ? _userLocation!.latitude : null);
-      final truckLng = truck.longitude ?? (fallbackToUserLoc ? _userLocation!.longitude : null);
+      // Slight offset for depot parking slots so trucks at base don't overlap completely
+      final slotOffsetLat = (tIdx % 3 - 1) * 0.00035;
+      final slotOffsetLng = (tIdx ~/ 3) * 0.00045;
 
-      if (truckLat == null || truckLng == null) continue;
+      final double truckLat = truck.latitude ??
+          (fallbackToUserLoc
+              ? _userLocation!.latitude
+              : (_pinnedOrigin?.latitude ?? (depotJolva.latitude + slotOffsetLat)));
+      final double truckLng = truck.longitude ??
+          (fallbackToUserLoc
+              ? _userLocation!.longitude
+              : (_pinnedOrigin?.longitude ?? (depotJolva.longitude + slotOffsetLng)));
+
+      final bool isLiveGps = truck.hasCoordinates && truck.hasValidGpsFix;
+      final double markerHue = isLiveGps
+          ? (truck.isMoving ? gm.BitmapDescriptor.hueAzure : gm.BitmapDescriptor.hueGreen)
+          : (isOnDuty ? gm.BitmapDescriptor.hueGreen : gm.BitmapDescriptor.hueCyan);
+
+      final String statusSnippet = isLiveGps
+          ? (truck.isMoving
+              ? 'Real-Time Moving · ${truck.currentSpeed.toStringAsFixed(0)} km/h'
+              : 'Live GPS · Stationary')
+          : (isOnDuty
+              ? 'ON DUTY (Online) · Base Depot / Office'
+              : 'Fleet Base Depot · ${truck.name}');
 
       markers.add(gm.Marker(
         markerId: gm.MarkerId('truck_${truck.code}'),
         position: gm.LatLng(truckLat, truckLng),
-        icon: gm.BitmapDescriptor.defaultMarkerWithHue(truck.isMoving
-            ? gm.BitmapDescriptor.hueAzure
-            : gm.BitmapDescriptor.hueBlue),
+        icon: gm.BitmapDescriptor.defaultMarkerWithHue(markerHue),
+        zIndexInt: isSelectedVehicle || isDriverActiveVehicle ? 10 : (isOnDuty ? 5 : 2),
         infoWindow: gm.InfoWindow(
-          title: '${truck.code} · ${truck.name}',
-          snippet: truck.isMoving
-              ? 'Real-Time Moving · ${truck.currentSpeed} km/h'
-              : 'Real GPS Live · Stationary',
+          title: '🚛 ${truck.code} · ${truck.name}',
+          snippet: statusSnippet,
         ),
-        onTap: () => _showVehicleIdentity(truck),
+        onTap: () {
+          widget.controller.selectTruck(tIdx);
+          _showVehicleIdentity(truck);
+        },
       ));
     }
     return markers;
