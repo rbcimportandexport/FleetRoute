@@ -72,7 +72,17 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkWeeklyReminders();
+      _ensureActiveDutyGps();
     });
+  }
+
+  Future<void> _ensureActiveDutyGps() async {
+    if (widget.adminPreview || !widget.controller.isDriver) return;
+    final driver = _activeDriver;
+    if (driver == null) return;
+    final driverId = _dutyDriverId(driver, driver.name);
+    if (widget.controller.getActiveDuty(driverId) == null) return;
+    await widget.controller.ensureDriverLiveLocationSharing();
   }
 
   void _checkWeeklyReminders() {
@@ -969,6 +979,36 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
             ],
           ),
           const SizedBox(height: 12),
+          if (isOnDuty && widget.controller.lastGpsSyncError != null) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF2F2),
+                borderRadius: BorderRadius.circular(9),
+                border: Border.all(color: const Color(0xFFFECACA)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.location_off_rounded,
+                      size: 17, color: Color(0xFFDC2626)),
+                  const SizedBox(width: 7),
+                  Expanded(
+                    child: Text(
+                      widget.controller.lastGpsSyncError!,
+                      style: const TextStyle(
+                          fontSize: 10.5, color: Color(0xFF991B1B)),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: _ensureActiveDutyGps,
+                    child: const Text('RETRY'),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+          ],
           Row(
             children: [
               Expanded(
@@ -997,15 +1037,18 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                         driverName: driverName,
                         tripId: activeTrip?.reference ?? '',
                       );
+                      String? gpsError;
                       if (err == null) {
-                        widget.controller.startGpsAutoPolling();
+                        gpsError = await widget.controller
+                            .ensureDriverLiveLocationSharing();
                       }
                       if (!mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text(err ??
-                              'Duty started! Attendance marked present.'),
-                          backgroundColor: err != null
+                              (gpsError ??
+                                  'Duty started! Live GPS location shared.')),
+                          backgroundColor: err != null || gpsError != null
                               ? const Color(0xFFDC2626)
                               : AppColors.primary,
                         ),

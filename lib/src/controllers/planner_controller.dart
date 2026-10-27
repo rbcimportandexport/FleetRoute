@@ -1079,9 +1079,14 @@ class PlannerController extends ChangeNotifier {
   }
 
   Future<void> _startDriverMobileLocationSharing() async {
+    lastGpsSyncError = null;
     final driver = selectedDriver;
     final vehicleCode = driver?.assignedVehicle.trim().toUpperCase() ?? '';
-    if (driver == null || vehicleCode.isEmpty) return;
+    if (driver == null || vehicleCode.isEmpty) {
+      lastGpsSyncError = 'Driver ko vehicle assign nahi hai.';
+      notifyListeners();
+      return;
+    }
     if (!await Geolocator.isLocationServiceEnabled()) {
       lastGpsSyncError = 'Driver phone location service OFF hai.';
       notifyListeners();
@@ -1126,7 +1131,7 @@ class PlannerController extends ChangeNotifier {
           ? math.max(reportedSpeed, calculatedSpeed).clamp(0.0, 220.0)
           : 0.0;
       _lastPublishedDriverPosition = position;
-      await FirebaseBackendService.instance.syncVehicleTelemetry(
+      final synced = await FirebaseBackendService.instance.syncVehicleTelemetry(
         vehicleCode: vehicleCode,
         latitude: position.latitude,
         longitude: position.longitude,
@@ -1135,6 +1140,12 @@ class PlannerController extends ChangeNotifier {
         driverId: driver.email,
         driverName: driver.name,
       );
+      if (!synced) {
+        throw StateError('Firebase location write failed');
+      }
+      lastGpsSyncError = null;
+      lastGpsSyncTime = DateTime.now();
+      notifyListeners();
     }
 
     try {
@@ -1146,6 +1157,9 @@ class PlannerController extends ChangeNotifier {
       ));
     } catch (error) {
       debugPrint('Initial driver mobile GPS fix failed: $error');
+      lastGpsSyncError =
+          'Real GPS fix nahi mila. Location ON karke permission Allow karein.';
+      notifyListeners();
     }
     _foregroundLocationSubscription = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
@@ -1157,6 +1171,13 @@ class PlannerController extends ChangeNotifier {
       lastGpsSyncError = 'Driver mobile GPS error: $error';
       notifyListeners();
     });
+  }
+
+  Future<String?> ensureDriverLiveLocationSharing() async {
+    _foregroundLocationSubscription?.cancel();
+    _foregroundLocationSubscription = null;
+    await _startDriverMobileLocationSharing();
+    return lastGpsSyncError;
   }
 
   void _applyFleetTelemetry(List<Map<String, dynamic>> updates) {
