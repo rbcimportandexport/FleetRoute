@@ -405,7 +405,6 @@ class AppSecurityService {
         }
         return null;
       }
-
       // Fallback for unencrypted JSON string
       return payload;
     } catch (_) {

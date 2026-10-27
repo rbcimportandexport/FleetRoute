@@ -68,7 +68,44 @@ class PlannerController extends ChangeNotifier {
           .toList(growable: false);
       if (list.isNotEmpty) return list;
     }
-    return const [];
+    return const [
+      DriverProfile(
+        'Sandeep',
+        'sandeep@transport1.com',
+        phone: '6355583474',
+        assignedVehicle: 'GJ19Y2720',
+      ),
+      DriverProfile(
+        'Dadarao',
+        'dadarao@transport1.com',
+        phone: '8007755389',
+        assignedVehicle: 'GJ19J6633',
+      ),
+      DriverProfile(
+        'Ramrao',
+        'ramrao@transport1.com',
+        phone: '7600291483',
+        assignedVehicle: 'GJ19J6633',
+      ),
+      DriverProfile(
+        'Devidas',
+        'devidas@transport1.com',
+        phone: '9726423091',
+        assignedVehicle: 'GJ19Y4628',
+      ),
+      DriverProfile(
+        'Ashok Tempo',
+        'ashok@transport1.com',
+        phone: '6354215071',
+        assignedVehicle: 'GJ19Y0829',
+      ),
+      DriverProfile(
+        'Ajay',
+        'ajay@transport1.com',
+        phone: '9081255626',
+        assignedVehicle: 'GJ19Z0901',
+      ),
+    ];
   }
 
   /// Fleet vehicles loaded from backend or default fleet vehicles.
@@ -83,7 +120,49 @@ class PlannerController extends ChangeNotifier {
           .toList(growable: false);
       if (list.isNotEmpty) return list;
     }
-    return const [];
+    return const [
+      TruckModel(
+        code: 'GJ19Y2720',
+        name: 'GJ19Y2720 (Sandeep)',
+        axles: '2',
+        capacity: '7.5 Ton',
+        maxSpeed: 80,
+        imei: '355139082439925',
+        assignedDriver: 'Sandeep',
+      ),
+      TruckModel(
+        code: 'GJ19J6633',
+        name: 'GJ19J6633 (Dadarao / Ramrao)',
+        axles: '2',
+        capacity: '7.5 Ton',
+        maxSpeed: 80,
+        assignedDriver: 'Dadarao',
+      ),
+      TruckModel(
+        code: 'GJ19Y4628',
+        name: 'GJ19Y4628 (Devidas)',
+        axles: '2',
+        capacity: '7.5 Ton',
+        maxSpeed: 80,
+        assignedDriver: 'Devidas',
+      ),
+      TruckModel(
+        code: 'GJ19Y0829',
+        name: 'GJ19Y0829 (Ashok Tempo)',
+        axles: '2',
+        capacity: '3.5 Ton',
+        maxSpeed: 80,
+        assignedDriver: 'Ashok Tempo',
+      ),
+      TruckModel(
+        code: 'GJ19Z0901',
+        name: 'GJ19Z0901 (Ajay)',
+        axles: '2',
+        capacity: '7.5 Ton',
+        maxSpeed: 80,
+        assignedDriver: 'Ajay',
+      ),
+    ];
   }
 
   static Map<String, dynamic> get _fleetBootstrapData {
@@ -497,31 +576,47 @@ class PlannerController extends ChangeNotifier {
               .where((d) =>
                   !deletedDriverEmails.contains(d.email.trim().toLowerCase()))
               .map((d) => d.copyWith(password: '')));
-        await _saveDrivers();
-      } else if (driverJson == null) {
-        // Fresh install / uninitialized storage: seed real fleet drivers
+      } else {
         drivers
           ..clear()
           ..addAll(defaultFleetDrivers.where((d) =>
               !deletedDriverEmails.contains(d.email.trim().toLowerCase())));
-        await _saveDrivers();
-      } else {
-        drivers.clear();
       }
+      // Ensure all 6 fleet drivers exist
+      for (final defDriver in defaultFleetDrivers) {
+        final email = defDriver.email.trim().toLowerCase();
+        final phone = defDriver.phone.replaceAll(RegExp(r'\D'), '');
+        if (deletedDriverEmails.contains(email)) continue;
+        final exists = drivers.any((d) =>
+            d.email.trim().toLowerCase() == email ||
+            (phone.isNotEmpty && d.phone.replaceAll(RegExp(r'\D'), '') == phone));
+        if (!exists) {
+          drivers.add(defDriver);
+        }
+      }
+      await _saveDrivers();
 
       final loadedTrucks = _decodeRecords(truckJson, TruckModel.fromJson);
       if (loadedTrucks != null && loadedTrucks.isNotEmpty) {
         truckModels
           ..clear()
           ..addAll(loadedTrucks);
-        await _saveTruckModels();
       } else {
-        // Fresh install / uninitialized storage: seed default fleet vehicles
         truckModels
           ..clear()
           ..addAll(defaultFleetVehicles);
-        await _saveTruckModels();
       }
+      // Ensure all 5 user vehicles exist in fleet
+      for (final defVehicle in defaultFleetVehicles) {
+        final idx = truckModels.indexWhere((t) =>
+            t.code.trim().toUpperCase() == defVehicle.code.trim().toUpperCase());
+        if (idx < 0) {
+          truckModels.add(defVehicle);
+        } else if (truckModels[idx].imei.isEmpty && defVehicle.imei.isNotEmpty) {
+          truckModels[idx] = truckModels[idx].copyWith(imei: defVehicle.imei);
+        }
+      }
+      await _saveTruckModels();
       await _importFleetBootstrapOnce();
       _syncGpsImeiMappings();
       if (truckModels.isNotEmpty &&

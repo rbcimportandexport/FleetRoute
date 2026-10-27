@@ -22,4 +22,7 @@ android/key.properties
 # Local IDE, logs, and generated release artifacts
 .idea/
 firebase-debug.log
+*.log
+*.err.log
 *.apk
+deploy_*/

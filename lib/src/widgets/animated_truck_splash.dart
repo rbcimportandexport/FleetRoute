@@ -189,18 +189,7 @@ class _AnimatedTruckSplashState extends State<AnimatedTruckSplash>
                   painter: _RealRoadPainter(progress),
                 ),
               ),
-              const Positioned(
-                left: 5,
-                bottom: 0,
-                child:
-                    _RoadPoint(icon: Icons.trip_origin_rounded, label: 'READY'),
-              ),
-              const Positioned(
-                right: 5,
-                bottom: 0,
-                child:
-                    _RoadPoint(icon: Icons.location_on_rounded, label: 'LIVE'),
-              ),
+              // Road without static READY and LIVE labels
               Positioned(
                 left: truckLeft,
                 bottom: 42,
@@ -356,34 +345,4 @@ class _RealRoadPainter extends CustomPainter {
       oldDelegate.progress != progress;
 }
 
-class _RoadPoint extends StatelessWidget {
-  const _RoadPoint({required this.icon, required this.label});
 
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          width: 20,
-          height: 20,
-          decoration:
-              const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-          child: Icon(icon, size: 13, color: AppColors.primary),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          label,
-          style: const TextStyle(
-            color: AppColors.slate,
-            fontSize: 7,
-            fontWeight: FontWeight.w800,
-            letterSpacing: .5,
-          ),
-        ),
-      ],
-    );
-  }
-}

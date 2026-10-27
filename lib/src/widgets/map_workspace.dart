@@ -99,13 +99,13 @@ class _MapWorkspaceState extends State<MapWorkspace> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _onControllerChanged();
-      // Only auto-center if no incoming intent location is waiting and no origin configured
+      // Auto-center on user's real GPS location on startup so vehicle and driver location are active
       final hasPendingIntent = IncomingIntentService().latestLocation != null;
-      if (!hasPendingIntent && widget.controller.origin.trim().isEmpty) {
-        if (widget.controller.truckModels.any((t) => t.hasCoordinates)) {
-          _fitFleet();
-        } else if (_userLocation == null) {
+      if (!hasPendingIntent) {
+        if (_userLocation == null) {
           _autoCenterUserLocation();
+        } else if (widget.controller.truckModels.any((t) => t.hasCoordinates)) {
+          _fitFleet();
         }
       }
     });
@@ -282,11 +282,34 @@ class _MapWorkspaceState extends State<MapWorkspace> {
         _pinnedOrigin = userPos;
       });
       widget.controller.setOrigin(_format(userPos));
+
+      // Link real device GPS coordinates to driver's assigned vehicle immediately
+      final assignedCode = widget.controller.selectedDriver?.assignedVehicle.trim().toUpperCase() ??
+          (widget.controller.isDriver && _selectedLiveTruck != null ? _selectedLiveTruck!.code.toUpperCase() : '');
+      if (assignedCode.isNotEmpty) {
+        final vIdx = widget.controller.truckModels.indexWhere((t) => t.code.toUpperCase() == assignedCode);
+        if (vIdx >= 0) {
+          final current = widget.controller.truckModels[vIdx];
+          widget.controller.truckModels[vIdx] = current.copyWith(
+            currentLat: pos.latitude,
+            currentLng: pos.longitude,
+            hasValidGpsFix: true,
+            isDemoTelemetry: false,
+            lastGpsUpdate: DateTime.now().toIso8601String(),
+          );
+        }
+      }
+
       try {
         _mapController.move(userPos, 15.0);
       } catch (e) {
         debugPrint('[MapWorkspace] MapController move skipped: $e');
       }
+      try {
+        _googleMapController?.animateCamera(
+          gm.CameraUpdate.newLatLngZoom(_googlePoint(userPos), 15.0),
+        );
+      } catch (_) {}
       final locationName = await ReverseGeocodingService.labelFor(userPos);
       if (!mounted) return;
       widget.controller.setOrigin(locationName);
@@ -1673,10 +1696,16 @@ class _MapWorkspaceState extends State<MapWorkspace> {
           ),
         ),
       for (final truck in widget.controller.truckModels)
-        if (truck.hasCoordinates)
+        if (truck.hasCoordinates ||
+            (widget.controller.isDriver &&
+                _userLocation != null &&
+                truck.code.toUpperCase() ==
+                    (widget.controller.selectedDriver?.assignedVehicle.trim().toUpperCase() ?? '')))
           Marker(
             key: ValueKey('truck-marker-${truck.code}'),
-            point: LatLng(truck.latitude!, truck.longitude!),
+            point: truck.hasCoordinates
+                ? LatLng(truck.latitude!, truck.longitude!)
+                : _userLocation!,
             width: 72,
             height: 52,
             alignment: Alignment.center,
@@ -1816,19 +1845,28 @@ class _MapWorkspaceState extends State<MapWorkspace> {
         },
       ));
     }
+    final activeAssignedCode = widget.controller.selectedDriver?.assignedVehicle.trim().toUpperCase() ??
+        (widget.controller.isDriver && _selectedLiveTruck != null ? _selectedLiveTruck!.code.toUpperCase() : '');
+
     for (final truck in widget.controller.truckModels) {
-      if (!truck.hasCoordinates) continue;
+      final isDriverActiveVehicle = activeAssignedCode.isNotEmpty &&
+          truck.code.toUpperCase() == activeAssignedCode;
+      final truckLat = truck.latitude ?? (isDriverActiveVehicle && _userLocation != null ? _userLocation!.latitude : null);
+      final truckLng = truck.longitude ?? (isDriverActiveVehicle && _userLocation != null ? _userLocation!.longitude : null);
+
+      if (truckLat == null || truckLng == null) continue;
+
       markers.add(gm.Marker(
         markerId: gm.MarkerId('truck_${truck.code}'),
-        position: gm.LatLng(truck.latitude!, truck.longitude!),
+        position: gm.LatLng(truckLat, truckLng),
         icon: gm.BitmapDescriptor.defaultMarkerWithHue(truck.isMoving
             ? gm.BitmapDescriptor.hueAzure
             : gm.BitmapDescriptor.hueBlue),
         infoWindow: gm.InfoWindow(
-          title: truck.code,
+          title: '${truck.code} · ${truck.name}',
           snippet: truck.isMoving
-              ? 'Moving · ${truck.currentSpeed} km/h'
-              : 'Stationary',
+              ? 'Real-Time Moving · ${truck.currentSpeed} km/h'
+              : 'Real GPS Live · Stationary',
         ),
         onTap: () => _showVehicleIdentity(truck),
       ));
@@ -2005,6 +2043,22 @@ class _MapWorkspaceState extends State<MapWorkspace> {
         _pinnedOrigin = location;
       });
       widget.controller.setOrigin(_format(location));
+
+      final assignedCode = widget.controller.selectedDriver?.assignedVehicle.trim().toUpperCase() ??
+          (widget.controller.isDriver && _selectedLiveTruck != null ? _selectedLiveTruck!.code.toUpperCase() : '');
+      if (assignedCode.isNotEmpty) {
+        final vIdx = widget.controller.truckModels.indexWhere((t) => t.code.toUpperCase() == assignedCode);
+        if (vIdx >= 0) {
+          final current = widget.controller.truckModels[vIdx];
+          widget.controller.truckModels[vIdx] = current.copyWith(
+            currentLat: position.latitude,
+            currentLng: position.longitude,
+            hasValidGpsFix: true,
+            isDemoTelemetry: false,
+            lastGpsUpdate: DateTime.now().toIso8601String(),
+          );
+        }
+      }
       _zoom = 16.0;
       try {
         _mapController.move(location, _zoom);
