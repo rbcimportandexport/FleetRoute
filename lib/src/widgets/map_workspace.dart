@@ -3728,7 +3728,6 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                               hasRoute: hasRoute,
                               onFitRoute: _fitRoute,
                               onClearRoute: _clearRoute,
-                              onShowFleet: _showFleetLocation,
                               onSetLocation: _openSetLocationSheet,
                               onSetPickup: () {
                                 setState(() => _activePinMode = 'pickup');
@@ -3824,14 +3823,6 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                                   onTap: _fitRoute,
                                 ),
                               ],
-                              _MapButton(
-                                icon: Icons.local_shipping_rounded,
-                                label: 'Fleet GPS',
-                                active: widget.controller.truckModels
-                                    .any((t) => t.hasCoordinates),
-                                activeColor: const Color(0xFF16A34A),
-                                onTap: _showFleetLocation,
-                              ),
                             ],
                           ),
                         ),
@@ -3869,12 +3860,6 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                       _LocationButton(
                         locating: _locating,
                         onPressed: _showCurrentLocation,
-                      ),
-                      const SizedBox(height: 9),
-                      _FleetGpsButton(
-                        hasCoords: widget.controller.truckModels
-                            .any((t) => t.hasCoordinates),
-                        onPressed: _showFleetLocation,
                       ),
                     ],
                   ),
@@ -5534,7 +5519,6 @@ class _CompactMapBar extends StatelessWidget {
     required this.hasRoute,
     required this.onFitRoute,
     required this.onClearRoute,
-    required this.onShowFleet,
     required this.onSetLocation,
     required this.onSetPickup,
     required this.onSetDrop,
@@ -5547,7 +5531,6 @@ class _CompactMapBar extends StatelessWidget {
   final bool hasRoute;
   final VoidCallback onFitRoute;
   final VoidCallback onClearRoute;
-  final VoidCallback onShowFleet;
   final VoidCallback onSetLocation;
   final VoidCallback onSetPickup;
   final VoidCallback onSetDrop;
@@ -5754,15 +5737,6 @@ class _CompactMapBar extends StatelessWidget {
             active: controller.pinMode,
             activeColor: const Color(0xFF2563EB),
             onTap: controller.togglePinMode,
-          ),
-          const SizedBox(width: 4),
-          // Fleet GPS vehicle button
-          _CompactIconButton(
-            icon: Icons.local_shipping_rounded,
-            tooltip: 'Fleet Vehicles (Gadi ki Live Location)',
-            active: controller.truckModels.any((t) => t.hasCoordinates),
-            activeColor: const Color(0xFF16A34A),
-            onTap: onShowFleet,
           ),
           if (hasRoute) ...[
             const SizedBox(width: 4),
