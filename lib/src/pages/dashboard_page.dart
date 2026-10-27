@@ -468,19 +468,9 @@ class _DashboardPageState extends State<DashboardPage>
   Widget _buildSimpleActions() {
     final actions = [
       (
-        'Add Vehicle',
-        Icons.add_road_rounded,
-        () => _openAddDialog(OperationsModule.vehicles)
-      ),
-      (
         'Create Trip',
         Icons.route_rounded,
         () => _openAddDialog(OperationsModule.trips)
-      ),
-      (
-        'Attendance',
-        Icons.how_to_reg_rounded,
-        () => widget.onNavigate(WorkspaceSection.attendance)
       ),
       (
         'Reports',
