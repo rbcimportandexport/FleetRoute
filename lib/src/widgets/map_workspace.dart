@@ -3851,7 +3851,8 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                 Positioned(
                   right: 14,
                   // Keep controls above Google logo/copyright/Terms strip.
-                  bottom: compact ? 68 : 66,
+                  // Leave room for Google Maps' native compass control below.
+                  bottom: compact ? 90 : 88,
                   child: Column(
                     children: [
                       if (!compact) ...[
