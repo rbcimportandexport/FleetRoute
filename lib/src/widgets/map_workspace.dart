@@ -641,6 +641,47 @@ class _MapWorkspaceState extends State<MapWorkspace> {
     await _openFleetDriverSheet();
   }
 
+  Future<void> _startDriverDuty() async {
+    if (!widget.controller.isDriver) return;
+    final driver = widget.controller.selectedDriver;
+    if (driver == null) {
+      _showMessage('Driver account load nahi hua. Dobara login karein.');
+      return;
+    }
+
+    final driverId = driver.name.trim().isNotEmpty
+        ? driver.name.trim()
+        : driver.email.trim();
+    if (widget.controller.getActiveDuty(driverId) != null) {
+      widget.controller.startGpsAutoPolling();
+      _showMessage('Aap already ON DUTY hain. Live GPS sharing active hai.');
+      return;
+    }
+
+    final error = await widget.controller.markStartDuty(
+      driverId: driverId,
+      driverName: driver.name.trim().isEmpty ? driverId : driver.name.trim(),
+      notes: 'Duty started from Live Route map',
+    );
+    if (!mounted) return;
+    if (error != null) {
+      _showMessage(error);
+      return;
+    }
+
+    widget.controller.startGpsAutoPolling();
+    _showMessage('Duty started. Live GPS sharing ON hai.');
+  }
+
+  bool get _isCurrentDriverOnDuty {
+    final driver = widget.controller.selectedDriver;
+    if (driver == null) return false;
+    final driverId = driver.name.trim().isNotEmpty
+        ? driver.name.trim()
+        : driver.email.trim();
+    return widget.controller.getActiveDuty(driverId) != null;
+  }
+
   Future<void> _openFleetDriverSheet() => showModalBottomSheet<void>(
         context: context,
         showDragHandle: true,
@@ -3790,6 +3831,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                               onFitRoute: _fitRoute,
                               onClearRoute: _clearRoute,
                               onShowFleet: _showFleetLocation,
+                              onStartDuty: _startDriverDuty,
                               onSetLocation: _openSetLocationSheet,
                               onSetPickup: () {
                                 setState(() => _activePinMode = 'pickup');
@@ -3870,6 +3912,16 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                                 label: 'Fleet GPS',
                                 onTap: _showFleetLocation,
                               ),
+                              if (widget.controller.isDriver)
+                                _MapButton(
+                                  icon: Icons.play_circle_outline_rounded,
+                                  label: _isCurrentDriverOnDuty
+                                      ? 'ON DUTY'
+                                      : 'Start Duty',
+                                  active: true,
+                                  activeColor: const Color(0xFF16A34A),
+                                  onTap: _startDriverDuty,
+                                ),
                               if (hasRoute ||
                                   _effectiveOrigin != null ||
                                   _effectiveDestination != null ||
@@ -5610,6 +5662,7 @@ class _CompactMapBar extends StatelessWidget {
     required this.onFitRoute,
     required this.onClearRoute,
     required this.onShowFleet,
+    required this.onStartDuty,
     required this.onSetLocation,
     required this.onSetPickup,
     required this.onSetDrop,
@@ -5623,12 +5676,21 @@ class _CompactMapBar extends StatelessWidget {
   final VoidCallback onFitRoute;
   final VoidCallback onClearRoute;
   final VoidCallback onShowFleet;
+  final VoidCallback onStartDuty;
   final VoidCallback onSetLocation;
   final VoidCallback onSetPickup;
   final VoidCallback onSetDrop;
 
   @override
   Widget build(BuildContext context) {
+    final driver = controller.selectedDriver;
+    final driverId = driver == null
+        ? ''
+        : (driver.name.trim().isNotEmpty
+            ? driver.name.trim()
+            : driver.email.trim());
+    final isOnDuty =
+        driverId.isNotEmpty && controller.getActiveDuty(driverId) != null;
     return Container(
       height: 38,
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
@@ -5838,6 +5900,36 @@ class _CompactMapBar extends StatelessWidget {
             activeColor: const Color(0xFF0F766E),
             onTap: onShowFleet,
           ),
+          if (controller.isDriver) ...[
+            const SizedBox(width: 4),
+            InkWell(
+              onTap: onStartDuty,
+              borderRadius: BorderRadius.circular(7),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF16A34A),
+                  borderRadius: BorderRadius.circular(7),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.play_circle_outline_rounded,
+                        size: 14, color: Colors.white),
+                    const SizedBox(width: 4),
+                    Text(
+                      isOnDuty ? 'ON DUTY' : 'Start Duty',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
           if (hasRoute) ...[
             const SizedBox(width: 4),
             _CompactIconButton(
