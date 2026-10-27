@@ -34,6 +34,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
   static const _india = LatLng(22.6, 79.0);
   final MapController _mapController = MapController();
   gm.GoogleMapController? _googleMapController;
+  gm.CameraPosition? _lastGoogleCameraPosition;
   final GlobalKey _mapViewKey = GlobalKey();
   LatLng? _userLocation;
   LatLng? _pinnedOrigin;
@@ -583,6 +584,21 @@ class _MapWorkspaceState extends State<MapWorkspace> {
         );
       }
     } catch (_) {}
+  }
+
+  void _resetMapCompass() {
+    final camera = _lastGoogleCameraPosition;
+    if (camera == null) return;
+    _googleMapController?.animateCamera(
+      gm.CameraUpdate.newCameraPosition(
+        gm.CameraPosition(
+          target: camera.target,
+          zoom: camera.zoom,
+          bearing: 0,
+          tilt: 0,
+        ),
+      ),
+    );
   }
 
   Future<void> _showFleetLocation() async {
@@ -3554,7 +3570,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                   myLocationEnabled: _userLocation != null,
                   myLocationButtonEnabled: false,
                   zoomControlsEnabled: false,
-                  compassEnabled: true,
+                  compassEnabled: false,
                   mapToolbarEnabled: false,
                   gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
                     Factory<EagerGestureRecognizer>(
@@ -3574,6 +3590,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                   onTap: (point) =>
                       _handleMapTap(LatLng(point.latitude, point.longitude)),
                   onCameraMove: (position) {
+                    _lastGoogleCameraPosition = position;
                     _zoom = position.zoom;
                     if (_isNavigating && _cameraFollowLocked) {
                       setState(() => _cameraFollowLocked = false);
@@ -3867,6 +3884,8 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                       _FleetGpsButton(
                         onPressed: _showFleetLocation,
                       ),
+                      const SizedBox(height: 12),
+                      _MapCompassButton(onPressed: _resetMapCompass),
                     ],
                   ),
                 ),
@@ -5324,6 +5343,24 @@ class _FleetGpsButton extends StatelessWidget {
       foregroundColor: const Color(0xFFF97316),
       tooltip: 'All Drivers Live Location',
       child: const Icon(Icons.gps_fixed_rounded, size: 20),
+    );
+  }
+}
+
+class _MapCompassButton extends StatelessWidget {
+  const _MapCompassButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return FloatingActionButton.small(
+      heroTag: 'map-compass-reset',
+      onPressed: onPressed,
+      backgroundColor: Colors.white,
+      foregroundColor: const Color(0xFF64748B),
+      tooltip: 'Reset map to North',
+      child: const Icon(Icons.explore_outlined, size: 21),
     );
   }
 }
