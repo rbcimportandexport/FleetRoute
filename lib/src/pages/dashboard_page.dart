@@ -470,7 +470,7 @@ class _DashboardPageState extends State<DashboardPage>
       (
         'Create Trip',
         Icons.route_rounded,
-        () => _openAddDialog(OperationsModule.trips)
+        () => widget.onNavigate(WorkspaceSection.planner)
       ),
       (
         'Reports',
