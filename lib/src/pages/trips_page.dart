@@ -692,9 +692,7 @@ class _TripsPageState extends State<TripsPage> {
               children: [
                 _TripsHeader(
                   creating: creating,
-                  onAction: creating
-                      ? _cancelCreatingTrip
-                      : _startCreatingTrip,
+                  onAction: creating ? _cancelCreatingTrip : _startCreatingTrip,
                 ),
                 const SizedBox(height: 16),
                 Expanded(child: creating ? _creator() : _tripList()),
@@ -719,7 +717,8 @@ class _TripsPageState extends State<TripsPage> {
                     ? fm.FlutterMap(
                         mapController: _flutterMapController,
                         options: fm.MapOptions(
-                          initialCenter: origin ?? const LatLng(21.1702, 72.8311),
+                          initialCenter:
+                              origin ?? const LatLng(21.1702, 72.8311),
                           initialZoom: origin == null ? 11.0 : 15.0,
                           minZoom: 3.0,
                           maxZoom: 19.0,
@@ -800,16 +799,19 @@ class _TripsPageState extends State<TripsPage> {
                         initialCameraPosition: gm.CameraPosition(
                           target: gm.LatLng(
                             (origin ?? const LatLng(21.1702, 72.8311)).latitude,
-                            (origin ?? const LatLng(21.1702, 72.8311)).longitude,
+                            (origin ?? const LatLng(21.1702, 72.8311))
+                                .longitude,
                           ),
                           zoom: origin == null ? 11 : 15,
                         ),
-                        mapType: satellite ? gm.MapType.hybrid : gm.MapType.normal,
+                        mapType:
+                            satellite ? gm.MapType.hybrid : gm.MapType.normal,
                         mapToolbarEnabled: false,
                         myLocationButtonEnabled: false,
                         zoomControlsEnabled: false,
                         compassEnabled: true,
-                        gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
+                        gestureRecognizers: <Factory<
+                            OneSequenceGestureRecognizer>>{
                           Factory<EagerGestureRecognizer>(
                             () => EagerGestureRecognizer(),
                           ),
@@ -824,12 +826,13 @@ class _TripsPageState extends State<TripsPage> {
                         polylines: {
                           if (origin != null && destination != null)
                             gm.Polyline(
-                              polylineId: const gm.PolylineId('planned-trip-route'),
+                              polylineId:
+                                  const gm.PolylineId('planned-trip-route'),
                               points: (_routePoints.isNotEmpty
                                       ? _routePoints
                                       : [origin!, ...stops, destination!])
-                                  .map((point) =>
-                                      gm.LatLng(point.latitude, point.longitude))
+                                  .map((point) => gm.LatLng(
+                                      point.latitude, point.longitude))
                                   .toList(growable: false),
                               color: AppColors.blue,
                               width: 5,
@@ -839,8 +842,8 @@ class _TripsPageState extends State<TripsPage> {
                           if (origin != null)
                             gm.Marker(
                               markerId: const gm.MarkerId('pickup'),
-                              position:
-                                  gm.LatLng(origin!.latitude, origin!.longitude),
+                              position: gm.LatLng(
+                                  origin!.latitude, origin!.longitude),
                               infoWindow: const gm.InfoWindow(title: 'Pickup'),
                               icon: gm.BitmapDescriptor.defaultMarkerWithHue(
                                   gm.BitmapDescriptor.hueGreen),
@@ -848,8 +851,8 @@ class _TripsPageState extends State<TripsPage> {
                           for (int i = 0; i < stops.length; i++)
                             gm.Marker(
                               markerId: gm.MarkerId('stop-$i'),
-                              position:
-                                  gm.LatLng(stops[i].latitude, stops[i].longitude),
+                              position: gm.LatLng(
+                                  stops[i].latitude, stops[i].longitude),
                               infoWindow: gm.InfoWindow(title: 'Stop ${i + 1}'),
                               icon: gm.BitmapDescriptor.defaultMarkerWithHue(
                                   gm.BitmapDescriptor.hueOrange),
@@ -857,8 +860,8 @@ class _TripsPageState extends State<TripsPage> {
                           if (destination != null)
                             gm.Marker(
                               markerId: const gm.MarkerId('drop'),
-                              position: gm.LatLng(
-                                  destination!.latitude, destination!.longitude),
+                              position: gm.LatLng(destination!.latitude,
+                                  destination!.longitude),
                               infoWindow: const gm.InfoWindow(title: 'Drop'),
                               icon: gm.BitmapDescriptor.defaultMarkerWithHue(
                                   gm.BitmapDescriptor.hueRed),
@@ -3101,29 +3104,29 @@ class _TripAuditBillingDialogState extends State<_TripAuditBillingDialog> {
     freightCtrl = TextEditingController(
         text: widget.trip.freightAmount > 0
             ? widget.trip.freightAmount.toStringAsFixed(0)
-            : '35000');
+            : '');
     advanceCtrl = TextEditingController(
         text: widget.trip.advancePaid > 0
             ? widget.trip.advancePaid.toStringAsFixed(0)
-            : '10000');
+            : '');
     invoiceNumCtrl =
         TextEditingController(text: widget.trip.customerInvoiceNumber);
     dieselCtrl = TextEditingController(
         text: widget.trip.dieselExpense > 0
             ? widget.trip.dieselExpense.toStringAsFixed(0)
-            : '18000');
+            : '');
     tollCtrl = TextEditingController(
         text: widget.trip.tollExpense > 0
             ? widget.trip.tollExpense.toStringAsFixed(0)
-            : '3200');
+            : '');
     parkingCtrl = TextEditingController(
         text: widget.trip.parkingExpense > 0
             ? widget.trip.parkingExpense.toStringAsFixed(0)
-            : '500');
+            : '');
     bhattaCtrl = TextEditingController(
         text: widget.trip.driverAllowance > 0
             ? widget.trip.driverAllowance.toStringAsFixed(0)
-            : '2500');
+            : '');
     otherCtrl = TextEditingController(
         text: widget.trip.otherExpense > 0
             ? widget.trip.otherExpense.toStringAsFixed(0)

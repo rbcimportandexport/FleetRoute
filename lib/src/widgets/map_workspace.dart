@@ -4307,7 +4307,8 @@ class _MapWorkspaceState extends State<MapWorkspace> {
   String get _remainingTimeStr {
     final dist = _remainingDistanceKm;
     if (dist <= 0) return 'Arrived';
-    final speed = _currentSpeed > 0 ? _currentSpeed : 45.0;
+    if (_currentSpeed < 3.0) return 'Stationary';
+    final speed = _currentSpeed;
     final hours = dist / speed;
     final h = hours.floor();
     final m = ((hours - h) * 60).round();

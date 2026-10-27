@@ -406,7 +406,12 @@ class TruckModel {
     return DateTime.now().difference(dt) > const Duration(minutes: 5);
   }
 
-  bool get isMoving => isIgnitionOn && currentSpeed >= 3.0;
+  bool get isMoving =>
+      hasValidGpsFix &&
+      !isDemoTelemetry &&
+      !isGpsStale &&
+      isIgnitionOn &&
+      currentSpeed >= 3.0;
 
   TruckModel copyWith({
     String? code,

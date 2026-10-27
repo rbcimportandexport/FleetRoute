@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -67,67 +68,8 @@ class PlannerController extends ChangeNotifier {
           .toList(growable: false);
       if (list.isNotEmpty) return list;
     }
-    return const [
-      DriverProfile(
-        'SANDEEP',
-        '6355583474@transport.one',
-        phone: '6355583474',
-        password: 'sandeep+474',
-        assignedVehicle: 'GJ19Y2720',
-        licenseNumber: 'GJ-05-2018-0045231',
-        licenseExpiry: '2028-11-14',
-      ),
-      DriverProfile(
-        'DADARAO',
-        '8007755389@transport.one',
-        phone: '8007755389',
-        password: 'dadarao+389',
-        assignedVehicle: 'GJ19J6633',
-        licenseNumber: 'MH-04-2019-0098412',
-        licenseExpiry: '2029-06-20',
-      ),
-      DriverProfile(
-        'RAMRAO',
-        '7600291483@transport.one',
-        phone: '7600291483',
-        password: 'ramrao+483',
-        assignedVehicle: 'GJ19J6633',
-        licenseNumber: 'GJ-19-2020-0012458',
-        licenseExpiry: '2030-05-15',
-      ),
-      DriverProfile(
-        'DEVIDAS',
-        '9726423091@transport.one',
-        phone: '9726423091',
-        password: 'devidas+091',
-        assignedVehicle: 'GJ19Y4628',
-        licenseNumber: 'GJ-19-2021-0034891',
-        licenseExpiry: '2031-08-22',
-      ),
-      DriverProfile(
-        'ASHOK TEMPO',
-        '6354215071@transport.one',
-        phone: '6354215071',
-        password: 'ashok+071',
-        assignedVehicle: 'GJ19Y0829',
-        licenseNumber: 'GJ-19-2022-0056123',
-        licenseExpiry: '2032-02-10',
-      ),
-      DriverProfile(
-        'AJAY',
-        '9081255626@transport.one',
-        phone: '9081255626',
-        password: 'ajay+626',
-        assignedVehicle: 'GJ19Z0901',
-        licenseNumber: 'GJ-19-2023-0078945',
-        licenseExpiry: '2033-11-30',
-      ),
-    ];
+    return const [];
   }
-
-  static List<TyreRecord> _generateInitialTyres(int km) => const [];
-
-  static List<FastagRechargeRecord> get _initialFastagRecharges => const [];
 
   /// Fleet vehicles loaded from backend or default fleet vehicles.
   static List<TruckModel> get defaultFleetVehicles {
@@ -141,59 +83,7 @@ class PlannerController extends ChangeNotifier {
           .toList(growable: false);
       if (list.isNotEmpty) return list;
     }
-    return const [
-      TruckModel(
-        code: 'GJ19Y2720',
-        name: 'GJ19Y2720 (SANDEEP)',
-        axles: '4-Axle (14 Wheeler)',
-        capacity: '28 Ton',
-        maxSpeed: 80,
-        imei: '355139082439925',
-        assignedDriver: 'SANDEEP',
-        vehicleModel: 'Tata Signa 4825.TK',
-        payloadCapacity: '28 Ton',
-      ),
-      TruckModel(
-        code: 'GJ19J6633',
-        name: 'GJ19J6633 (DADARAO / RAMRAO)',
-        axles: '3-Axle (10 Wheeler)',
-        capacity: '24 Ton',
-        maxSpeed: 80,
-        assignedDriver: 'DADARAO / RAMRAO',
-        vehicleModel: 'Tata Prima 3530.K',
-        payloadCapacity: '24 Ton',
-      ),
-      TruckModel(
-        code: 'GJ19Y4628',
-        name: 'GJ19Y4628 (DEVIDAS)',
-        axles: '3-Axle (10 Wheeler)',
-        capacity: '20 Ton',
-        maxSpeed: 80,
-        assignedDriver: 'DEVIDAS',
-        vehicleModel: 'BharatBenz 2823R',
-        payloadCapacity: '20 Ton',
-      ),
-      TruckModel(
-        code: 'GJ19Y0829',
-        name: 'GJ19Y0829 (ASHOK TEMPO)',
-        axles: '2-Axle (6 Wheeler)',
-        capacity: '10 Ton',
-        maxSpeed: 80,
-        assignedDriver: 'ASHOK TEMPO',
-        vehicleModel: 'Ashok Leyland Ecomet',
-        payloadCapacity: '10 Ton',
-      ),
-      TruckModel(
-        code: 'GJ19Z0901',
-        name: 'GJ19Z0901 (AJAY)',
-        axles: '2-Axle (6 Wheeler)',
-        capacity: '14 Ton',
-        maxSpeed: 80,
-        assignedDriver: 'AJAY',
-        vehicleModel: 'Eicher Pro 3019',
-        payloadCapacity: '14 Ton',
-      ),
-    ];
+    return const [];
   }
 
   static Map<String, dynamic> get _fleetBootstrapData {
@@ -599,37 +489,14 @@ class PlannerController extends ChangeNotifier {
         } catch (_) {}
       }
 
-      final realDriverPhones = defaultFleetDrivers
-          .map((d) => d.phone.replaceAll(RegExp(r'\D'), ''))
-          .where((p) => p.isNotEmpty)
-          .toSet();
-
       final loadedDrivers = _decodeRecords(driverJson, DriverProfile.fromJson);
       if (loadedDrivers != null && loadedDrivers.isNotEmpty) {
         drivers
           ..clear()
-          ..addAll(loadedDrivers.where((d) {
-            final email = d.email.trim().toLowerCase();
-            if (deletedDriverEmails.contains(email)) return false;
-            final phone = d.phone.replaceAll(RegExp(r'\D'), '');
-            final emailDigits = email.replaceAll(RegExp(r'\D'), '');
-            // Only keep if it matches one of the real driver phones or names
-            return realDriverPhones.contains(phone) ||
-                realDriverPhones.contains(emailDigits) ||
-                defaultFleetDrivers.any((real) =>
-                    real.name.trim().toLowerCase() ==
-                    d.name.trim().toLowerCase());
-          }).map((d) => d.copyWith(password: '')));
-        // Also ensure any of the real drivers missing from local storage are added
-        for (final real in defaultFleetDrivers) {
-          final realPhone = real.phone.replaceAll(RegExp(r'\D'), '');
-          final exists = drivers.any((d) =>
-              d.phone.replaceAll(RegExp(r'\D'), '') == realPhone ||
-              d.email.trim().toLowerCase() == real.email.trim().toLowerCase());
-          if (!exists) {
-            drivers.add(real);
-          }
-        }
+          ..addAll(loadedDrivers
+              .where((d) =>
+                  !deletedDriverEmails.contains(d.email.trim().toLowerCase()))
+              .map((d) => d.copyWith(password: '')));
         await _saveDrivers();
       } else if (driverJson == null) {
         // Fresh install / uninitialized storage: seed real fleet drivers
@@ -642,44 +509,11 @@ class PlannerController extends ChangeNotifier {
         drivers.clear();
       }
 
-      final realVehicleCodes =
-          defaultFleetVehicles.map((v) => v.code.toUpperCase()).toSet();
-
       final loadedTrucks = _decodeRecords(truckJson, TruckModel.fromJson);
       if (loadedTrucks != null && loadedTrucks.isNotEmpty) {
         truckModels
           ..clear()
-          ..addAll(loadedTrucks
-              .where((t) => realVehicleCodes.contains(t.code.toUpperCase())));
-        // Also ensure all default fleet vehicles exist
-        for (final def in defaultFleetVehicles) {
-          final exists = truckModels.any(
-            (t) => t.code.toUpperCase() == def.code.toUpperCase(),
-          );
-          if (!exists) {
-            truckModels.add(def);
-          }
-        }
-        // Only seed default IMEI if vehicle has empty IMEI and default exists
-        bool updatedAny = false;
-        for (var i = 0; i < truckModels.length; i++) {
-          final t = truckModels[i];
-          var modified = t;
-          final def = defaultFleetVehicles.firstWhere(
-            (d) => d.code.toUpperCase() == t.code.toUpperCase(),
-            orElse: () => t,
-          );
-          if (t.imei.trim().isEmpty && def.imei.isNotEmpty) {
-            modified = modified.copyWith(imei: def.imei);
-          }
-          if (modified.assignedDriver.isEmpty) {
-            modified = modified.copyWith(assignedDriver: def.assignedDriver);
-          }
-          if (modified != t) {
-            truckModels[i] = modified;
-            updatedAny = true;
-          }
-        }
+          ..addAll(loadedTrucks);
         await _saveTruckModels();
       } else {
         // Fresh install / uninitialized storage: seed default fleet vehicles
@@ -709,20 +543,16 @@ class PlannerController extends ChangeNotifier {
                 tyre.tyreNumber != 'APO-3942' &&
                 tyre.tyreNumber != 'CEAT-502')
             .toList();
-        final def = defaultFleetVehicles.firstWhere(
-          (d) => d.code.toUpperCase() == t.code.toUpperCase(),
-          orElse: () => t,
-        );
         truckModels[i] = t.copyWith(
           serviceHistory: cleanServices,
           fastagRecharges: cleanRecharges,
           tyres: cleanTyres,
-          currentLat: t.hasCoordinates ? t.currentLat : def.currentLat,
-          currentLng: t.hasCoordinates ? t.currentLng : def.currentLng,
-          currentSpeed: t.hasCoordinates ? t.currentSpeed : def.currentSpeed,
-          course: t.hasCoordinates ? t.course : def.course,
-          isIgnitionOn: t.hasCoordinates ? t.isIgnitionOn : def.isIgnitionOn,
-          hasValidGpsFix: t.hasCoordinates && !t.isGpsStale,
+          clearGpsCoordinates: t.isDemoTelemetry,
+          currentSpeed: t.isDemoTelemetry ? 0 : t.currentSpeed,
+          course: t.isDemoTelemetry ? 0 : t.course,
+          isIgnitionOn: t.isDemoTelemetry ? false : t.isIgnitionOn,
+          hasValidGpsFix:
+              !t.isDemoTelemetry && t.hasCoordinates && !t.isGpsStale,
           isDemoTelemetry: false,
         );
       }
@@ -786,10 +616,10 @@ class PlannerController extends ChangeNotifier {
             return true;
           }
           final cleanDigits = a.driverId.replaceAll(RegExp(r'\D'), '');
-          final driverMatch = realDriverPhones.contains(cleanDigits) ||
-              defaultFleetDrivers.any((d) =>
-                  d.name.trim().toLowerCase() ==
-                  a.driverName.trim().toLowerCase());
+          final driverMatch = drivers.any((d) =>
+              d.phone.replaceAll(RegExp(r'\D'), '') == cleanDigits ||
+              d.email.replaceAll(RegExp(r'\D'), '') == cleanDigits ||
+              d.name.trim().toLowerCase() == a.driverName.trim().toLowerCase());
           return !driverMatch;
         });
       }
@@ -1186,6 +1016,7 @@ class PlannerController extends ChangeNotifier {
   Timer? _gpsAutoPollTimer;
   final Map<String, DateTime> _lastOverspeedAlerts = {};
   StreamSubscription<Position>? _foregroundLocationSubscription;
+  Position? _lastPublishedDriverPosition;
   StreamSubscription<List<Map<String, dynamic>>>? _fleetTelemetrySubscription;
 
   void startGpsAutoPolling({Duration interval = const Duration(seconds: 15)}) {
@@ -1230,13 +1061,39 @@ class PlannerController extends ChangeNotifier {
     }
 
     Future<void> publish(Position position) async {
-      final speed = (position.speed * 3.6).clamp(0.0, 220.0);
+      final previous = _lastPublishedDriverPosition;
+      final reportedSpeed = (position.speed * 3.6).clamp(0.0, 220.0);
+      var movedMeters = 0.0;
+      var calculatedSpeed = 0.0;
+      if (previous != null) {
+        movedMeters = Geolocator.distanceBetween(
+          previous.latitude,
+          previous.longitude,
+          position.latitude,
+          position.longitude,
+        );
+        final elapsedSeconds = position.timestamp
+                .difference(previous.timestamp)
+                .inMilliseconds
+                .abs() /
+            1000.0;
+        if (elapsedSeconds > 0 && elapsedSeconds <= 120) {
+          calculatedSpeed = (movedMeters / elapsedSeconds) * 3.6;
+        }
+      }
+      final hasRealMovement = previous != null &&
+          movedMeters >= 8.0 &&
+          (reportedSpeed >= 3.0 || calculatedSpeed >= 3.0);
+      final speed = hasRealMovement
+          ? math.max(reportedSpeed, calculatedSpeed).clamp(0.0, 220.0)
+          : 0.0;
+      _lastPublishedDriverPosition = position;
       await FirebaseBackendService.instance.syncVehicleTelemetry(
         vehicleCode: vehicleCode,
         latitude: position.latitude,
         longitude: position.longitude,
         speed: speed,
-        isIgnitionOn: speed > 1,
+        isIgnitionOn: hasRealMovement,
         driverId: driver.email,
         driverName: driver.name,
       );
@@ -1298,6 +1155,7 @@ class PlannerController extends ChangeNotifier {
     _gpsAutoPollTimer = null;
     _foregroundLocationSubscription?.cancel();
     _foregroundLocationSubscription = null;
+    _lastPublishedDriverPosition = null;
     _fleetTelemetrySubscription?.cancel();
     _fleetTelemetrySubscription = null;
   }

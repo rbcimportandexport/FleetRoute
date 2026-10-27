@@ -51,7 +51,8 @@ class TripDetailReportDialog extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 color: AppColors.navy,
                 child: Row(
                   children: [
@@ -66,7 +67,8 @@ class TripDetailReportDialog extends StatelessWidget {
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close_rounded, color: Colors.white),
+                      icon:
+                          const Icon(Icons.close_rounded, color: Colors.white),
                       onPressed: () => Navigator.pop(ctx),
                     ),
                   ],
@@ -158,7 +160,8 @@ class TripDetailReportDialog extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
               decoration: BoxDecoration(
                 color: Colors.black.withValues(alpha: 0.65),
-                borderRadius: const BorderRadius.only(topLeft: Radius.circular(6)),
+                borderRadius:
+                    const BorderRadius.only(topLeft: Radius.circular(6)),
               ),
               child: const Row(
                 mainAxisSize: MainAxisSize.min,
@@ -189,7 +192,8 @@ class TripDetailReportDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDelivered = trip.status == 'delivered' || trip.status == 'completed';
+    final isDelivered =
+        trip.status == 'delivered' || trip.status == 'completed';
     final hasPod = trip.podStatus == 'received' || trip.podPhoto.isNotEmpty;
     final hasRcv = trip.receivingCopyStatus == 'received' ||
         trip.receivingCopyPhoto.isNotEmpty;
@@ -200,7 +204,8 @@ class TripDetailReportDialog extends StatelessWidget {
       try {
         customer = controller!.customers.firstWhere(
           (c) =>
-              c.name.trim().toLowerCase() == trip.customerName.trim().toLowerCase(),
+              c.name.trim().toLowerCase() ==
+              trip.customerName.trim().toLowerCase(),
         );
       } catch (_) {
         customer = null;
@@ -292,7 +297,8 @@ class TripDetailReportDialog extends StatelessWidget {
                   ),
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close_rounded, color: AppColors.slate),
+                    icon:
+                        const Icon(Icons.close_rounded, color: AppColors.slate),
                   ),
                 ],
               ),
@@ -345,7 +351,8 @@ class TripDetailReportDialog extends StatelessWidget {
                               ),
                               if (custPhone.isNotEmpty)
                                 ElevatedButton.icon(
-                                  onPressed: () => _callCustomer(context, custPhone),
+                                  onPressed: () =>
+                                      _callCustomer(context, custPhone),
                                   icon: const Icon(Icons.phone_in_talk_rounded,
                                       size: 14),
                                   label: const Text('Call Customer'),
@@ -400,7 +407,8 @@ class TripDetailReportDialog extends StatelessWidget {
                     _buildSectionCard(
                       icon: Icons.alt_route_rounded,
                       title: 'Route, Distance & Stops (रूट व टोल नाके)',
-                      subtitle: 'Origin, toll plazas, intermediate stops & drop point',
+                      subtitle:
+                          'Origin, toll plazas, intermediate stops & drop point',
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -410,7 +418,8 @@ class TripDetailReportDialog extends StatelessWidget {
                             decoration: BoxDecoration(
                               color: AppColors.primarySoft,
                               borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: AppColors.primaryBorder),
+                              border:
+                                  Border.all(color: AppColors.primaryBorder),
                             ),
                             child: Row(
                               children: [
@@ -419,7 +428,8 @@ class TripDetailReportDialog extends StatelessWidget {
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       const Text(
                                         'PICKUP / ORIGIN',
@@ -452,7 +462,8 @@ class TripDetailReportDialog extends StatelessWidget {
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       const Text(
                                         'DROP / DESTINATION',
@@ -495,9 +506,10 @@ class TripDetailReportDialog extends StatelessWidget {
                               spacing: 6,
                               runSpacing: 6,
                               children: trip.stops.map((stop) {
-                                final isToll = stop.toLowerCase().contains('toll') ||
-                                    stop.toLowerCase().contains('naka') ||
-                                    stop.toLowerCase().contains('plaza');
+                                final isToll =
+                                    stop.toLowerCase().contains('toll') ||
+                                        stop.toLowerCase().contains('naka') ||
+                                        stop.toLowerCase().contains('plaza');
                                 return Container(
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 9, vertical: 4.5),
@@ -630,7 +642,8 @@ class TripDetailReportDialog extends StatelessWidget {
                     _buildSectionCard(
                       icon: Icons.inventory_2_rounded,
                       title: 'Cargo & Goods Transported (माल व वजन विवरण)',
-                      subtitle: 'Loaded products, quantities and attached cargo photos',
+                      subtitle:
+                          'Loaded products, quantities and attached cargo photos',
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -651,18 +664,21 @@ class TripDetailReportDialog extends StatelessWidget {
                                       Container(
                                         width: 50,
                                         height: 50,
-                                        margin: const EdgeInsets.only(right: 10),
-                                        child: _buildPhotoThumbnail(
-                                            context, item.productName, item.photoAsset),
+                                        margin:
+                                            const EdgeInsets.only(right: 10),
+                                        child: _buildPhotoThumbnail(context,
+                                            item.productName, item.photoAsset),
                                       )
                                     else
                                       Container(
                                         width: 44,
                                         height: 44,
-                                        margin: const EdgeInsets.only(right: 10),
+                                        margin:
+                                            const EdgeInsets.only(right: 10),
                                         decoration: BoxDecoration(
                                           color: AppColors.primaryLight,
-                                          borderRadius: BorderRadius.circular(8),
+                                          borderRadius:
+                                              BorderRadius.circular(8),
                                         ),
                                         child: const Icon(
                                             Icons.inventory_rounded,
@@ -671,7 +687,8 @@ class TripDetailReportDialog extends StatelessWidget {
                                       ),
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Text(
                                             item.productName,
@@ -707,14 +724,16 @@ class TripDetailReportDialog extends StatelessWidget {
                                       ),
                                     ),
                                     Column(
-                                      crossAxisAlignment: CrossAxisAlignment.end,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.end,
                                       children: [
                                         Container(
                                           padding: const EdgeInsets.symmetric(
                                               horizontal: 8, vertical: 3),
                                           decoration: BoxDecoration(
                                             color: AppColors.primarySoft,
-                                            borderRadius: BorderRadius.circular(6),
+                                            borderRadius:
+                                                BorderRadius.circular(6),
                                             border: Border.all(
                                                 color: AppColors.primaryBorder),
                                           ),
@@ -731,7 +750,8 @@ class TripDetailReportDialog extends StatelessWidget {
                                         const Text(
                                           'Loaded',
                                           style: TextStyle(
-                                              fontSize: 10, color: AppColors.slate),
+                                              fontSize: 10,
+                                              color: AppColors.slate),
                                         ),
                                       ],
                                     ),
@@ -754,12 +774,13 @@ class TripDetailReportDialog extends StatelessWidget {
                                   const SizedBox(width: 10),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           trip.cargoDescription.isNotEmpty
                                               ? trip.cargoDescription
-                                              : 'Commercial Goods Cargo',
+                                              : 'Cargo details not recorded',
                                           style: const TextStyle(
                                             fontSize: 13,
                                             fontWeight: FontWeight.w700,
@@ -768,7 +789,7 @@ class TripDetailReportDialog extends StatelessWidget {
                                         ),
                                         const SizedBox(height: 2),
                                         const Text(
-                                          'Standard freight logistics manifest',
+                                          'No cargo manifest entered',
                                           style: TextStyle(
                                             fontSize: 11,
                                             color: AppColors.slate,
@@ -778,7 +799,7 @@ class TripDetailReportDialog extends StatelessWidget {
                                     ),
                                   ),
                                   const Text(
-                                    '10.5 Ton',
+                                    'Not recorded',
                                     style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w800,
@@ -798,7 +819,8 @@ class TripDetailReportDialog extends StatelessWidget {
                     _buildSectionCard(
                       icon: Icons.receipt_long_rounded,
                       title: 'Toll & Trip Expenses (टोल नाका व खर्च रिपोर्ट)',
-                      subtitle: 'FASTag toll naka charges, fuel, driver allowance & parking',
+                      subtitle:
+                          'FASTag toll naka charges, fuel, driver allowance & parking',
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -806,18 +828,14 @@ class TripDetailReportDialog extends StatelessWidget {
                             children: [
                               _buildExpenseItem(
                                 label: 'FASTag Toll Naka',
-                                amount: trip.tollExpense > 0
-                                    ? trip.tollExpense
-                                    : 3200.0,
+                                amount: trip.tollExpense,
                                 icon: Icons.toll_rounded,
                                 highlight: true,
                               ),
                               const SizedBox(width: 8),
                               _buildExpenseItem(
                                 label: 'Diesel / Fuel',
-                                amount: trip.dieselExpense > 0
-                                    ? trip.dieselExpense
-                                    : 18500.0,
+                                amount: trip.dieselExpense,
                                 icon: Icons.local_gas_station_rounded,
                               ),
                             ],
@@ -827,17 +845,13 @@ class TripDetailReportDialog extends StatelessWidget {
                             children: [
                               _buildExpenseItem(
                                 label: 'Driver Bhatta',
-                                amount: trip.driverAllowance > 0
-                                    ? trip.driverAllowance
-                                    : 2500.0,
+                                amount: trip.driverAllowance,
                                 icon: Icons.person_pin_rounded,
                               ),
                               const SizedBox(width: 8),
                               _buildExpenseItem(
                                 label: 'Parking & Others',
-                                amount: trip.parkingExpense + trip.otherExpense > 0
-                                    ? (trip.parkingExpense + trip.otherExpense)
-                                    : 500.0,
+                                amount: trip.parkingExpense + trip.otherExpense,
                                 icon: Icons.local_parking_rounded,
                               ),
                             ],
@@ -862,7 +876,7 @@ class TripDetailReportDialog extends StatelessWidget {
                                   ),
                                 ),
                                 Text(
-                                  '₹${trip.totalExpenses > 0 ? trip.totalExpenses.toStringAsFixed(0) : "24,700"}',
+                                  '₹${trip.totalExpenses.toStringAsFixed(0)}',
                                   style: const TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w900,
@@ -880,8 +894,10 @@ class TripDetailReportDialog extends StatelessWidget {
                     // Section 5: Delivery Proofs (POD & Receiving Copy)
                     _buildSectionCard(
                       icon: Icons.fact_check_rounded,
-                      title: 'Delivery Proofs & Receipts (पावती व डिलीवरी प्रूफ)',
-                      subtitle: 'Signed consignee receiving copy and uploaded POD photos',
+                      title:
+                          'Delivery Proofs & Receipts (पावती व डिलीवरी प्रूफ)',
+                      subtitle:
+                          'Signed consignee receiving copy and uploaded POD photos',
                       child: Row(
                         children: [
                           Expanded(
@@ -966,7 +982,9 @@ class TripDetailReportDialog extends StatelessWidget {
                                   ],
                                 ),
                                 const SizedBox(height: 6),
-                                _buildPhotoThumbnail(context, 'Signed Receiving Copy',
+                                _buildPhotoThumbnail(
+                                    context,
+                                    'Signed Receiving Copy',
                                     trip.receivingCopyPhoto),
                               ],
                             ),
@@ -1095,7 +1113,8 @@ class TripDetailReportDialog extends StatelessWidget {
                 Expanded(
                   child: Text(
                     label,
-                    style: const TextStyle(fontSize: 10, color: AppColors.slate),
+                    style:
+                        const TextStyle(fontSize: 10, color: AppColors.slate),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -1149,9 +1168,8 @@ class TripDetailReportDialog extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 10.5,
                       fontWeight: FontWeight.w600,
-                      color: highlight
-                          ? const Color(0xFF92400E)
-                          : AppColors.slate,
+                      color:
+                          highlight ? const Color(0xFF92400E) : AppColors.slate,
                     ),
                   ),
                   Text(
@@ -1159,9 +1177,8 @@ class TripDetailReportDialog extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w800,
-                      color: highlight
-                          ? const Color(0xFF78350F)
-                          : AppColors.navy,
+                      color:
+                          highlight ? const Color(0xFF78350F) : AppColors.navy,
                     ),
                   ),
                 ],
