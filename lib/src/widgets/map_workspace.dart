@@ -99,6 +99,8 @@ class _MapWorkspaceState extends State<MapWorkspace> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _onControllerChanged();
+      // Auto sync real GPS coordinates from Protrack GPS tracker or backend
+      unawaited(widget.controller.syncProtrackGps(allowSimulationFallback: false));
       // Auto-center on user's real GPS location on startup so vehicle and driver location are active
       final hasPendingIntent = IncomingIntentService().latestLocation != null;
       if (!hasPendingIntent) {
@@ -644,6 +646,9 @@ class _MapWorkspaceState extends State<MapWorkspace> {
   }
 
   Future<void> _showFleetLocation() async {
+    // Proactively fetch latest real GPS telemetry
+    unawaited(widget.controller.syncProtrackGps(allowSimulationFallback: false));
+
     final vehicles = widget.controller.truckModels;
     final online = vehicles.where(_isVehicleOnline).length;
     final offline = vehicles.length - online;
@@ -1349,6 +1354,8 @@ class _MapWorkspaceState extends State<MapWorkspace> {
   List<Marker> get _markers {
     final origin = _effectiveOrigin;
     final dest = _effectiveDestination;
+    final activeAssignedCode = widget.controller.selectedDriver?.assignedVehicle.trim().toUpperCase() ??
+        (widget.controller.isDriver && _selectedLiveTruck != null ? _selectedLiveTruck!.code.toUpperCase() : '');
 
     return [
       if (_isNavigating && _currentNavPosition != null)
@@ -1697,10 +1704,10 @@ class _MapWorkspaceState extends State<MapWorkspace> {
         ),
       for (final truck in widget.controller.truckModels)
         if (truck.hasCoordinates ||
-            (widget.controller.isDriver &&
-                _userLocation != null &&
-                truck.code.toUpperCase() ==
-                    (widget.controller.selectedDriver?.assignedVehicle.trim().toUpperCase() ?? '')))
+            (_userLocation != null &&
+                (truck.code.toUpperCase() == activeAssignedCode ||
+                    (widget.controller.truckModels.isNotEmpty &&
+                        truck.code.toUpperCase() == (_selectedLiveTruck?.code.toUpperCase() ?? widget.controller.truckModels.first.code.toUpperCase())))))
           Marker(
             key: ValueKey('truck-marker-${truck.code}'),
             point: truck.hasCoordinates
@@ -1847,12 +1854,18 @@ class _MapWorkspaceState extends State<MapWorkspace> {
     }
     final activeAssignedCode = widget.controller.selectedDriver?.assignedVehicle.trim().toUpperCase() ??
         (widget.controller.isDriver && _selectedLiveTruck != null ? _selectedLiveTruck!.code.toUpperCase() : '');
+    final currentSelectedCode = (widget.controller.truckModels.isNotEmpty && widget.controller.truckIndex != null && widget.controller.truckIndex! >= 0 && widget.controller.truckIndex! < widget.controller.truckModels.length)
+        ? widget.controller.truckModels[widget.controller.truckIndex!].code.toUpperCase()
+        : (_selectedLiveTruck?.code.toUpperCase() ?? (widget.controller.truckModels.isNotEmpty ? widget.controller.truckModels.first.code.toUpperCase() : ''));
 
     for (final truck in widget.controller.truckModels) {
       final isDriverActiveVehicle = activeAssignedCode.isNotEmpty &&
           truck.code.toUpperCase() == activeAssignedCode;
-      final truckLat = truck.latitude ?? (isDriverActiveVehicle && _userLocation != null ? _userLocation!.latitude : null);
-      final truckLng = truck.longitude ?? (isDriverActiveVehicle && _userLocation != null ? _userLocation!.longitude : null);
+      final isSelectedVehicle = truck.code.toUpperCase() == currentSelectedCode;
+      final fallbackToUserLoc = (isDriverActiveVehicle || isSelectedVehicle) && _userLocation != null;
+
+      final truckLat = truck.latitude ?? (fallbackToUserLoc ? _userLocation!.latitude : null);
+      final truckLng = truck.longitude ?? (fallbackToUserLoc ? _userLocation!.longitude : null);
 
       if (truckLat == null || truckLng == null) continue;
 
