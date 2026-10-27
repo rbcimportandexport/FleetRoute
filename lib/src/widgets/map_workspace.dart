@@ -285,11 +285,15 @@ class _MapWorkspaceState extends State<MapWorkspace> {
       });
       widget.controller.setOrigin(_format(userPos));
 
-      // Link real device GPS coordinates to driver's assigned vehicle immediately
+      // Link real device GPS coordinates to driver's assigned vehicle or selected fleet vehicle immediately
       final assignedCode = widget.controller.selectedDriver?.assignedVehicle.trim().toUpperCase() ??
           (widget.controller.isDriver && _selectedLiveTruck != null ? _selectedLiveTruck!.code.toUpperCase() : '');
-      if (assignedCode.isNotEmpty) {
-        final vIdx = widget.controller.truckModels.indexWhere((t) => t.code.toUpperCase() == assignedCode);
+      final targetCode = assignedCode.isNotEmpty
+          ? assignedCode
+          : (_selectedLiveTruck?.code.toUpperCase() ??
+              (widget.controller.truckModels.isNotEmpty ? widget.controller.truckModels.first.code.toUpperCase() : ''));
+      if (targetCode.isNotEmpty) {
+        final vIdx = widget.controller.truckModels.indexWhere((t) => t.code.toUpperCase() == targetCode);
         if (vIdx >= 0) {
           final current = widget.controller.truckModels[vIdx];
           widget.controller.truckModels[vIdx] = current.copyWith(
@@ -595,17 +599,40 @@ class _MapWorkspaceState extends State<MapWorkspace> {
         truckPoints.add(LatLng(truck.latitude!, truck.longitude!));
       }
     }
+    if (truckPoints.isEmpty && _userLocation != null) {
+      truckPoints.add(_userLocation!);
+    }
     if (truckPoints.isEmpty) return;
 
     try {
       if (truckPoints.length == 1) {
-        _mapController.move(truckPoints.first, 13.0);
+        _mapController.move(truckPoints.first, 15.0);
+        _googleMapController?.animateCamera(
+          gm.CameraUpdate.newLatLngZoom(_googlePoint(truckPoints.first), 15.0),
+        );
       } else {
         final bounds = LatLngBounds.fromPoints(truckPoints);
         _mapController.fitCamera(
           CameraFit.bounds(
             bounds: bounds,
             padding: const EdgeInsets.all(60),
+          ),
+        );
+        final southWest = LatLng(
+          truckPoints.map((p) => p.latitude).reduce(math.min),
+          truckPoints.map((p) => p.longitude).reduce(math.min),
+        );
+        final northEast = LatLng(
+          truckPoints.map((p) => p.latitude).reduce(math.max),
+          truckPoints.map((p) => p.longitude).reduce(math.max),
+        );
+        _googleMapController?.animateCamera(
+          gm.CameraUpdate.newLatLngBounds(
+            gm.LatLngBounds(
+              southwest: _googlePoint(southWest),
+              northeast: _googlePoint(northEast),
+            ),
+            50,
           ),
         );
       }
@@ -2059,8 +2086,12 @@ class _MapWorkspaceState extends State<MapWorkspace> {
 
       final assignedCode = widget.controller.selectedDriver?.assignedVehicle.trim().toUpperCase() ??
           (widget.controller.isDriver && _selectedLiveTruck != null ? _selectedLiveTruck!.code.toUpperCase() : '');
-      if (assignedCode.isNotEmpty) {
-        final vIdx = widget.controller.truckModels.indexWhere((t) => t.code.toUpperCase() == assignedCode);
+      final targetCode = assignedCode.isNotEmpty
+          ? assignedCode
+          : (_selectedLiveTruck?.code.toUpperCase() ??
+              (widget.controller.truckModels.isNotEmpty ? widget.controller.truckModels.first.code.toUpperCase() : ''));
+      if (targetCode.isNotEmpty) {
+        final vIdx = widget.controller.truckModels.indexWhere((t) => t.code.toUpperCase() == targetCode);
         if (vIdx >= 0) {
           final current = widget.controller.truckModels[vIdx];
           widget.controller.truckModels[vIdx] = current.copyWith(
