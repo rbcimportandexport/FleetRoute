@@ -5305,34 +5305,6 @@ class _LocationButton extends StatelessWidget {
   }
 }
 
-class _FleetGpsButton extends StatelessWidget {
-  const _FleetGpsButton({
-    required this.hasCoords,
-    required this.onPressed,
-  });
-
-  final bool hasCoords;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return FloatingActionButton.small(
-      heroTag: 'fleet-gps-location',
-      onPressed: onPressed,
-      backgroundColor: Colors.white,
-      foregroundColor:
-          hasCoords ? const Color(0xFF16A34A) : const Color(0xFFD97706),
-      tooltip: hasCoords
-          ? 'Fleet Vehicles (Gadi ki location)'
-          : 'Live Demo Telemetry load karein',
-      child: Icon(
-        hasCoords ? Icons.local_shipping_rounded : Icons.gps_fixed_rounded,
-        size: 20,
-      ),
-    );
-  }
-}
-
 class _MapTypeControl extends StatelessWidget {
   const _MapTypeControl({required this.controller});
   final PlannerController controller;

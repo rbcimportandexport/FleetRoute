@@ -134,5 +134,20 @@
     };
   </script>
   <script src="flutter_bootstrap.js" async></script>
+  <script>
+    // Clear obsolete Flutter caches so a deployment cannot retain old map controls.
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        registrations.forEach(function(registration) { registration.unregister(); });
+      });
+    }
+    if ('caches' in window) {
+      caches.keys().then(function(keys) {
+        keys.forEach(function(key) {
+          if (key.indexOf('flutter-app-cache') !== -1) caches.delete(key);
+        });
+      });
+    }
+  </script>
 </body>
 </html>
