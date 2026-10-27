@@ -2273,7 +2273,9 @@ class PlannerController extends ChangeNotifier {
       if (existing.endTime.isEmpty) {
         return 'Driver is already on active duty today since ${existing.startTime}.';
       }
-      return 'Duty already recorded for today for driver $driverName.';
+      // A completed shift must not block the driver from starting another
+      // legitimate shift later on the same day. Every shift receives its own
+      // timestamp-based record ID below.
     }
 
     final isLate = now.hour > 9 || (now.hour == 9 && now.minute > 15);

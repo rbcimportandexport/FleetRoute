@@ -359,6 +359,9 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                 driver?.assignedVehicle.trim().isNotEmpty == true
                     ? driver!.assignedVehicle.trim()
                     : 'Not assigned';
+            final dutyDriverId = _dutyDriverId(driver, driverName);
+            final isOnDuty =
+                widget.controller.getActiveDuty(dutyDriverId) != null;
             final isSunday = DateTime.now().weekday == DateTime.sunday;
             final driverRecords = widget.controller.seatbeltRecords.where((r) {
               final tVehicle =
@@ -407,8 +410,8 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       // 1. Driver & Vehicle Profile Header (Clean White Card)
-                      _buildDriverHeader(
-                          driverName, vehicleNumber, driver?.phone ?? ''),
+                      _buildDriverHeader(driverName, vehicleNumber,
+                          driver?.phone ?? '', isOnDuty),
                       const SizedBox(height: 14),
 
                       // 1B. Driver Attendance & Duty Presence (Requirement 1: Start/End Duty, Duplicate Guard, Working Hours)
@@ -504,7 +507,15 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
     );
   }
 
-  Widget _buildDriverHeader(String name, String vehicle, String phone) {
+  String _dutyDriverId(DriverProfile? driver, String fallbackName) {
+    if (driver?.name.trim().isNotEmpty == true) return driver!.name.trim();
+    if (driver?.email.trim().isNotEmpty == true) return driver!.email.trim();
+    if (driver?.phone.trim().isNotEmpty == true) return driver!.phone.trim();
+    return fallbackName.trim();
+  }
+
+  Widget _buildDriverHeader(
+      String name, String vehicle, String phone, bool isOnDuty) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -574,23 +585,35 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
-                            color: AppColors.primaryLight,
+                            color: isOnDuty
+                                ? AppColors.primaryLight
+                                : const Color(0xFFF1F5F9),
                             borderRadius: BorderRadius.circular(6),
                             border: Border.all(
-                                color: AppColors.iconBadgeBorder, width: 1),
+                              color: isOnDuty
+                                  ? AppColors.iconBadgeBorder
+                                  : const Color(0xFFCBD5E1),
+                              width: 1,
+                            ),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.fiber_manual_record,
-                                  size: 8, color: AppColors.iconColor),
+                              Icon(Icons.fiber_manual_record,
+                                  size: 8,
+                                  color: isOnDuty
+                                      ? AppColors.iconColor
+                                      : AppColors.slate),
                               const SizedBox(width: 4),
                               Text(
-                                AppLocalizationService.instance.tr('on_duty'),
-                                style: const TextStyle(
+                                AppLocalizationService.instance
+                                    .tr(isOnDuty ? 'on_duty' : 'off_duty'),
+                                style: TextStyle(
                                   fontSize: 9.5,
                                   fontWeight: FontWeight.w800,
-                                  color: AppColors.primaryDark,
+                                  color: isOnDuty
+                                      ? AppColors.primaryDark
+                                      : AppColors.slate,
                                   fontFamily: 'sans-serif',
                                 ),
                               ),
@@ -835,8 +858,7 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
 
   Widget _buildDriverAttendanceCard(DriverProfile? driver, String driverName,
       String vehicleNumber, TripRecord? activeTrip) {
-    final driverId =
-        driver?.name.isNotEmpty == true ? driver!.name : driverName;
+    final driverId = _dutyDriverId(driver, driverName);
     final activeDuty = widget.controller.getActiveDuty(driverId);
     final isOnDuty = activeDuty != null;
 
