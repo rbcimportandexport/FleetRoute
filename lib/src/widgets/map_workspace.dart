@@ -3850,7 +3850,8 @@ class _MapWorkspaceState extends State<MapWorkspace> {
               if (!_isNavigating)
                 Positioned(
                   right: 14,
-                  bottom: compact ? 14 : 18,
+                  // Keep controls above Google logo/copyright/Terms strip.
+                  bottom: compact ? 44 : 42,
                   child: Column(
                     children: [
                       if (!compact) ...[
