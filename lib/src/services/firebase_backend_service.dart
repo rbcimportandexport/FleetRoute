@@ -12,6 +12,8 @@ class FirebaseBackendService {
   FirebaseBackendService._();
   static final FirebaseBackendService instance = FirebaseBackendService._();
 
+  String? lastWriteError;
+
   bool get isConfigured =>
       FirebaseBootstrapService.isInitialized &&
       FirebaseAuth.instance.currentUser != null;
@@ -25,12 +27,14 @@ class FirebaseBackendService {
     Map<String, dynamic> data, {
     http.Client? client,
   }) async {
+    lastWriteError = null;
     if (client != null) {
       return true;
     }
     if (!isConfigured) {
       debugPrint(
           '[FirebaseSync] Standalone mode: $collection $rawDocumentId saved to local offline state.');
+      lastWriteError = 'Firebase session available nahi hai.';
       return false;
     }
     final documentId =
@@ -51,9 +55,12 @@ class FirebaseBackendService {
       return true;
     } on FirebaseException catch (error) {
       debugPrint('[FirebaseSync] $collection/${error.code}: ${error.message}');
+      lastWriteError =
+          '${error.code}: ${error.message ?? 'Firebase write failed'}';
       return false;
     } catch (error) {
       debugPrint('[FirebaseSync] $collection write failed: $error');
+      lastWriteError = error.toString();
       return false;
     }
   }

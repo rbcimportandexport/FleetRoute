@@ -35,6 +35,14 @@ service cloud.firestore {
         data.longitude >= -180 && data.longitude <= 180;
     }
 
+    function driverOwnsVehicle(vehicleCode) {
+      return isDriver() &&
+        (request.auth.token.assignedVehicle == vehicleCode ||
+         (exists(/databases/$(database)/documents/drivers/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/drivers/$(request.auth.uid))
+            .data.assignedVehicle == vehicleCode));
+    }
+
     match /seatbelt_records/{recordId} {
       allow read: if isAdmin() || ownsExisting();
       allow create: if isAdmin() ||
@@ -54,10 +62,12 @@ service cloud.firestore {
 
     match /fleet_telemetry/{vehicleCode} {
       allow read: if isAdmin() ||
-        (isDriver() && request.auth.token.assignedVehicle == vehicleCode);
+        (driverOwnsVehicle(vehicleCode) && ownsExisting());
       allow create, update: if validLocation(request.resource.data) &&
         (isAdmin() ||
-         (isDriver() && request.auth.token.assignedVehicle == vehicleCode && ownsIncoming()));
+         (driverOwnsVehicle(vehicleCode) && ownsIncoming() &&
+          request.resource.data.vehicleCode == vehicleCode &&
+          request.resource.data.driverId == request.auth.token.email));
       allow delete: if isAdmin();
     }
 

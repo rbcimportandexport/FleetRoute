@@ -1141,7 +1141,8 @@ class PlannerController extends ChangeNotifier {
         driverName: driver.name,
       );
       if (!synced) {
-        throw StateError('Firebase location write failed');
+        throw StateError(FirebaseBackendService.instance.lastWriteError ??
+            'Firebase location write failed');
       }
       lastGpsSyncError = null;
       lastGpsSyncTime = DateTime.now();
@@ -1149,16 +1150,28 @@ class PlannerController extends ChangeNotifier {
     }
 
     try {
-      await publish(await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-          timeLimit: Duration(seconds: 20),
-        ),
-      ));
+      Position position;
+      try {
+        position = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.high,
+            timeLimit: Duration(seconds: 25),
+          ),
+        );
+      } catch (highAccuracyError) {
+        debugPrint('High accuracy GPS fix failed: $highAccuracyError');
+        position = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.medium,
+            timeLimit: Duration(seconds: 30),
+          ),
+        );
+      }
+      await publish(position);
     } catch (error) {
       debugPrint('Initial driver mobile GPS fix failed: $error');
-      lastGpsSyncError =
-          'Real GPS fix nahi mila. Location ON karke permission Allow karein.';
+      final reason = error.toString().replaceFirst('Bad state: ', '');
+      lastGpsSyncError = 'Live location sync failed: $reason';
       notifyListeners();
     }
     _foregroundLocationSubscription = Geolocator.getPositionStream(
@@ -1166,8 +1179,12 @@ class PlannerController extends ChangeNotifier {
         accuracy: LocationAccuracy.high,
         distanceFilter: 15,
       ),
-    ).listen((position) => unawaited(publish(position)),
-        onError: (Object error) {
+    ).listen((position) {
+      unawaited(publish(position).catchError((Object error) {
+        lastGpsSyncError = 'Live location upload failed: $error';
+        notifyListeners();
+      }));
+    }, onError: (Object error) {
       lastGpsSyncError = 'Driver mobile GPS error: $error';
       notifyListeners();
     });
