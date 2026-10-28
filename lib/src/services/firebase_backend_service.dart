@@ -234,6 +234,79 @@ class FirebaseBackendService {
     return _put('delivery_proofs', record.id, data, client: client);
   }
 
+  // --- Customers Firestore Sync ---
+  Future<bool> syncCustomerRecord({
+    required CustomerRecord record,
+    http.Client? client,
+  }) =>
+      _put('customers', record.id, record.toJson(), client: client);
+
+  Future<bool> deleteCustomerRecord(String customerId) async {
+    if (!isConfigured) return false;
+    try {
+      await FirebaseFirestore.instance
+          .collection('customers')
+          .doc(customerId)
+          .delete()
+          .timeout(const Duration(seconds: 12));
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Stream<List<CustomerRecord>> watchCustomers() {
+    if (!isConfigured) return const Stream.empty();
+    return FirebaseFirestore.instance
+        .collection('customers')
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => CustomerRecord.fromJson(
+                  <String, dynamic>{'id': doc.id, ...doc.data()},
+                ))
+            .toList(growable: false));
+  }
+
+  // --- Fleet Vehicles Firestore Sync ---
+  Future<bool> syncFleetVehicle({
+    required TruckModel vehicle,
+    http.Client? client,
+  }) =>
+      _put('fleet_vehicles', vehicle.code, vehicle.toJson(), client: client);
+
+  Stream<List<TruckModel>> watchFleetVehicles() {
+    if (!isConfigured) return const Stream.empty();
+    return FirebaseFirestore.instance
+        .collection('fleet_vehicles')
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => TruckModel.fromJson(
+                  <String, dynamic>{'code': doc.id, ...doc.data()},
+                ))
+            .toList(growable: false));
+  }
+
+  // --- Operations Alerts Firestore Sync ---
+  Future<bool> syncOperationsAlert({
+    required OperationsAlert alert,
+    http.Client? client,
+  }) {
+    final alertId = '${alert.category}_${alert.createdAt.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_')}_${alert.title.hashCode.abs()}';
+    return _put('operations_alerts', alertId, alert.toJson(), client: client);
+  }
+
+  Stream<List<OperationsAlert>> watchOperationsAlerts() {
+    if (!isConfigured) return const Stream.empty();
+    return FirebaseFirestore.instance
+        .collection('operations_alerts')
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => OperationsAlert.fromJson(
+                  <String, dynamic>{'id': doc.id, ...doc.data()},
+                ))
+            .toList(growable: false));
+  }
+
   Future<List<Map<String, dynamic>>> fetchCollection(
     String collection, {
     int limit = 500,

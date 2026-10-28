@@ -109,8 +109,23 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    match /customers/{customerId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /fleet_vehicles/{vehicleCode} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    match /operations_alerts/{alertId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
   }
 }
+

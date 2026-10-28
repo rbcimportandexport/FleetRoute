@@ -1133,6 +1133,9 @@ class PlannerController extends ChangeNotifier {
   StreamSubscription<List<AttendanceRecord>>? _attendanceSubscription;
   StreamSubscription<List<SeatbeltRecord>>? _seatbeltSubscription;
   StreamSubscription<List<TripRecord>>? _tripsSubscription;
+  StreamSubscription<List<CustomerRecord>>? _customersSubscription;
+  StreamSubscription<List<TruckModel>>? _vehiclesSubscription;
+  StreamSubscription<List<OperationsAlert>>? _alertsSubscription;
 
   void startGpsAutoPolling({Duration interval = const Duration(seconds: 15)}) {
     _gpsAutoPollTimer?.cancel();
@@ -1141,6 +1144,9 @@ class PlannerController extends ChangeNotifier {
     _attendanceSubscription?.cancel();
     _seatbeltSubscription?.cancel();
     _tripsSubscription?.cancel();
+    _customersSubscription?.cancel();
+    _vehiclesSubscription?.cancel();
+    _alertsSubscription?.cancel();
     // Do not launch background periodic timers in unit/widget test environments
     if (const bool.fromEnvironment('FLUTTER_TEST') ||
         (kDebugMode && Zone.current[#test.declarer] != null)) {
@@ -1152,7 +1158,44 @@ class PlannerController extends ChangeNotifier {
         .listen(_applyRemoteTrips, onError: (Object error) {
       debugPrint('Live trips sync failed: $error');
     });
+    // Listen to real-time vehicles synchronization from Firestore
+    _vehiclesSubscription = FirebaseBackendService.instance
+        .watchFleetVehicles()
+        .listen((remoteVehicles) {
+      if (remoteVehicles.isNotEmpty) {
+        for (final rv in remoteVehicles) {
+          final idx = truckModels.indexWhere((t) => t.code == rv.code);
+          if (idx < 0) {
+            truckModels.add(rv);
+          } else {
+            truckModels[idx] = rv;
+          }
+        }
+        notifyListeners();
+      }
+    }, onError: (_) {});
+    // Listen to real-time operations alerts from Firestore
+    _alertsSubscription = FirebaseBackendService.instance
+        .watchOperationsAlerts()
+        .listen((remoteAlerts) {
+      if (remoteAlerts.isNotEmpty) {
+        alerts
+          ..clear()
+          ..addAll(remoteAlerts);
+        notifyListeners();
+      }
+    }, onError: (_) {});
     if (isAdmin) {
+      _customersSubscription = FirebaseBackendService.instance
+          .watchCustomers()
+          .listen((remoteCustomers) {
+        if (remoteCustomers.isNotEmpty) {
+          customers
+            ..clear()
+            ..addAll(remoteCustomers);
+          notifyListeners();
+        }
+      }, onError: (_) {});
       _fleetTelemetrySubscription = FirebaseBackendService.instance
           .watchFleetTelemetry()
           .listen(_applyFleetTelemetry, onError: (Object error) {
@@ -3700,40 +3743,70 @@ class PlannerController extends ChangeNotifier {
         drivers.map((driver) => driver.toJson()),
       );
 
-  Future<void> _saveTruckModels() => _saveEncryptedJsonList(
-        _truckModelsKey,
-        truckModels.map((model) => model.toJson()),
-      );
+  Future<void> _saveTruckModels() {
+    for (final vehicle in truckModels) {
+      unawaited(FirebaseBackendService.instance.syncFleetVehicle(vehicle: vehicle));
+    }
+    return _saveEncryptedJsonList(
+      _truckModelsKey,
+      truckModels.map((model) => model.toJson()),
+    );
+  }
 
-  Future<void> _saveTrips() => _saveEncryptedJsonList(
-        _tripsKey,
-        trips.map((trip) => trip.toJson()),
-      );
+  Future<void> _saveTrips() {
+    for (final trip in trips) {
+      unawaited(FirebaseBackendService.instance.syncTripRecord(record: trip));
+    }
+    return _saveEncryptedJsonList(
+      _tripsKey,
+      trips.map((trip) => trip.toJson()),
+    );
+  }
 
-  Future<void> _saveAlerts() => _saveEncryptedJsonList(
-        _alertsKey,
-        alerts.map((alert) => alert.toJson()),
-      );
+  Future<void> _saveAlerts() {
+    for (final alert in alerts) {
+      unawaited(FirebaseBackendService.instance.syncOperationsAlert(alert: alert));
+    }
+    return _saveEncryptedJsonList(
+      _alertsKey,
+      alerts.map((alert) => alert.toJson()),
+    );
+  }
 
   Future<void> _saveActivities() => _saveEncryptedJsonList(
         _activitiesKey,
         activities.map((activity) => activity.toJson()),
       );
 
-  Future<void> _saveAttendance() => _saveEncryptedJsonList(
-        _attendanceKey,
-        attendanceRecords.map((record) => record.toJson()),
-      );
+  Future<void> _saveAttendance() {
+    for (final att in attendanceRecords) {
+      unawaited(FirebaseBackendService.instance.syncAttendanceRecord(record: att));
+    }
+    return _saveEncryptedJsonList(
+      _attendanceKey,
+      attendanceRecords.map((record) => record.toJson()),
+    );
+  }
 
-  Future<void> _saveCustomers() => _saveEncryptedJsonList(
-        _customersKey,
-        customers.map((customer) => customer.toJson()),
-      );
+  Future<void> _saveCustomers() {
+    for (final cust in customers) {
+      unawaited(FirebaseBackendService.instance.syncCustomerRecord(record: cust));
+    }
+    return _saveEncryptedJsonList(
+      _customersKey,
+      customers.map((customer) => customer.toJson()),
+    );
+  }
 
-  Future<void> _saveExpenses() => _saveEncryptedJsonList(
-        _expensesKey,
-        expenses.map((expense) => expense.toJson()),
-      );
+  Future<void> _saveExpenses() {
+    for (final exp in expenses) {
+      unawaited(FirebaseBackendService.instance.syncExpenseRecord(record: exp));
+    }
+    return _saveEncryptedJsonList(
+      _expensesKey,
+      expenses.map((expense) => expense.toJson()),
+    );
+  }
 
   Future<void> _saveBilling() => _saveEncryptedJsonList(
         _billingKey,
