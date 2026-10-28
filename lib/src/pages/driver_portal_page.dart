@@ -424,6 +424,18 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                           driver?.phone ?? '', isOnDuty),
                       const SizedBox(height: 14),
 
+                      // 1A. Highlighted Alert: New Ride Assigned by Admin (Accept & Start Actions)
+                      if (activeTrip != null &&
+                          (activeTrip.status == 'assigned' ||
+                              activeTrip.operationalStep == 'not_started')) ...[
+                        _buildNewRideAssignedAlertCard(
+                          activeTrip,
+                          vehicleNumber,
+                          driverName,
+                          widget.controller.trips.indexOf(activeTrip),
+                        ),
+                      ],
+
                       // 1B. Driver Attendance & Duty Presence (Requirement 1: Start/End Duty, Duplicate Guard, Working Hours)
                       _buildDriverAttendanceCard(
                           driver, driverName, vehicleNumber, activeTrip),
@@ -1888,6 +1900,329 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
     );
   }
 
+  Widget _buildNewRideAssignedAlertCard(
+    TripRecord trip,
+    String vehicleNumber,
+    String driverName,
+    int tripIndex,
+  ) {
+    final isAssignedOnly = trip.status == 'assigned';
+
+    // Format cargo summary with items
+    String cargoSummary = trip.cargoDescription;
+    if (trip.cargoItems.isNotEmpty) {
+      final itemsStr = trip.cargoItems
+          .map((item) =>
+              '${item.loadedQuantity > 0 ? "${item.loadedQuantity.toStringAsFixed(item.loadedQuantity.truncateToDouble() == item.loadedQuantity ? 0 : 1)} " : ""}${item.productName}${item.unit.isNotEmpty ? " (${item.unit})" : ""}')
+          .join(', ');
+      cargoSummary = itemsStr;
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0FDF4),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF86EFAC), width: 1.5),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x1A16A34A),
+            blurRadius: 10,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFDCFCE7),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.notifications_active_rounded,
+                  color: Color(0xFF16A34A),
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isAssignedOnly
+                          ? 'NEW RIDE ASSIGNED BY ADMIN'
+                          : 'RIDE ACCEPTED - READY TO START',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.5,
+                        color: isAssignedOnly
+                            ? const Color(0xFF15803D)
+                            : const Color(0xFF0284C7),
+                        fontFamily: 'sans-serif',
+                      ),
+                    ),
+                    Text(
+                      'Trip # ${trip.effectiveTripNumber}',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.navy,
+                        fontFamily: 'sans-serif',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: isAssignedOnly
+                      ? const Color(0xFFFEF3C7)
+                      : const Color(0xFFDCFCE7),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: isAssignedOnly
+                        ? const Color(0xFFFDE68A)
+                        : const Color(0xFF86EFAC),
+                  ),
+                ),
+                child: Text(
+                  trip.status.toUpperCase(),
+                  style: TextStyle(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w800,
+                    color: isAssignedOnly
+                        ? const Color(0xFFB45309)
+                        : const Color(0xFF16A34A),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Divider(height: 1, color: Color(0xFFBBF7D0)),
+          const SizedBox(height: 10),
+
+          // Route: Origin -> Stops -> Destination
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.trip_origin_rounded,
+                  size: 14, color: Color(0xFF16A34A)),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  'Pickup: ${trip.origin}',
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.navy,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          if (trip.stops.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            for (int i = 0; i < trip.stops.length; i++)
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.location_on_rounded,
+                      size: 14, color: Color(0xFFD97706)),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Stop ${i + 1}: ${trip.stops[i]}',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFFB45309),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+          ],
+          const SizedBox(height: 4),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.location_on_rounded,
+                  size: 14, color: Color(0xFFEF4444)),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  'Drop: ${trip.destination}',
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.navy,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 10),
+
+          // Customer & Cargo Info
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Customer: ${trip.customerName.isNotEmpty ? trip.customerName : "Direct Customer"}',
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.navy,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Cargo: $cargoSummary',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFF0F766E),
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                if (trip.plannedDistanceKm > 0)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      '${trip.plannedDistanceKm.toStringAsFixed(0)} KM',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.navy,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
+          // Two Action Buttons: Accept Ride & Start Ride
+          Row(
+            children: [
+              if (isAssignedOnly) ...[
+                Expanded(
+                  child: FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF16A34A),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    onPressed: () async {
+                      await widget.controller.acceptTrip(trip.reference);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Ride Accepted! Ab aap trip start kar sakte hain.'),
+                          backgroundColor: Color(0xFF16A34A),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.check_circle_rounded, size: 18),
+                    label: const Text(
+                      'ACCEPT RIDE (स्वीकार करें)',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
+              Expanded(
+                child: FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  onPressed: () async {
+                    if (isAssignedOnly) {
+                      await widget.controller.acceptTrip(trip.reference);
+                    }
+                    await widget.controller.updateTripOperationalStep(
+                      tripReference: trip.reference,
+                      step: 'navigating_pickup',
+                      status: 'in_transit',
+                    );
+                    if (tripIndex >= 0) {
+                      await widget.controller.updateTripMilestones(
+                        index: tripIndex,
+                        status: 'in_transit',
+                      );
+                    }
+                    widget.controller.setRoute(
+                      newOrigin: trip.origin.trim(),
+                      newDestination: trip.destination.trim(),
+                      newStops: trip.stops,
+                    );
+                    widget.onNavigate(WorkspaceSection.planner);
+                  },
+                  icon: const Icon(Icons.navigation_rounded, size: 18),
+                  label: Text(
+                    isAssignedOnly
+                        ? 'START & OPEN MAP'
+                        : 'START TRIP & OPEN MAP',
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildNextLifecycleActionButton(
       TripRecord trip, String currentStep, int tripIndex) {
     String label;
@@ -1897,19 +2232,39 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
 
     switch (currentStep) {
       case 'not_started':
-        label = '1. START TRIP (यात्रा शुरू करें / યાત્રા શરૂ કરો)';
-        icon = Icons.play_arrow_rounded;
-        buttonColor = AppColors.primary;
+        final isAssignedOnly = trip.status == 'assigned';
+        label = isAssignedOnly
+            ? '1. ACCEPT RIDE (एडमिन की राइड स्वीकार करें)'
+            : '1. START TRIP & OPEN MAP (यात्रा शुरू करें)';
+        icon = isAssignedOnly ? Icons.check_circle_rounded : Icons.play_arrow_rounded;
+        buttonColor = isAssignedOnly ? const Color(0xFF16A34A) : AppColors.primary;
         onTap = () async {
-          await widget.controller.updateTripOperationalStep(
-            tripReference: trip.reference,
-            step: 'navigating_pickup',
-          );
-          if (tripIndex >= 0) {
-            await widget.controller.updateTripMilestones(
-              index: tripIndex,
+          if (isAssignedOnly) {
+            await widget.controller.acceptTrip(trip.reference);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Ride Accepted! Ab aap trip start kar sakte hain.'),
+                backgroundColor: Color(0xFF16A34A),
+              ),
+            );
+          } else {
+            await widget.controller.updateTripOperationalStep(
+              tripReference: trip.reference,
+              step: 'navigating_pickup',
               status: 'in_transit',
             );
+            if (tripIndex >= 0) {
+              await widget.controller.updateTripMilestones(
+                index: tripIndex,
+                status: 'in_transit',
+              );
+            }
+            widget.controller.setRoute(
+              newOrigin: trip.origin.trim(),
+              newDestination: trip.destination.trim(),
+              newStops: trip.stops,
+            );
+            widget.onNavigate(WorkspaceSection.planner);
           }
         };
         break;

@@ -190,6 +190,8 @@ class RoadTrafficHotspot {
 }
 
 class RouteTrafficService {
+  static Map<String, LatLng> get cityCoordinates => _cityCoordinates;
+
   static const Map<String, LatLng> _cityCoordinates = {
     'delhi': LatLng(28.6139, 77.2090),
     'new delhi': LatLng(28.6139, 77.2090),

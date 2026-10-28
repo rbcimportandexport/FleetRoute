@@ -19,6 +19,7 @@ import '../services/route_traffic_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/cargo_workflow_dialogs.dart';
 import '../widgets/delivery_proof_dialog.dart';
+import '../widgets/location_search_dialog.dart';
 import '../widgets/trip_detail_report_dialog.dart';
 
 class TripsPage extends StatefulWidget {
@@ -291,6 +292,8 @@ class _TripsPageState extends State<TripsPage> {
     super.dispose();
   }
 
+  final List<CargoItem> _customCargoItems = [];
+
   void _pin(LatLng point) {
     HapticFeedback.mediumImpact();
     setState(() {
@@ -307,6 +310,30 @@ class _TripsPageState extends State<TripsPage> {
     _fetchRoadPolyline();
   }
 
+  void _addViaStop(LatLng point) {
+    HapticFeedback.mediumImpact();
+    setState(() {
+      showValidation = false;
+      stops.add(point);
+    });
+    _fetchRoadPolyline();
+  }
+
+  Future<void> _handleSearchLocation({
+    required String title,
+    required void Function(LatLng point) onSelected,
+  }) async {
+    final result = await LocationSearchDialog.show(
+      context,
+      title: title,
+    );
+    if (result != null && mounted) {
+      onSelected(result.coordinates);
+      _centerMapOn(result.coordinates);
+      _fetchRoadPolyline();
+    }
+  }
+
   void _startCreatingTrip() {
     _routeRequestId++;
     setState(() {
@@ -314,6 +341,7 @@ class _TripsPageState extends State<TripsPage> {
       origin = null;
       destination = null;
       stops.clear();
+      _customCargoItems.clear();
       _routePoints = [];
       _plannedDistanceKm = 0;
       _plannedDurationMinutes = 0;
@@ -334,6 +362,7 @@ class _TripsPageState extends State<TripsPage> {
       origin = null;
       destination = null;
       stops.clear();
+      _customCargoItems.clear();
       _routePoints = [];
       _routeLoading = false;
       _routeError = null;
@@ -552,29 +581,41 @@ class _TripsPageState extends State<TripsPage> {
         : const <String>[];
     final tripNum = referenceController.text.trim();
 
+    final List<CargoItem> assembledCargoItems = _customCargoItems.isNotEmpty
+        ? List<CargoItem>.from(_customCargoItems)
+        : (cargoWeight > 0
+            ? [
+                CargoItem(
+                  id: 'C-1',
+                  productId: selectedCatalogProduct?.id ?? 'custom-product',
+                  brand: selectedCatalogProduct?.brand ?? '',
+                  category: selectedCatalogProduct?.category ?? '',
+                  photoAsset: selectedCatalogProduct?.photoAsset ?? '',
+                  productName: cargoDescController.text.trim().isNotEmpty
+                      ? cargoDescController.text.trim()
+                      : 'Industrial Goods',
+                  loadedQuantity: cargoWeight,
+                  unit: 'Ton',
+                ),
+              ]
+            : const []);
+
+    final String finalCargoDesc = _customCargoItems.isNotEmpty
+        ? _customCargoItems
+            .map((item) => '${item.loadedQuantity.toStringAsFixed(item.unit == 'Ton' ? 1 : 0)} ${item.unit} ${item.productName}')
+            .join(', ')
+        : (cargoDescController.text.trim().isNotEmpty
+            ? cargoDescController.text.trim()
+            : 'Industrial Goods');
+
     final newTrip = TripRecord(
       reference: tripNum,
       tripNumber: tripNum,
       customerName: customerController.text.trim(),
       assignedVehicle: selectedVehicle!.code,
       assignedDriver: selectedDriver!.trim(),
-      cargoDescription: cargoDescController.text.trim(),
-      cargoItems: cargoWeight > 0
-          ? [
-              CargoItem(
-                id: 'C-1',
-                productId: selectedCatalogProduct?.id ?? 'custom-product',
-                brand: selectedCatalogProduct?.brand ?? '',
-                category: selectedCatalogProduct?.category ?? '',
-                photoAsset: selectedCatalogProduct?.photoAsset ?? '',
-                productName: cargoDescController.text.trim().isNotEmpty
-                    ? cargoDescController.text.trim()
-                    : 'Industrial Goods',
-                loadedQuantity: cargoWeight,
-                unit: 'Ton',
-              ),
-            ]
-          : const [],
+      cargoDescription: finalCargoDesc,
+      cargoItems: assembledCargoItems,
       departureDateTime: departureTimeController.text.trim(),
       returnDepot: returnDepotController.text.trim(),
       driverInstructions: driverInstructionsController.text.trim(),
@@ -615,6 +656,7 @@ class _TripsPageState extends State<TripsPage> {
       origin = null;
       destination = null;
       stops.clear();
+      _customCargoItems.clear();
       _routePoints = [];
       showValidation = false;
       _initTripDefaults();
@@ -722,6 +764,7 @@ class _TripsPageState extends State<TripsPage> {
                           initialZoom: origin == null ? 11.0 : 15.0,
                           minZoom: 3.0,
                           maxZoom: 19.0,
+                          onTap: (tapPosition, point) => _pin(point),
                           onLongPress: (tapPosition, point) => _pin(point),
                         ),
                         children: [
@@ -821,6 +864,8 @@ class _TripsPageState extends State<TripsPage> {
                           _mapReady = true;
                           if (origin != null) _centerMapOn(origin!);
                         },
+                        onTap: (point) =>
+                            _pin(LatLng(point.latitude, point.longitude)),
                         onLongPress: (point) =>
                             _pin(LatLng(point.latitude, point.longitude)),
                         polylines: {
@@ -926,10 +971,10 @@ class _TripsPageState extends State<TripsPage> {
                           Flexible(
                             child: Text(
                               origin == null
-                                  ? 'Pickup ke liye map par hold karein'
+                                  ? 'Pickup ke liye map par tap karein ya search karein'
                                   : destination == null
-                                      ? 'Drop ke liye map par hold karein'
-                                      : 'Via Stop add karne ke liye hold karein',
+                                      ? 'Drop ke liye map par tap karein ya search karein'
+                                      : 'Via Stop add karne ke liye map par tap karein',
                               textAlign: TextAlign.center,
                               style: const TextStyle(
                                 fontSize: 11,
@@ -985,6 +1030,50 @@ class _TripsPageState extends State<TripsPage> {
           locating: locating,
           showValidation: showValidation,
           onCurrentLocation: _useCurrentLocation,
+          onSearchOrigin: () => _handleSearchLocation(
+            title: 'Pickup Location Search / Paste Link',
+            onSelected: (point) => setState(() => origin = point),
+          ),
+          onSearchDestination: () => _handleSearchLocation(
+            title: 'Drop Destination Search / Paste Link',
+            onSelected: (point) => setState(() => destination = point),
+          ),
+          onAddViaStopSearch: () => _handleSearchLocation(
+            title: 'Add Intermediate Delivery Stop / Waypoint',
+            onSelected: (point) => _addViaStop(point),
+          ),
+          customCargoItems: _customCargoItems,
+          onAddCargoItem: (item) {
+            setState(() {
+              _customCargoItems.add(item);
+              // Calculate total tons
+              double totalTon = 0;
+              for (final ci in _customCargoItems) {
+                totalTon += ci.unit == 'KG'
+                    ? ci.loadedQuantity / 1000.0
+                    : ci.loadedQuantity;
+              }
+              cargoWeightController.text = totalTon.toStringAsFixed(2);
+              cargoDescController.text = _customCargoItems
+                  .map((e) => '${e.loadedQuantity.toStringAsFixed(e.unit == 'Ton' ? 1 : 0)} ${e.unit} ${e.productName}')
+                  .join(', ');
+            });
+          },
+          onRemoveCargoItem: (idx) {
+            setState(() {
+              _customCargoItems.removeAt(idx);
+              double totalTon = 0;
+              for (final ci in _customCargoItems) {
+                totalTon += ci.unit == 'KG'
+                    ? ci.loadedQuantity / 1000.0
+                    : ci.loadedQuantity;
+              }
+              cargoWeightController.text = totalTon > 0 ? totalTon.toStringAsFixed(2) : '';
+              cargoDescController.text = _customCargoItems
+                  .map((e) => '${e.loadedQuantity.toStringAsFixed(e.unit == 'Ton' ? 1 : 0)} ${e.unit} ${e.productName}')
+                  .join(', ');
+            });
+          },
           onMoveStopUp: (i) {
             if (i > 0) {
               setState(() {
@@ -1013,6 +1102,7 @@ class _TripsPageState extends State<TripsPage> {
             origin = null;
             stops.clear();
             destination = null;
+            _customCargoItems.clear();
             showValidation = false;
           }),
           onSave: _saveTrip,
@@ -1188,7 +1278,7 @@ class _TripsHeader extends StatelessWidget {
   }
 }
 
-class _TripSetupPanel extends StatelessWidget {
+class _TripSetupPanel extends StatefulWidget {
   const _TripSetupPanel({
     required this.referenceController,
     required this.onRegenerateTripNumber,
@@ -1212,6 +1302,12 @@ class _TripSetupPanel extends StatelessWidget {
     required this.locating,
     required this.showValidation,
     required this.onCurrentLocation,
+    required this.onSearchOrigin,
+    required this.onSearchDestination,
+    required this.onAddViaStopSearch,
+    required this.customCargoItems,
+    required this.onAddCargoItem,
+    required this.onRemoveCargoItem,
     required this.onMoveStopUp,
     required this.onMoveStopDown,
     required this.onRemoveStop,
@@ -1244,11 +1340,37 @@ class _TripSetupPanel extends StatelessWidget {
   final bool locating;
   final bool showValidation;
   final VoidCallback onCurrentLocation;
+  final VoidCallback onSearchOrigin;
+  final VoidCallback onSearchDestination;
+  final VoidCallback onAddViaStopSearch;
+
+  final List<CargoItem> customCargoItems;
+  final ValueChanged<CargoItem> onAddCargoItem;
+  final ValueChanged<int> onRemoveCargoItem;
+
   final ValueChanged<int> onMoveStopUp;
   final ValueChanged<int> onMoveStopDown;
   final ValueChanged<int> onRemoveStop;
   final VoidCallback onReset;
   final VoidCallback onSave;
+
+  @override
+  State<_TripSetupPanel> createState() => _TripSetupPanelState();
+}
+
+class _TripSetupPanelState extends State<_TripSetupPanel> {
+  final _quickItemNameCtrl = TextEditingController(text: 'Chairs');
+  final _quickItemQtyCtrl = TextEditingController(text: '10');
+  final _quickItemWeightCtrl = TextEditingController(text: '50');
+  String _quickItemUnit = 'KG'; // 'KG' or 'Ton'
+
+  @override
+  void dispose() {
+    _quickItemNameCtrl.dispose();
+    _quickItemQtyCtrl.dispose();
+    _quickItemWeightCtrl.dispose();
+    super.dispose();
+  }
 
   void _showSelectedProduct(BuildContext context, CatalogProduct product) {
     Navigator.of(context).push<void>(
@@ -1275,15 +1397,34 @@ class _TripSetupPanel extends StatelessWidget {
     );
   }
 
+  void _addQuickItem() {
+    final name = _quickItemNameCtrl.text.trim().isNotEmpty
+        ? _quickItemNameCtrl.text.trim()
+        : 'Item';
+    final qty = double.tryParse(_quickItemQtyCtrl.text.trim()) ?? 1.0;
+    final singleWeight = double.tryParse(_quickItemWeightCtrl.text.trim()) ?? 10.0;
+    final totalW = qty * singleWeight;
+
+    final item = CargoItem(
+      id: 'CI-${DateTime.now().millisecondsSinceEpoch % 100000}',
+      productId: 'custom-item',
+      productName: '$name (Qty: ${qty.toInt()})',
+      loadedQuantity: _quickItemUnit == 'KG' ? totalW / 1000.0 : totalW,
+      unit: _quickItemUnit,
+      notes: '${qty.toInt()} pieces × ${singleWeight.toStringAsFixed(1)} $_quickItemUnit',
+    );
+    widget.onAddCargoItem(item);
+  }
+
   String coordinate(LatLng? point) => point == null
-      ? 'Tap the map to select'
+      ? 'Tap map or search'
       : '${point.latitude.toStringAsFixed(6)}, ${point.longitude.toStringAsFixed(6)}';
 
   @override
   Widget build(BuildContext context) {
     final cargoWeight =
-        double.tryParse(cargoWeightController.text.trim()) ?? 0.0;
-    final vehicleCap = selectedVehicle?.numericPayloadCapacityTon ?? 0.0;
+        double.tryParse(widget.cargoWeightController.text.trim()) ?? 0.0;
+    final vehicleCap = widget.selectedVehicle?.numericPayloadCapacityTon ?? 0.0;
     final isOverloaded =
         cargoWeight > 0 && vehicleCap > 0 && cargoWeight > vehicleCap;
 
@@ -1310,16 +1451,16 @@ class _TripSetupPanel extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           OutlinedButton.icon(
-            onPressed: onChooseProduct,
+            onPressed: widget.onChooseProduct,
             icon: const Icon(Icons.inventory_2_outlined),
             label: Text(
-              selectedCatalogProduct == null
+              widget.selectedCatalogProduct == null
                   ? 'Choose RBC / RAMA Product with Photo'
-                  : '${selectedCatalogProduct!.brand} · ${selectedCatalogProduct!.category} · ${selectedCatalogProduct!.code}',
+                  : '${widget.selectedCatalogProduct!.brand} · ${widget.selectedCatalogProduct!.category} · ${widget.selectedCatalogProduct!.code}',
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          if (selectedCatalogProduct != null) ...[
+          if (widget.selectedCatalogProduct != null) ...[
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.all(8),
@@ -1332,7 +1473,7 @@ class _TripSetupPanel extends StatelessWidget {
                 children: [
                   InkWell(
                     onTap: () =>
-                        _showSelectedProduct(context, selectedCatalogProduct!),
+                        _showSelectedProduct(context, widget.selectedCatalogProduct!),
                     borderRadius: BorderRadius.circular(8),
                     child: Stack(
                       alignment: Alignment.bottomRight,
@@ -1340,7 +1481,7 @@ class _TripSetupPanel extends StatelessWidget {
                         ClipRRect(
                           borderRadius: BorderRadius.circular(8),
                           child: Image.asset(
-                            selectedCatalogProduct!.photoAsset,
+                            widget.selectedCatalogProduct!.photoAsset,
                             width: 72,
                             height: 72,
                             fit: BoxFit.contain,
@@ -1364,11 +1505,11 @@ class _TripSetupPanel extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          selectedCatalogProduct!.displayName,
+                          widget.selectedCatalogProduct!.displayName,
                           style: const TextStyle(fontWeight: FontWeight.w800),
                         ),
                         Text(
-                          selectedCatalogProduct!.category,
+                          widget.selectedCatalogProduct!.category,
                           style: const TextStyle(
                             color: AppColors.slate,
                             fontSize: 12,
@@ -1386,7 +1527,7 @@ class _TripSetupPanel extends StatelessWidget {
             children: [
               Expanded(
                 child: TextField(
-                  controller: referenceController,
+                  controller: widget.referenceController,
                   decoration: const InputDecoration(
                     labelText: 'Trip Number / Reference',
                     isDense: true,
@@ -1395,7 +1536,7 @@ class _TripSetupPanel extends StatelessWidget {
               ),
               const SizedBox(width: 6),
               IconButton(
-                onPressed: onRegenerateTripNumber,
+                onPressed: widget.onRegenerateTripNumber,
                 tooltip: 'Auto-generate sequential trip number',
                 icon: const Icon(Icons.refresh_rounded,
                     size: 20, color: AppColors.primary),
@@ -1404,7 +1545,7 @@ class _TripSetupPanel extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           TextField(
-            controller: customerController,
+            controller: widget.customerController,
             decoration: const InputDecoration(
               labelText: 'Customer / Client Name',
               hintText: 'Tata Steel Logistics',
@@ -1427,12 +1568,12 @@ class _TripSetupPanel extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           DropdownButtonFormField<String>(
-            initialValue: selectedVehicle?.code,
+            initialValue: widget.selectedVehicle?.code,
             decoration: const InputDecoration(
               labelText: 'Assigned Vehicle',
               isDense: true,
             ),
-            items: truckModels.map((truck) {
+            items: widget.truckModels.map((truck) {
               final isInactive = truck.isDisabled || truck.isUnderMaintenance;
               return DropdownMenuItem<String>(
                 value: truck.code,
@@ -1452,19 +1593,19 @@ class _TripSetupPanel extends StatelessWidget {
             onChanged: (code) {
               if (code == null) return;
               try {
-                final found = truckModels.firstWhere((t) => t.code == code);
-                onVehicleSelected(found);
+                final found = widget.truckModels.firstWhere((t) => t.code == code);
+                widget.onVehicleSelected(found);
               } catch (_) {}
             },
           ),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
-            initialValue: selectedDriver,
+            initialValue: widget.selectedDriver,
             decoration: const InputDecoration(
               labelText: 'Assigned Driver',
               isDense: true,
             ),
-            items: drivers.map((driver) {
+            items: widget.drivers.map((driver) {
               return DropdownMenuItem<String>(
                 value: driver.name,
                 child: Text(
@@ -1479,31 +1620,184 @@ class _TripSetupPanel extends StatelessWidget {
                 ),
               );
             }).toList(),
-            onChanged: onDriverSelected,
+            onChanged: widget.onDriverSelected,
           ),
 
           const SizedBox(height: 14),
 
-          // 3. Cargo Details & Payload Capacity Validation
-          const Text(
-            'CARGO & PAYLOAD VALIDATION',
-            style: TextStyle(
-              color: AppColors.slate,
-              fontSize: 10.5,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.5,
-              fontFamily: 'sans-serif',
+          // 3. Cargo Details & Itemized Quantity/Weight Breakdown
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'CARGO & ITEM QUANTITY (सामान/QTY/वजन)',
+                style: TextStyle(
+                  color: AppColors.slate,
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.5,
+                  fontFamily: 'sans-serif',
+                ),
+              ),
+              Text(
+                'Total: ${cargoWeight.toStringAsFixed(2)} Ton',
+                style: const TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.primaryDark,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          // Quick Item Add Row (Chairs, Tables, Beds, Boxes, etc.)
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Quick Add Items (कुर्सी, मेज़, बेड, वज़न जोड़ें):',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.navy,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  children: [
+                    for (final preset in ['Chairs', 'Tables', 'Beds', 'Boxes', 'Desks'])
+                      ActionChip(
+                        label: Text(preset, style: const TextStyle(fontSize: 11)),
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        visualDensity: VisualDensity.compact,
+                        onPressed: () {
+                          setState(() {
+                            _quickItemNameCtrl.text = preset;
+                          });
+                        },
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 4,
+                      child: TextField(
+                        controller: _quickItemNameCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'Item Name',
+                          hintText: 'e.g. Chair',
+                          isDense: true,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      flex: 2,
+                      child: TextField(
+                        controller: _quickItemQtyCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Qty (संख्या)',
+                          hintText: '10',
+                          isDense: true,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      flex: 3,
+                      child: TextField(
+                        controller: _quickItemWeightCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          labelText: 'Wt/pc ($_quickItemUnit)',
+                          hintText: '50',
+                          isDense: true,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    IconButton.filled(
+                      onPressed: _addQuickItem,
+                      icon: const Icon(Icons.add, size: 18),
+                      tooltip: 'Add Cargo Item',
+                      style: IconButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
+
+          if (widget.customCargoItems.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEFF6FF),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFBFDBFE)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (int i = 0; i < widget.customCargoItems.length; i++) ...[
+                    Row(
+                      children: [
+                        const Icon(Icons.check_circle_rounded,
+                            size: 14, color: AppColors.primary),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            '${widget.customCargoItems[i].productName} · ${widget.customCargoItems[i].notes}',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.navy,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline, size: 16, color: Colors.red),
+                          visualDensity: VisualDensity.compact,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+                          onPressed: () => widget.onRemoveCargoItem(i),
+                        ),
+                      ],
+                    ),
+                    if (i < widget.customCargoItems.length - 1)
+                      const Divider(height: 6, thickness: 0.5),
+                  ],
+                ],
+              ),
+            ),
+          ],
+
           const SizedBox(height: 10),
           Row(
             children: [
               Expanded(
                 flex: 6,
                 child: TextField(
-                  controller: cargoDescController,
+                  controller: widget.cargoDescController,
                   decoration: const InputDecoration(
-                    labelText: 'Cargo Description',
+                    labelText: 'Overall Cargo Description',
                     hintText: 'Industrial Goods',
                     isDense: true,
                   ),
@@ -1513,7 +1807,7 @@ class _TripSetupPanel extends StatelessWidget {
               Expanded(
                 flex: 4,
                 child: TextField(
-                  controller: cargoWeightController,
+                  controller: widget.cargoWeightController,
                   keyboardType: TextInputType.number,
                   decoration: const InputDecoration(
                     labelText: 'Weight (Ton)',
@@ -1591,7 +1885,7 @@ class _TripSetupPanel extends StatelessWidget {
             children: [
               Expanded(
                 child: TextField(
-                  controller: departureTimeController,
+                  controller: widget.departureTimeController,
                   decoration: const InputDecoration(
                     labelText: 'Departure Date / Time',
                     hintText: 'YYYY-MM-DD HH:MM',
@@ -1602,7 +1896,7 @@ class _TripSetupPanel extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: TextField(
-                  controller: returnDepotController,
+                  controller: widget.returnDepotController,
                   decoration: const InputDecoration(
                     labelText: 'Return Depot / Yard',
                     hintText: 'Central Hub',
@@ -1614,7 +1908,7 @@ class _TripSetupPanel extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           TextField(
-            controller: driverInstructionsController,
+            controller: widget.driverInstructionsController,
             maxLines: 2,
             decoration: const InputDecoration(
               labelText: 'Driver Instructions',
@@ -1628,7 +1922,7 @@ class _TripSetupPanel extends StatelessWidget {
 
           // 5. Pinned Locations on Map
           const Text(
-            'PINNED ROUTE & STOPS',
+            'PINNED ROUTE & STOPS (लोकेशन / मैप स्टॉप्स)',
             style: TextStyle(
               color: AppColors.slate,
               fontSize: 10.5,
@@ -1638,28 +1932,50 @@ class _TripSetupPanel extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
+
+          // Pickup Location Row with Search / Paste Link Button
           _PinnedLocation(
             label: '1. Pickup / origin',
-            value: coordinate(origin),
+            value: coordinate(widget.origin),
             color: const Color(0xFF168547),
-            selected: origin != null,
+            selected: widget.origin != null,
+            trailingAction: OutlinedButton.icon(
+              onPressed: widget.onSearchOrigin,
+              icon: const Icon(Icons.search_rounded, size: 14),
+              label: const Text('Search / Link', style: TextStyle(fontSize: 11)),
+              style: OutlinedButton.styleFrom(
+                visualDensity: VisualDensity.compact,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              ),
+            ),
           ),
           const SizedBox(height: 8),
+
+          // Destination Location Row with Search / Paste Link Button
           _PinnedLocation(
             label: '2. Destination (Drop Point)',
-            value: destination != null
-                ? coordinate(destination)
-                : (origin != null
-                    ? 'Optional: Tap map to pin destination'
+            value: widget.destination != null
+                ? coordinate(widget.destination)
+                : (widget.origin != null
+                    ? 'Tap map or click search to select drop'
                     : 'Tap the map to select'),
             color: const Color(0xFFD83B4B),
-            selected: destination != null,
+            selected: widget.destination != null,
+            trailingAction: OutlinedButton.icon(
+              onPressed: widget.onSearchDestination,
+              icon: const Icon(Icons.search_rounded, size: 14),
+              label: const Text('Search / Link', style: TextStyle(fontSize: 11)),
+              style: OutlinedButton.styleFrom(
+                visualDensity: VisualDensity.compact,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              ),
+            ),
           ),
 
           // Via Stops with Reordering Controls
-          if (stops.isNotEmpty) ...[
+          if (widget.stops.isNotEmpty) ...[
             const SizedBox(height: 10),
-            for (int i = 0; i < stops.length; i++) ...[
+            for (int i = 0; i < widget.stops.length; i++) ...[
               Container(
                 margin: const EdgeInsets.only(bottom: 6),
                 padding:
@@ -1688,7 +2004,7 @@ class _TripSetupPanel extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            coordinate(stops[i]),
+                            coordinate(widget.stops[i]),
                             style: const TextStyle(
                               fontSize: 10,
                               color: Color(0xFFB45309),
@@ -1701,7 +2017,7 @@ class _TripSetupPanel extends StatelessWidget {
                     ),
                     IconButton(
                       icon: const Icon(Icons.arrow_upward_rounded, size: 16),
-                      onPressed: i > 0 ? () => onMoveStopUp(i) : null,
+                      onPressed: i > 0 ? () => widget.onMoveStopUp(i) : null,
                       tooltip: 'Move Up',
                       visualDensity: VisualDensity.compact,
                       padding: EdgeInsets.zero,
@@ -1711,7 +2027,7 @@ class _TripSetupPanel extends StatelessWidget {
                     IconButton(
                       icon: const Icon(Icons.arrow_downward_rounded, size: 16),
                       onPressed:
-                          i < stops.length - 1 ? () => onMoveStopDown(i) : null,
+                          i < widget.stops.length - 1 ? () => widget.onMoveStopDown(i) : null,
                       tooltip: 'Move Down',
                       visualDensity: VisualDensity.compact,
                       padding: EdgeInsets.zero,
@@ -1721,7 +2037,7 @@ class _TripSetupPanel extends StatelessWidget {
                     IconButton(
                       icon: const Icon(Icons.close_rounded,
                           size: 16, color: Color(0xFFDC2626)),
-                      onPressed: () => onRemoveStop(i),
+                      onPressed: () => widget.onRemoveStop(i),
                       tooltip: 'Remove stop',
                       visualDensity: VisualDensity.compact,
                       padding: EdgeInsets.zero,
@@ -1735,18 +2051,38 @@ class _TripSetupPanel extends StatelessWidget {
           ],
 
           const SizedBox(height: 10),
-          OutlinedButton.icon(
-            onPressed: locating ? null : onCurrentLocation,
-            icon: locating
-                ? const SizedBox.square(
-                    dimension: 15,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.my_location_rounded),
-            label: const Text('Use GPS as pickup'),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: widget.locating ? null : widget.onCurrentLocation,
+                  icon: widget.locating
+                      ? const SizedBox.square(
+                          dimension: 15,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.my_location_rounded, size: 15),
+                  label: const Text('GPS Pickup', style: TextStyle(fontSize: 11)),
+                  style: OutlinedButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: FilledButton.tonalIcon(
+                  onPressed: widget.onAddViaStopSearch,
+                  icon: const Icon(Icons.add_location_alt_outlined, size: 15),
+                  label: const Text('+ Add Stop', style: TextStyle(fontSize: 11)),
+                  style: FilledButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ),
+              ),
+            ],
           ),
 
-          if (showValidation)
+          if (widget.showValidation)
             const Padding(
               padding: EdgeInsets.only(top: 10),
               child: Text(
@@ -1758,14 +2094,14 @@ class _TripSetupPanel extends StatelessWidget {
           const SizedBox(height: 18),
           Row(
             children: [
-              TextButton(onPressed: onReset, child: const Text('Reset pins')),
+              TextButton(onPressed: widget.onReset, child: const Text('Reset pins')),
               const Spacer(),
               FilledButton.icon(
-                onPressed: onSave,
+                onPressed: widget.onSave,
                 icon: const Icon(Icons.save_outlined),
                 label: Text(
-                  stops.isNotEmpty
-                      ? 'Save (${2 + stops.length} Places)'
+                  widget.stops.isNotEmpty
+                      ? 'Save (${2 + widget.stops.length} Places)'
                       : 'Save trip',
                 ),
               ),
@@ -1783,11 +2119,13 @@ class _PinnedLocation extends StatelessWidget {
     required this.value,
     required this.color,
     required this.selected,
+    this.trailingAction,
   });
   final String label;
   final String value;
   final Color color;
   final bool selected;
+  final Widget? trailingAction;
 
   @override
   Widget build(BuildContext context) {
@@ -1818,6 +2156,10 @@ class _PinnedLocation extends StatelessWidget {
               ],
             ),
           ),
+          if (trailingAction != null) ...[
+            const SizedBox(width: 8),
+            trailingAction!,
+          ],
         ],
       ),
     );

@@ -1129,12 +1129,14 @@ class PlannerController extends ChangeNotifier {
   Position? _lastPublishedDriverPosition;
   StreamSubscription<List<Map<String, dynamic>>>? _fleetTelemetrySubscription;
   StreamSubscription<List<AttendanceRecord>>? _attendanceSubscription;
+  StreamSubscription<List<SeatbeltRecord>>? _seatbeltSubscription;
 
   void startGpsAutoPolling({Duration interval = const Duration(seconds: 15)}) {
     _gpsAutoPollTimer?.cancel();
     _foregroundLocationSubscription?.cancel();
     _fleetTelemetrySubscription?.cancel();
     _attendanceSubscription?.cancel();
+    _seatbeltSubscription?.cancel();
     // Do not launch background periodic timers in unit/widget test environments
     if (const bool.fromEnvironment('FLUTTER_TEST') ||
         (kDebugMode && Zone.current[#test.declarer] != null)) {
@@ -1152,6 +1154,11 @@ class PlannerController extends ChangeNotifier {
           .listen(_applyRemoteAttendance, onError: (Object error) {
         debugPrint('Live attendance sync failed: $error');
       });
+      _seatbeltSubscription = FirebaseBackendService.instance
+          .watchSeatbeltRecords()
+          .listen(_applyRemoteSeatbelts, onError: (Object error) {
+        debugPrint('Live seatbelt sync failed: $error');
+      });
     } else if (isDriver) {
       final driver = selectedDriver;
       final driverId = driver == null
@@ -1162,6 +1169,34 @@ class PlannerController extends ChangeNotifier {
       if (driverId.isNotEmpty && getActiveDuty(driverId) != null) {
         unawaited(_startDriverMobileLocationSharing());
       }
+      _seatbeltSubscription = FirebaseBackendService.instance
+          .watchSeatbeltRecords()
+          .listen(_applyRemoteSeatbelts, onError: (Object error) {
+        debugPrint('Live seatbelt sync failed: $error');
+      });
+    }
+  }
+
+  void _applyRemoteSeatbelts(List<SeatbeltRecord> records) {
+    if (records.isEmpty) return;
+    var changed = false;
+    for (final remote in records) {
+      final idx = seatbeltRecords.indexWhere((r) => r.id == remote.id);
+      if (idx < 0) {
+        seatbeltRecords.add(remote);
+        changed = true;
+      } else if (remote.photoBase64.isNotEmpty && seatbeltRecords[idx].photoBase64.isEmpty) {
+        seatbeltRecords[idx] = remote;
+        changed = true;
+      }
+    }
+    if (changed) {
+      seatbeltRecords.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+      if (seatbeltRecords.length > 50) {
+        seatbeltRecords.removeRange(50, seatbeltRecords.length);
+      }
+      unawaited(_saveSeatbeltRecords());
+      notifyListeners();
     }
   }
 
@@ -1331,6 +1366,8 @@ class PlannerController extends ChangeNotifier {
     _fleetTelemetrySubscription = null;
     _attendanceSubscription?.cancel();
     _attendanceSubscription = null;
+    _seatbeltSubscription?.cancel();
+    _seatbeltSubscription = null;
   }
 
   bool isVehicleDriverOnDuty(String vehicleCode) {
@@ -2374,6 +2411,26 @@ class PlannerController extends ChangeNotifier {
       title: 'Trip Workflow Advanced',
       details:
           'Trip ${current.effectiveTripNumber} reached operational step: $step',
+      category: ActivityCategory.trip,
+      action: 'updated',
+    );
+  }
+
+  Future<void> acceptTrip(String tripReference) async {
+    final tripIdx = trips.indexWhere(
+        (t) => t.reference == tripReference || t.tripNumber == tripReference);
+    if (tripIdx < 0) return;
+    final current = trips[tripIdx];
+    final updated = current.copyWith(
+      status: 'accepted',
+    );
+    trips[tripIdx] = updated;
+    notifyListeners();
+    await _saveTrips();
+    await FirebaseBackendService.instance.syncTripRecord(record: updated);
+    await logActivity(
+      title: 'Ride Accepted by Driver',
+      details: 'Driver accepted Trip ${current.effectiveTripNumber}',
       category: ActivityCategory.trip,
       action: 'updated',
     );

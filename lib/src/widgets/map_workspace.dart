@@ -3346,14 +3346,188 @@ class _MapWorkspaceState extends State<MapWorkspace> {
     );
   }
 
+  void _showMapWaypointActionSheet(LatLng point) {
+    final coordStr = _format(point);
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (ctx) {
+        return FutureBuilder<String>(
+          future: ReverseGeocodingService.labelFor(point),
+          builder: (context, snapshot) {
+            final label = snapshot.data ?? coordStr;
+            final shortName = label.split(',').first.trim();
+
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(18, 14, 18, 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        margin: const EdgeInsets.only(bottom: 12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFD3DCE8),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEF3C7),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(
+                            Icons.add_location_alt_rounded,
+                            color: Color(0xFFD97706),
+                            size: 22,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                shortName,
+                                style: const TextStyle(
+                                  fontSize: 14.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.navy,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                label,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: AppColors.slate,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    const Divider(height: 1),
+                    const SizedBox(height: 10),
+                    // 1. Add as Intermediate Stop / Waypoint
+                    FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFFD97706),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.of(ctx).pop();
+                        final newStopLabel = label.isNotEmpty ? label : coordStr;
+                        widget.controller.addStop(newStopLabel);
+                        _showMessage(
+                            'Delivery stop (Waypoint) joda gaya: $shortName');
+                      },
+                      icon: const Icon(Icons.add_circle_outline_rounded, size: 18),
+                      label: Text(
+                        'Delivery Stop / Waypoint Jodein (${widget.controller.stops.length + 1})',
+                        style: const TextStyle(
+                            fontSize: 12.5, fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    // 2. Set as Drop
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFFDC2626),
+                        side: const BorderSide(color: Color(0xFFFCA5A5)),
+                        padding: const EdgeInsets.symmetric(vertical: 11),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.of(ctx).pop();
+                        setState(() => _pinnedDestination = point);
+                        final newLabel = label.isNotEmpty ? label : coordStr;
+                        widget.controller.setDestination(newLabel);
+                        _showMessage('New Drop set: $shortName');
+                      },
+                      icon: const Icon(Icons.location_on_rounded, size: 17),
+                      label: const Text(
+                        'Drop / Final Destination Badlein',
+                        style: TextStyle(
+                            fontSize: 12, fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    // 3. Set as Pickup
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF16A34A),
+                        side: const BorderSide(color: Color(0xFF86EFAC)),
+                        padding: const EdgeInsets.symmetric(vertical: 11),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.of(ctx).pop();
+                        setState(() {
+                          _pinnedOrigin = point;
+                          _userLocation = point;
+                        });
+                        final newLabel = label.isNotEmpty ? label : coordStr;
+                        widget.controller.setOrigin(newLabel);
+                        _showMessage('New Pickup set: $shortName');
+                      },
+                      icon: const Icon(Icons.my_location_rounded, size: 17),
+                      label: const Text(
+                        'Pickup / Starting Point Badlein',
+                        style: TextStyle(
+                            fontSize: 12, fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   Future<void> _handleMapTap(LatLng point) async {
-    if (_isNavigating || !widget.controller.pinMode) return;
+    if (_isNavigating) return;
 
     final coordString = _format(point);
 
+    // If both Pickup and Drop exist, prompt to add intermediate waypoint or adjust
+    if (_effectiveOrigin != null &&
+        _effectiveDestination != null &&
+        !widget.controller.pinMode) {
+      _showMapWaypointActionSheet(point);
+      return;
+    }
+
     // 1. If in Drop mode, ALWAYS set / update Drop!
     if (_activePinMode == 'drop') {
-      // If pickup is not set yet, use current user location or fallback as pickup
       if (widget.controller.origin.trim().isEmpty || _pinnedOrigin == null) {
         final fallbackOrigin = _userLocation ?? const LatLng(21.1702, 72.8311);
         _pinnedOrigin = fallbackOrigin;
@@ -3381,15 +3555,14 @@ class _MapWorkspaceState extends State<MapWorkspace> {
       return;
     }
 
-    // 2. Otherwise in Pickup mode:
+    // 2. Otherwise in Pickup mode or when origin not set:
     if (_activePinMode == 'pickup' ||
         widget.controller.origin.trim().isEmpty ||
         _pinnedOrigin == null) {
       setState(() {
         _pinnedOrigin = point;
         _userLocation = point;
-        _activePinMode =
-            'drop'; // automatically advance to Drop mode for next tap
+        _activePinMode = 'drop'; // automatically advance to Drop mode for next tap
       });
       widget.controller.setOrigin(coordString);
       _showMessage('Pickup Pinned ($coordString). Ab Drop tap karein.');
@@ -3405,19 +3578,8 @@ class _MapWorkspaceState extends State<MapWorkspace> {
       return;
     }
 
-    // 3. Fallback: if both are set, extend with stop
-    setState(() => _pinnedDestination = point);
-    widget.controller.extendRouteTo(coordString);
-    _showMessage(
-        'Stop ${widget.controller.stops.length} saved. New Drop pinned: $coordString.');
-
-    ReverseGeocodingService.labelFor(point).then((locationName) {
-      if (!mounted) return;
-      if (_pinnedDestination == point) {
-        widget.controller.setDestination(locationName);
-      }
-    });
-    widget.controller.setPinMode(false);
+    // 3. Fallback: if both are set and pinMode is on, show waypoint action sheet
+    _showMapWaypointActionSheet(point);
   }
 
   Future<void> _openExternalNav() async {

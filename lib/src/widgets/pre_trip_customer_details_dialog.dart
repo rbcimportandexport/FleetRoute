@@ -635,6 +635,66 @@ class _PreTripCustomerDetailsDialogState
                         ),
                       ],
                       const SizedBox(height: 14),
+
+                      // Quick Cargo Presets for Drivers (Chairs, Tables, Beds, Boxes, etc.)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Quick Cargo Presets (कुर्सी, मेज़, बेड आदि):',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF475569),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 4,
+                            children: [
+                              for (final preset in [
+                                '10 Chairs (कुर्सी)',
+                                '4 Tables (मेज़)',
+                                '2 Beds (बेड)',
+                                '15 Boxes (पेटी)',
+                                'Iron / Steel',
+                              ])
+                                InkWell(
+                                  borderRadius: BorderRadius.circular(16),
+                                  onTap: () {
+                                    setState(() {
+                                      final current = _cargoDescController.text.trim();
+                                      if (current.isEmpty || current == 'Industrial Cargo' || current == 'Steel / Goods') {
+                                        _cargoDescController.text = preset;
+                                      } else if (!current.contains(preset)) {
+                                        _cargoDescController.text = '$current, $preset';
+                                      }
+                                    });
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF1F5F9),
+                                      borderRadius: BorderRadius.circular(16),
+                                      border: Border.all(color: const Color(0xFFCBD5E1)),
+                                    ),
+                                    child: Text(
+                                      preset,
+                                      style: const TextStyle(
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF1E293B),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [

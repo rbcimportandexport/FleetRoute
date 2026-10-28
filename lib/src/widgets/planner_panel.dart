@@ -8,6 +8,7 @@ import '../models/planner_models.dart';
 import '../services/reverse_geocoding_service.dart';
 import '../services/route_traffic_service.dart';
 import '../theme/app_theme.dart';
+import 'location_search_dialog.dart';
 
 class PlannerPanel extends StatefulWidget {
   const PlannerPanel({
@@ -1235,7 +1236,7 @@ class _RouteInputs extends StatelessWidget {
   }
 }
 
-class _StopLocationField extends StatelessWidget {
+class _StopLocationField extends StatefulWidget {
   const _StopLocationField({
     required this.index,
     required this.controller,
@@ -1247,6 +1248,50 @@ class _StopLocationField extends StatelessWidget {
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
   final VoidCallback onRemove;
+
+  @override
+  State<_StopLocationField> createState() => _StopLocationFieldState();
+}
+
+class _StopLocationFieldState extends State<_StopLocationField> {
+  bool _isResolving = false;
+
+  Future<void> _resolveText(String raw) async {
+    final clean = raw.trim();
+    if (clean.isEmpty) return;
+
+    // Check if it's a URL or contains search tokens
+    if (clean.startsWith('http') || clean.contains('goo.gl') || !clean.contains('(')) {
+      setState(() => _isResolving = true);
+      try {
+        final place = await ReverseGeocodingService.resolveLocationQueryOrLink(clean);
+        if (place != null && mounted) {
+          widget.controller.text = place.formattedLabel;
+          widget.onChanged(place.formattedLabel);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Stop ${widget.index + 1} Set: ${place.shortName}'),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      } catch (_) {}
+      if (mounted) setState(() => _isResolving = false);
+    }
+  }
+
+  Future<void> _openSearch() async {
+    final place = await LocationSearchDialog.show(
+      context,
+      initialQuery: widget.controller.text.trim(),
+      title: 'Stop ${widget.index + 1} Search / Link',
+      hint: 'Stop ka naam likhein ya Google Maps link paste karein',
+    );
+    if (place != null && mounted) {
+      widget.controller.text = place.formattedLabel;
+      widget.onChanged(place.formattedLabel);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1268,7 +1313,7 @@ class _StopLocationField extends StatelessWidget {
                 ),
                 child: Center(
                   child: Text(
-                    '${index + 1}',
+                    '${widget.index + 1}',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 8.5,
@@ -1298,7 +1343,7 @@ class _StopLocationField extends StatelessWidget {
                 child: Row(
                   children: [
                     Text(
-                      'Stop ${index + 1} / Via (रास्ते का स्टॉप ${index + 1})',
+                      'Stop ${widget.index + 1} / Via (रास्ते का स्टॉप ${widget.index + 1})',
                       style: const TextStyle(
                         color: Color(0xFFB45309),
                         fontSize: 10,
@@ -1307,7 +1352,7 @@ class _StopLocationField extends StatelessWidget {
                     ),
                     const Spacer(),
                     InkWell(
-                      onTap: onRemove,
+                      onTap: widget.onRemove,
                       child: const Padding(
                         padding: EdgeInsets.symmetric(horizontal: 4),
                         child: Text(
@@ -1326,20 +1371,49 @@ class _StopLocationField extends StatelessWidget {
               SizedBox(
                 height: 47,
                 child: TextField(
-                  controller: controller,
-                  onChanged: onChanged,
+                  controller: widget.controller,
+                  onChanged: (val) {
+                    widget.onChanged(val);
+                    if (val.startsWith('http') || val.contains('goo.gl')) {
+                      _resolveText(val);
+                    }
+                  },
+                  onSubmitted: _resolveText,
                   style: const TextStyle(color: AppColors.navy, fontSize: 13),
                   decoration: InputDecoration(
-                    hintText: 'e.g. Bardoli, Surat, Kamrej or tap map',
+                    hintText: 'Naam likhein, link paste karein ya map tap',
                     contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-                    suffixIcon: IconButton(
-                      icon: const Icon(
-                        Icons.close_rounded,
-                        color: Color(0xFFEF4444),
-                        size: 16,
-                      ),
-                      tooltip: 'Remove Stop',
-                      onPressed: onRemove,
+                    suffixIcon: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (_isResolving)
+                          const SizedBox.square(
+                            dimension: 16,
+                            child: Padding(
+                              padding: EdgeInsets.all(12),
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          )
+                        else
+                          IconButton(
+                            icon: const Icon(
+                              Icons.search_rounded,
+                              color: Color(0xFFD97706),
+                              size: 18,
+                            ),
+                            tooltip: 'Search place or paste link',
+                            onPressed: _openSearch,
+                          ),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.close_rounded,
+                            color: Color(0xFFEF4444),
+                            size: 16,
+                          ),
+                          tooltip: 'Remove Stop',
+                          onPressed: widget.onRemove,
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -1352,7 +1426,7 @@ class _StopLocationField extends StatelessWidget {
   }
 }
 
-class _LocationField extends StatelessWidget {
+class _LocationField extends StatefulWidget {
   const _LocationField({
     required this.label,
     required this.hint,
@@ -1376,9 +1450,58 @@ class _LocationField extends StatelessWidget {
   final bool isLoading;
 
   @override
+  State<_LocationField> createState() => _LocationFieldState();
+}
+
+class _LocationFieldState extends State<_LocationField> {
+  bool _isResolving = false;
+
+  Future<void> _resolveText(String raw) async {
+    final clean = raw.trim();
+    if (clean.isEmpty) return;
+
+    if (clean.startsWith('http') || clean.contains('goo.gl') || !clean.contains('(')) {
+      setState(() => _isResolving = true);
+      try {
+        final place = await ReverseGeocodingService.resolveLocationQueryOrLink(clean);
+        if (place != null && mounted) {
+          widget.controller.text = place.formattedLabel;
+          widget.onChanged(place.formattedLabel);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${widget.dot ? "Drop" : "Pickup"} Set: ${place.shortName}'),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      } catch (_) {}
+      if (mounted) setState(() => _isResolving = false);
+    }
+  }
+
+  Future<void> _openSearchModal() async {
+    final place = await LocationSearchDialog.show(
+      context,
+      initialQuery: widget.controller.text.trim(),
+      title: widget.dot
+          ? 'Destination / Drop Location Search'
+          : 'Starting / Pickup Location Search',
+      hint: widget.dot
+          ? 'Drop ka naam likhein ya Google Maps link paste karein'
+          : 'Pickup ka naam likhein ya Google Maps link paste karein',
+    );
+    if (place != null && mounted) {
+      widget.controller.text = place.formattedLabel;
+      widget.onChanged(place.formattedLabel);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    Widget? suffixWidget;
-    if (isLoading) {
+    final hasText = widget.controller.text.trim().isNotEmpty;
+
+    Widget suffixWidget;
+    if (widget.isLoading || _isResolving) {
       suffixWidget = const SizedBox.square(
         dimension: 18,
         child: Padding(
@@ -1387,11 +1510,10 @@ class _LocationField extends StatelessWidget {
         ),
       );
     } else {
-      final hasText = controller.text.trim().isNotEmpty;
       suffixWidget = Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (hasText && onClear != null)
+          if (hasText && widget.onClear != null)
             IconButton(
               icon: const Icon(
                 Icons.close_rounded,
@@ -1400,20 +1522,24 @@ class _LocationField extends StatelessWidget {
               ),
               tooltip: 'Clear location',
               onPressed: () {
-                controller.clear();
-                onClear!();
+                widget.controller.clear();
+                widget.onClear!();
               },
             ),
-          if (onSuffixTap != null)
+          IconButton(
+            icon: const Icon(
+              Icons.search_rounded,
+              color: AppColors.primary,
+              size: 18,
+            ),
+            tooltip: 'Search by name or paste link',
+            onPressed: _openSearchModal,
+          ),
+          if (widget.onSuffixTap != null)
             IconButton(
-              icon: Icon(suffix, color: AppColors.blue, size: 18),
+              icon: Icon(widget.suffix, color: AppColors.blue, size: 18),
               tooltip: 'Use current GPS location',
-              onPressed: onSuffixTap,
-            )
-          else if (!hasText)
-            Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: Icon(suffix, color: AppColors.muted, size: 18),
+              onPressed: widget.onSuffixTap,
             ),
         ],
       );
@@ -1432,14 +1558,15 @@ class _LocationField extends StatelessWidget {
                 width: 11,
                 height: 11,
                 decoration: BoxDecoration(
-                  color: dot ? AppColors.blue : Colors.white,
-                  shape: dot ? BoxShape.rectangle : BoxShape.circle,
-                  borderRadius: dot ? BorderRadius.circular(3) : null,
-                  border:
-                      dot ? null : Border.all(color: AppColors.blue, width: 3),
+                  color: widget.dot ? AppColors.blue : Colors.white,
+                  shape: widget.dot ? BoxShape.rectangle : BoxShape.circle,
+                  borderRadius: widget.dot ? BorderRadius.circular(3) : null,
+                  border: widget.dot
+                      ? null
+                      : Border.all(color: AppColors.blue, width: 3),
                 ),
               ),
-              if (!dot)
+              if (!widget.dot)
                 ...List.generate(
                   3,
                   (_) => Container(
@@ -1459,7 +1586,7 @@ class _LocationField extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(left: 1, bottom: 5),
                 child: Text(
-                  label,
+                  widget.label,
                   style: const TextStyle(
                     color: AppColors.slate,
                     fontSize: 10,
@@ -1470,11 +1597,17 @@ class _LocationField extends StatelessWidget {
               SizedBox(
                 height: 47,
                 child: TextField(
-                  controller: controller,
-                  onChanged: onChanged,
+                  controller: widget.controller,
+                  onChanged: (val) {
+                    widget.onChanged(val);
+                    if (val.startsWith('http') || val.contains('goo.gl')) {
+                      _resolveText(val);
+                    }
+                  },
+                  onSubmitted: _resolveText,
                   style: const TextStyle(color: AppColors.navy, fontSize: 13),
                   decoration: InputDecoration(
-                    hintText: hint,
+                    hintText: widget.hint,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 12),
                     suffixIcon: suffixWidget,
                   ),

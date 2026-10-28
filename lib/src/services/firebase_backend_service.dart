@@ -83,8 +83,26 @@ class FirebaseBackendService {
             'timestamp': Timestamp.fromDate(record.timestamp.toUtc()),
             'location': record.location,
             'notes': record.notes,
+            if (record.photoBase64.isNotEmpty) 'photoBase64': record.photoBase64,
           },
           client: client);
+
+  Stream<List<SeatbeltRecord>> watchSeatbeltRecords() {
+    if (!isConfigured) return const Stream.empty();
+    return FirebaseFirestore.instance
+        .collection('seatbelt_records')
+        .orderBy('timestamp', descending: true)
+        .limit(100)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.map((doc) {
+              final data = <String, dynamic>{'id': doc.id, ...doc.data()};
+              final ts = data['timestamp'];
+              if (ts is Timestamp) {
+                data['timestamp'] = ts.toDate().toIso8601String();
+              }
+              return SeatbeltRecord.fromJson(data);
+            }).toList(growable: false));
+  }
 
   Future<bool> syncVehicleTelemetry({
     required String vehicleCode,
