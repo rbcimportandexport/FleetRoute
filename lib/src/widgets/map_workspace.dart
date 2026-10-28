@@ -8,6 +8,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart' as gm;
 import 'package:latlong2/latlong.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../controllers/planner_controller.dart';
@@ -4286,139 +4287,141 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                   left: 14,
                   right: compact ? 14 : null,
                   top: 14,
-                  child: compact
-                      ? Align(
-                          alignment: Alignment.topLeft,
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerLeft,
-                            child: _CompactMapBar(
-                              controller: widget.controller,
-                              activePinMode: _activePinMode,
-                              trafficEnabled: _trafficEnabled,
-                              onToggleTraffic: _toggleLiveTraffic,
-                              hasRoute: hasRoute,
-                              onFitRoute: _fitRoute,
-                              onClearRoute: _clearRoute,
-                              onShowFleet: _showFleetLocation,
-                              onStartDuty: _startDriverDuty,
-                              onSetLocation: _openSetLocationSheet,
-                              onSetPickup: () {
-                                setState(() => _activePinMode = 'pickup');
-                                widget.controller.setPinMode(true);
-                                _showMessage(
-                                    'Pickup Mode ON: Map par tap karein pickup badalne ke liye (Green Pin).');
-                              },
-                              onSetDrop: () {
-                                setState(() => _activePinMode = 'drop');
-                                widget.controller.setPinMode(true);
-                                _showMessage(
-                                    'Drop Mode ON: Map par tap karein drop point set karne ke liye (Red Pin).');
-                              },
-                            ),
-                          ),
-                        )
-                      : ConstrainedBox(
-                          constraints: BoxConstraints(
-                            maxWidth: (constraints.maxWidth - 200)
-                                .clamp(200.0, 750.0),
-                          ),
-                          child: Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            children: [
-                              _MapTypeControl(controller: widget.controller),
-                              _MapButton(
-                                icon: Icons.edit_location_alt_rounded,
-                                label: 'Set Route',
-                                active: true,
-                                activeColor: AppColors.primary,
-                                onTap: _openSetLocationSheet,
-                              ),
-                              _MapButton(
-                                icon: Icons.place_rounded,
-                                label: 'Set Pickup',
-                                active: _activePinMode == 'pickup',
-                                activeColor: const Color(0xFF10B981),
-                                onTap: () {
+                  child: PointerInterceptor(
+                    child: compact
+                        ? Align(
+                            alignment: Alignment.topLeft,
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: _CompactMapBar(
+                                controller: widget.controller,
+                                activePinMode: _activePinMode,
+                                trafficEnabled: _trafficEnabled,
+                                onToggleTraffic: _toggleLiveTraffic,
+                                hasRoute: hasRoute,
+                                onFitRoute: _fitRoute,
+                                onClearRoute: _clearRoute,
+                                onShowFleet: _showFleetLocation,
+                                onStartDuty: _startDriverDuty,
+                                onSetLocation: _openSetLocationSheet,
+                                onSetPickup: () {
                                   setState(() => _activePinMode = 'pickup');
                                   widget.controller.setPinMode(true);
                                   _showMessage(
                                       'Pickup Mode ON: Map par tap karein pickup badalne ke liye (Green Pin).');
                                 },
-                              ),
-                              _MapButton(
-                                icon: Icons.location_on_rounded,
-                                label: 'Set Drop',
-                                active: _activePinMode == 'drop',
-                                activeColor: const Color(0xFFEF4444),
-                                onTap: () {
+                                onSetDrop: () {
                                   setState(() => _activePinMode = 'drop');
                                   widget.controller.setPinMode(true);
                                   _showMessage(
                                       'Drop Mode ON: Map par tap karein drop point set karne ke liye (Red Pin).');
                                 },
                               ),
-                              _MapButton(
-                                icon: Icons.add_location_alt_outlined,
-                                label: widget.controller.pinMode
-                                    ? 'Tap to Pin'
-                                    : 'Pin on map',
-                                active: widget.controller.pinMode,
-                                onTap: widget.controller.togglePinMode,
-                              ),
-                              _MapButton(
-                                icon: Icons.traffic_rounded,
-                                label: _trafficEnabled
-                                    ? 'Traffic: ON'
-                                    : 'Traffic: OFF',
-                                active: _trafficEnabled,
-                                activeColor: const Color(0xFF10B981),
-                                onTap: _toggleLiveTraffic,
-                              ),
-                              _MapButton(
-                                icon: Icons.local_shipping_rounded,
-                                label: 'Fleet GPS',
-                                onTap: _showFleetLocation,
-                              ),
-                              if (widget.controller.isDriver)
+                            ),
+                          )
+                        : ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxWidth: (constraints.maxWidth - 200)
+                                  .clamp(200.0, 750.0),
+                            ),
+                            child: Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                _MapTypeControl(controller: widget.controller),
                                 _MapButton(
-                                  icon: Icons.play_circle_outline_rounded,
-                                  label: _isCurrentDriverOnDuty
-                                      ? 'ON DUTY'
-                                      : 'Start Duty',
+                                  icon: Icons.edit_location_alt_rounded,
+                                  label: 'Set Route',
                                   active: true,
-                                  activeColor: const Color(0xFF16A34A),
-                                  onTap: _startDriverDuty,
+                                  activeColor: AppColors.primary,
+                                  onTap: _openSetLocationSheet,
                                 ),
-                              if (hasRoute ||
-                                  _effectiveOrigin != null ||
-                                  _effectiveDestination != null ||
-                                  widget.controller.stops.isNotEmpty) ...[
                                 _MapButton(
-                                  icon: Icons.refresh_rounded,
-                                  label: 'Clear Route',
-                                  onTap: _clearRoute,
-                                ),
-                              ],
-                              if (hasRoute) ...[
-                                _MapButton(
-                                  icon: Icons.play_arrow_rounded,
-                                  label: 'START LIVE',
-                                  active: true,
+                                  icon: Icons.place_rounded,
+                                  label: 'Set Pickup',
+                                  active: _activePinMode == 'pickup',
                                   activeColor: const Color(0xFF10B981),
-                                  onTap: _startLiveNavigation,
+                                  onTap: () {
+                                    setState(() => _activePinMode = 'pickup');
+                                    widget.controller.setPinMode(true);
+                                    _showMessage(
+                                        'Pickup Mode ON: Map par tap karein pickup badalne ke liye (Green Pin).');
+                                  },
                                 ),
                                 _MapButton(
-                                  icon: Icons.crop_free_rounded,
-                                  label: 'Fit Route',
-                                  onTap: _fitRoute,
+                                  icon: Icons.location_on_rounded,
+                                  label: 'Set Drop',
+                                  active: _activePinMode == 'drop',
+                                  activeColor: const Color(0xFFEF4444),
+                                  onTap: () {
+                                    setState(() => _activePinMode = 'drop');
+                                    widget.controller.setPinMode(true);
+                                    _showMessage(
+                                        'Drop Mode ON: Map par tap karein drop point set karne ke liye (Red Pin).');
+                                  },
                                 ),
+                                _MapButton(
+                                  icon: Icons.add_location_alt_outlined,
+                                  label: widget.controller.pinMode
+                                      ? 'Tap to Pin'
+                                      : 'Pin on map',
+                                  active: widget.controller.pinMode,
+                                  onTap: widget.controller.togglePinMode,
+                                ),
+                                _MapButton(
+                                  icon: Icons.traffic_rounded,
+                                  label: _trafficEnabled
+                                      ? 'Traffic: ON'
+                                      : 'Traffic: OFF',
+                                  active: _trafficEnabled,
+                                  activeColor: const Color(0xFF10B981),
+                                  onTap: _toggleLiveTraffic,
+                                ),
+                                _MapButton(
+                                  icon: Icons.local_shipping_rounded,
+                                  label: 'Fleet GPS',
+                                  onTap: _showFleetLocation,
+                                ),
+                                if (widget.controller.isDriver)
+                                  _MapButton(
+                                    icon: Icons.play_circle_outline_rounded,
+                                    label: _isCurrentDriverOnDuty
+                                        ? 'ON DUTY'
+                                        : 'Start Duty',
+                                    active: true,
+                                    activeColor: const Color(0xFF16A34A),
+                                    onTap: _startDriverDuty,
+                                  ),
+                                if (hasRoute ||
+                                    _effectiveOrigin != null ||
+                                    _effectiveDestination != null ||
+                                    widget.controller.stops.isNotEmpty) ...[
+                                  _MapButton(
+                                    icon: Icons.refresh_rounded,
+                                    label: 'Clear Route',
+                                    onTap: _clearRoute,
+                                  ),
+                                ],
+                                if (hasRoute) ...[
+                                  _MapButton(
+                                    icon: Icons.play_arrow_rounded,
+                                    label: 'START LIVE',
+                                    active: true,
+                                    activeColor: const Color(0xFF10B981),
+                                    onTap: _startLiveNavigation,
+                                  ),
+                                  _MapButton(
+                                    icon: Icons.crop_free_rounded,
+                                    label: 'Fit Route',
+                                    onTap: _fitRoute,
+                                  ),
+                                ],
                               ],
-                            ],
+                            ),
                           ),
-                        ),
+                  ),
                 ),
 
               // Top-right Provider Badge and Traffic Legend
