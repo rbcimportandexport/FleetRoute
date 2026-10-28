@@ -755,180 +755,81 @@ class _TripsPageState extends State<TripsPage> {
           child: Stack(
             children: [
               Positioned.fill(
-                child: kIsWeb
-                    ? fm.FlutterMap(
-                        mapController: _flutterMapController,
-                        options: fm.MapOptions(
-                          initialCenter:
-                              origin ?? const LatLng(21.1702, 72.8311),
-                          initialZoom: origin == null ? 11.0 : 15.0,
-                          minZoom: 3.0,
-                          maxZoom: 19.0,
-                          onTap: (tapPosition, point) => _pin(point),
-                          onLongPress: (tapPosition, point) => _pin(point),
-                        ),
-                        children: [
-                          fm.TileLayer(
-                            key: ValueKey(mapStyle),
-                            urlTemplate: MapTileService.getTileUrl(
-                              satellite: satellite,
-                              streetlight: isStreetlight,
-                              traffic: false,
-                            ),
-                            subdomains: MapTileService.getSubdomains(
-                              streetlight: isStreetlight,
-                            ),
-                            fallbackUrl: MapTileService.fallbackTileUrl,
-                            maxNativeZoom: 19,
-                            userAgentPackageName: MapTileService.userAgent,
-                            maxZoom: 19,
-                          ),
-                          if (satellite) ...[
-                            fm.TileLayer(
-                              key: const ValueKey('satellite_roads_overlay'),
-                              urlTemplate: MapTileService.satelliteRoadsTileUrl,
-                              maxNativeZoom: 19,
-                              userAgentPackageName: MapTileService.userAgent,
-                              maxZoom: 19,
-                            ),
-                            fm.TileLayer(
-                              key: const ValueKey('satellite_labels_overlay'),
-                              urlTemplate: MapTileService.satelliteLabelsTileUrl,
-                              maxNativeZoom: 19,
-                              userAgentPackageName: MapTileService.userAgent,
-                              maxZoom: 19,
-                            ),
-                          ],
-                          fm.PolylineLayer(
-                            polylines: [
-                              if (origin != null && destination != null)
-                                fm.Polyline(
-                                  points: _routePoints.isNotEmpty
-                                      ? _routePoints
-                                      : [origin!, ...stops, destination!],
-                                  color: AppColors.blue,
-                                  strokeWidth: 5,
-                                ),
-                            ],
-                          ),
-                          fm.MarkerLayer(
-                            markers: [
-                              if (origin != null)
-                                fm.Marker(
-                                  point: origin!,
-                                  width: 60,
-                                  height: 60,
-                                  alignment: Alignment.bottomCenter,
-                                  child: const Icon(
-                                    Icons.location_on,
-                                    color: Colors.green,
-                                    size: 38,
-                                  ),
-                                ),
-                              for (int i = 0; i < stops.length; i++)
-                                fm.Marker(
-                                  point: stops[i],
-                                  width: 50,
-                                  height: 50,
-                                  alignment: Alignment.bottomCenter,
-                                  child: const Icon(
-                                    Icons.location_on,
-                                    color: Colors.orange,
-                                    size: 34,
-                                  ),
-                                ),
-                              if (destination != null)
-                                fm.Marker(
-                                  point: destination!,
-                                  width: 60,
-                                  height: 60,
-                                  alignment: Alignment.bottomCenter,
-                                  child: const Icon(
-                                    Icons.location_on,
-                                    color: Colors.red,
-                                    size: 38,
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ],
-                      )
-                    : gm.GoogleMap(
-                        key: ValueKey(mapStyle),
-                        initialCameraPosition: gm.CameraPosition(
-                          target: gm.LatLng(
-                            (origin ?? const LatLng(21.1702, 72.8311)).latitude,
-                            (origin ?? const LatLng(21.1702, 72.8311))
-                                .longitude,
-                          ),
-                          zoom: origin == null ? 11 : 15,
-                        ),
-                        mapType:
-                            satellite ? gm.MapType.hybrid : gm.MapType.normal,
-                        mapToolbarEnabled: false,
-                        myLocationButtonEnabled: false,
-                        zoomControlsEnabled: false,
-                        compassEnabled: true,
-                        gestureRecognizers: <Factory<
-                            OneSequenceGestureRecognizer>>{
-                          Factory<EagerGestureRecognizer>(
-                            () => EagerGestureRecognizer(),
-                          ),
-                        },
-                        onMapCreated: (controller) {
-                          _tripGoogleMapController = controller;
-                          _mapReady = true;
-                          if (origin != null) _centerMapOn(origin!);
-                        },
-                        onTap: (point) =>
-                            _pin(LatLng(point.latitude, point.longitude)),
-                        onLongPress: (point) =>
-                            _pin(LatLng(point.latitude, point.longitude)),
-                        polylines: {
-                          if (origin != null && destination != null)
-                            gm.Polyline(
-                              polylineId:
-                                  const gm.PolylineId('planned-trip-route'),
-                              points: (_routePoints.isNotEmpty
-                                      ? _routePoints
-                                      : [origin!, ...stops, destination!])
-                                  .map((point) => gm.LatLng(
-                                      point.latitude, point.longitude))
-                                  .toList(growable: false),
-                              color: AppColors.blue,
-                              width: 5,
-                            ),
-                        },
-                        markers: {
-                          if (origin != null)
-                            gm.Marker(
-                              markerId: const gm.MarkerId('pickup'),
-                              position: gm.LatLng(
-                                  origin!.latitude, origin!.longitude),
-                              infoWindow: const gm.InfoWindow(title: 'Pickup'),
-                              icon: gm.BitmapDescriptor.defaultMarkerWithHue(
-                                  gm.BitmapDescriptor.hueGreen),
-                            ),
-                          for (int i = 0; i < stops.length; i++)
-                            gm.Marker(
-                              markerId: gm.MarkerId('stop-$i'),
-                              position: gm.LatLng(
-                                  stops[i].latitude, stops[i].longitude),
-                              infoWindow: gm.InfoWindow(title: 'Stop ${i + 1}'),
-                              icon: gm.BitmapDescriptor.defaultMarkerWithHue(
-                                  gm.BitmapDescriptor.hueOrange),
-                            ),
-                          if (destination != null)
-                            gm.Marker(
-                              markerId: const gm.MarkerId('drop'),
-                              position: gm.LatLng(destination!.latitude,
-                                  destination!.longitude),
-                              infoWindow: const gm.InfoWindow(title: 'Drop'),
-                              icon: gm.BitmapDescriptor.defaultMarkerWithHue(
-                                  gm.BitmapDescriptor.hueRed),
-                            ),
-                        },
+                child: gm.GoogleMap(
+                  key: ValueKey(mapStyle),
+                  initialCameraPosition: gm.CameraPosition(
+                    target: gm.LatLng(
+                      (origin ?? const LatLng(21.1702, 72.8311)).latitude,
+                      (origin ?? const LatLng(21.1702, 72.8311)).longitude,
+                    ),
+                    zoom: origin == null ? 11 : 15,
+                  ),
+                  mapType:
+                      satellite ? gm.MapType.hybrid : gm.MapType.normal,
+                  mapToolbarEnabled: false,
+                  myLocationButtonEnabled: false,
+                  zoomControlsEnabled: false,
+                  compassEnabled: true,
+                  gestureRecognizers: <Factory<
+                      OneSequenceGestureRecognizer>>{
+                    Factory<EagerGestureRecognizer>(
+                      () => EagerGestureRecognizer(),
+                    ),
+                  },
+                  onMapCreated: (controller) {
+                    _tripGoogleMapController = controller;
+                    _mapReady = true;
+                    if (origin != null) _centerMapOn(origin!);
+                  },
+                  onTap: (point) =>
+                      _pin(LatLng(point.latitude, point.longitude)),
+                  onLongPress: (point) =>
+                      _pin(LatLng(point.latitude, point.longitude)),
+                  polylines: {
+                    if (origin != null && destination != null)
+                      gm.Polyline(
+                        polylineId:
+                            const gm.PolylineId('planned-trip-route'),
+                        points: (_routePoints.isNotEmpty
+                                ? _routePoints
+                                : [origin!, ...stops, destination!])
+                            .map((point) => gm.LatLng(
+                                point.latitude, point.longitude))
+                            .toList(growable: false),
+                        color: AppColors.blue,
+                        width: 5,
                       ),
+                  },
+                  markers: {
+                    if (origin != null)
+                      gm.Marker(
+                        markerId: const gm.MarkerId('pickup'),
+                        position: gm.LatLng(
+                            origin!.latitude, origin!.longitude),
+                        infoWindow: const gm.InfoWindow(title: 'Pickup'),
+                        icon: gm.BitmapDescriptor.defaultMarkerWithHue(
+                            gm.BitmapDescriptor.hueGreen),
+                      ),
+                    for (int i = 0; i < stops.length; i++)
+                      gm.Marker(
+                        markerId: gm.MarkerId('stop-$i'),
+                        position: gm.LatLng(
+                            stops[i].latitude, stops[i].longitude),
+                        infoWindow: gm.InfoWindow(title: 'Stop ${i + 1}'),
+                        icon: gm.BitmapDescriptor.defaultMarkerWithHue(
+                            gm.BitmapDescriptor.hueOrange),
+                      ),
+                    if (destination != null)
+                      gm.Marker(
+                        markerId: const gm.MarkerId('drop'),
+                        position: gm.LatLng(destination!.latitude,
+                            destination!.longitude),
+                        infoWindow: const gm.InfoWindow(title: 'Drop'),
+                        icon: gm.BitmapDescriptor.defaultMarkerWithHue(
+                            gm.BitmapDescriptor.hueRed),
+                      ),
+                  },
+                ),
               ),
               Positioned(
                 left: 12,
