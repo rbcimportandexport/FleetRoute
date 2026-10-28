@@ -255,6 +255,15 @@ class RouteTrafficService {
     'valsad': LatLng(20.5992, 72.9342),
     'kim': LatLng(21.4019, 72.9234),
     'kosamba': LatLng(21.4746, 72.9554),
+    'jolva': LatLng(21.2052, 73.0135),
+    'kadodara': LatLng(21.1718, 72.9642),
+    'palsana': LatLng(21.0825, 72.9972),
+    'tadkeshwar': LatLng(21.3619, 73.0847),
+    'mandvi': LatLng(21.2580, 73.3039),
+    'vyara': LatLng(21.1120, 73.3980),
+    'songadh': LatLng(21.1685, 73.5593),
+    'dahej': LatLng(21.7107, 72.5857),
+    'zaghadia': LatLng(21.7142, 73.1534),
   };
 
   /// Popular quick routes across India for instant planning

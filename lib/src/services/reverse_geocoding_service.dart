@@ -191,14 +191,14 @@ class ReverseGeocodingService {
 
     final results = <GeocodedPlace>[];
 
-    // Check predefined cities first
+    // Check predefined cities & local Gujarat towns first
     for (final entry in RouteTrafficService.cityCoordinates.entries) {
       if (entry.key.toLowerCase().contains(clean.toLowerCase())) {
         results.add(
           GeocodedPlace(
             coordinates: entry.value,
             displayName:
-                '${entry.key[0].toUpperCase()}${entry.key.substring(1)}, India',
+                '${entry.key[0].toUpperCase()}${entry.key.substring(1)}, Gujarat, India',
             shortName:
                 '${entry.key[0].toUpperCase()}${entry.key.substring(1)}',
           ),
@@ -207,6 +207,46 @@ class ReverseGeocodingService {
       }
     }
 
+    // 1. Try Open-Meteo Geocoding API (Fast, Free, 100% CORS-Enabled on Web & Mobile)
+    try {
+      final openMeteoUri = Uri.https('geocoding-api.open-meteo.com', '/v1/search', {
+        'name': clean,
+        'count': '$limit',
+        'language': 'en',
+        'format': 'json',
+      });
+      final omResponse = await http.get(openMeteoUri).timeout(const Duration(seconds: 4));
+      if (omResponse.statusCode == 200) {
+        final data = jsonDecode(omResponse.body);
+        if (data is Map && data['results'] is List) {
+          for (final item in data['results'] as List) {
+            if (item is Map) {
+              final lat = double.tryParse(item['latitude']?.toString() ?? '');
+              final lon = double.tryParse(item['longitude']?.toString() ?? '');
+              if (lat != null && lon != null) {
+                final name = item['name']?.toString() ?? clean;
+                final admin1 = item['admin1']?.toString() ?? '';
+                final country = item['country']?.toString() ?? 'India';
+                final parts = [name, if (admin1.isNotEmpty) admin1, country];
+                results.add(
+                  GeocodedPlace(
+                    coordinates: LatLng(lat, lon),
+                    displayName: parts.join(', '),
+                    shortName: name,
+                  ),
+                );
+              }
+            }
+          }
+        }
+      }
+    } catch (_) {}
+
+    if (results.isNotEmpty) {
+      return results;
+    }
+
+    // 2. Fallback to OpenStreetMap Nominatim
     try {
       final uri = Uri.https('nominatim.openstreetmap.org', '/search', {
         'format': 'jsonv2',

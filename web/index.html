@@ -23,8 +23,45 @@
       -moz-osx-font-smoothing: grayscale;
     }
   </style>
-  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyArJB3w8s8l66nuhGLbLy6LvZi5EgqXscQ"></script>
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyArJB3w8s8l66nuhGLbLy6LvZi5EgqXscQ&libraries=places"></script>
   <script>
+    // Global Google Places & Geocoder service helper for fast and CORS-free place searches
+    window.TransportGoogleSearch = {
+      search: function(query, callback) {
+        if (!query || !query.trim()) {
+          callback(JSON.stringify([]));
+          return;
+        }
+        var q = query.trim();
+        // 1. If geocoder is available, try forward geocoding
+        if (window.google && window.google.maps && window.google.maps.Geocoder) {
+          var geocoder = new window.google.maps.Geocoder();
+          geocoder.geocode({ address: q, componentRestrictions: { country: 'in' } }, function(results, status) {
+            if (status === 'OK' && results && results.length > 0) {
+              var out = [];
+              for (var i = 0; i < Math.min(results.length, 6); i++) {
+                var r = results[i];
+                var lat = r.geometry.location.lat();
+                var lng = r.geometry.location.lng();
+                var shortName = (r.address_components && r.address_components[0]) ? r.address_components[0].long_name : r.formatted_address.split(',')[0];
+                out.push({
+                  lat: lat,
+                  lng: lng,
+                  displayName: r.formatted_address,
+                  shortName: shortName
+                });
+              }
+              callback(JSON.stringify(out));
+            } else {
+              callback(JSON.stringify([]));
+            }
+          });
+        } else {
+          callback(JSON.stringify([]));
+        }
+      }
+    };
+
     // Intercept Google Maps constructor so gestureHandling is greedy by default.
     // Also isolate touch/wheel events on the map element so scrolling/dragging inside the map
     // never bubbles up or drags the outer browser page.
