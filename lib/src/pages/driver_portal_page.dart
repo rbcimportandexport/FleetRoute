@@ -426,6 +426,10 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                           driver?.phone ?? '', isOnDuty),
                       const SizedBox(height: 14),
 
+                      // Vehicle Details Card
+                      _buildCompleteVehicleDetails(_activeTruck, vehicleNumber),
+                      const SizedBox(height: 14),
+
                       // 1A. Highlighted Alert: New Ride Assigned by Admin (Accept & Start Actions)
                       if (activeTrip != null &&
                           (activeTrip.status == 'assigned' ||

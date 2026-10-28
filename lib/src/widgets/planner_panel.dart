@@ -1261,10 +1261,13 @@ class _StopLocationFieldState extends State<_StopLocationField> {
     if (clean.isEmpty) return;
 
     // Check if it's a URL or contains search tokens
-    if (clean.startsWith('http') || clean.contains('goo.gl') || !clean.contains('(')) {
+    if (clean.startsWith('http') ||
+        clean.contains('goo.gl') ||
+        !clean.contains('(')) {
       setState(() => _isResolving = true);
       try {
-        final place = await ReverseGeocodingService.resolveLocationQueryOrLink(clean);
+        final place =
+            await ReverseGeocodingService.resolveLocationQueryOrLink(clean);
         if (place != null && mounted) {
           widget.controller.text = place.formattedLabel;
           widget.onChanged(place.formattedLabel);
@@ -1460,16 +1463,20 @@ class _LocationFieldState extends State<_LocationField> {
     final clean = raw.trim();
     if (clean.isEmpty) return;
 
-    if (clean.startsWith('http') || clean.contains('goo.gl') || !clean.contains('(')) {
+    if (clean.startsWith('http') ||
+        clean.contains('goo.gl') ||
+        !clean.contains('(')) {
       setState(() => _isResolving = true);
       try {
-        final place = await ReverseGeocodingService.resolveLocationQueryOrLink(clean);
+        final place =
+            await ReverseGeocodingService.resolveLocationQueryOrLink(clean);
         if (place != null && mounted) {
           widget.controller.text = place.formattedLabel;
           widget.onChanged(place.formattedLabel);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('${widget.dot ? "Drop" : "Pickup"} Set: ${place.shortName}'),
+              content: Text(
+                  '${widget.dot ? "Drop" : "Pickup"} Set: ${place.shortName}'),
               duration: const Duration(seconds: 2),
             ),
           );
@@ -1958,26 +1965,37 @@ class _DriverListDialog extends StatelessWidget {
                 return ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: CircleAvatar(
-                    backgroundColor: isItemAdmin ? const Color(0xFFEFF6FF) : AppColors.blueSoft,
-                    foregroundColor: isItemAdmin ? AppColors.blue : AppColors.navy,
-                    child: Icon(isItemAdmin ? Icons.admin_panel_settings_rounded : Icons.person_outline_rounded),
+                    backgroundColor: isItemAdmin
+                        ? const Color(0xFFEFF6FF)
+                        : AppColors.blueSoft,
+                    foregroundColor:
+                        isItemAdmin ? AppColors.blue : AppColors.navy,
+                    child: Icon(isItemAdmin
+                        ? Icons.admin_panel_settings_rounded
+                        : Icons.person_outline_rounded),
                   ),
                   title: Row(
                     children: [
                       Expanded(
                         child: Text(
                           driver.name,
-                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w600, fontSize: 13.5),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
-                          color: isItemAdmin ? const Color(0xFFEFF6FF) : const Color(0xFFECFDF5),
+                          color: isItemAdmin
+                              ? const Color(0xFFEFF6FF)
+                              : const Color(0xFFECFDF5),
                           borderRadius: BorderRadius.circular(4),
                           border: Border.all(
-                            color: isItemAdmin ? const Color(0xFFBFDBFE) : const Color(0xFFA7F3D0),
+                            color: isItemAdmin
+                                ? const Color(0xFFBFDBFE)
+                                : const Color(0xFFA7F3D0),
                           ),
                         ),
                         child: Text(
@@ -1985,14 +2003,20 @@ class _DriverListDialog extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 9.5,
                             fontWeight: FontWeight.w700,
-                            color: isItemAdmin ? AppColors.blue : const Color(0xFF065F46),
+                            color: isItemAdmin
+                                ? AppColors.blue
+                                : const Color(0xFF065F46),
                           ),
                         ),
                       ),
                     ],
                   ),
                   subtitle: Text(
-                    driver.email.isNotEmpty ? driver.email : (driver.phone.isNotEmpty ? '+91 ${driver.phone}' : 'No Email'),
+                    driver.email.isNotEmpty
+                        ? driver.email
+                        : (driver.phone.isNotEmpty
+                            ? '+91 ${driver.phone}'
+                            : 'No Email'),
                     style: const TextStyle(fontSize: 11.5),
                   ),
                   trailing: controller.isAdmin
@@ -2001,7 +2025,8 @@ class _DriverListDialog extends StatelessWidget {
                           children: [
                             PopupMenuButton<String>(
                               tooltip: 'Change Role (Admin / Driver)',
-                              icon: const Icon(Icons.swap_horiz_rounded, size: 20, color: AppColors.blue),
+                              icon: const Icon(Icons.swap_horiz_rounded,
+                                  size: 20, color: AppColors.blue),
                               onSelected: (role) async {
                                 await controller.toggleDriverRole(index, role);
                               },
@@ -2010,7 +2035,8 @@ class _DriverListDialog extends StatelessWidget {
                                   value: 'driver',
                                   child: Row(
                                     children: [
-                                      Icon(Icons.local_shipping_outlined, size: 16, color: Color(0xFF059669)),
+                                      Icon(Icons.local_shipping_outlined,
+                                          size: 16, color: Color(0xFF059669)),
                                       SizedBox(width: 8),
                                       Text('Make Driver (ड्राइवर बनाएं)'),
                                     ],
@@ -2020,7 +2046,8 @@ class _DriverListDialog extends StatelessWidget {
                                   value: 'admin',
                                   child: Row(
                                     children: [
-                                      Icon(Icons.admin_panel_settings_outlined, size: 16, color: AppColors.blue),
+                                      Icon(Icons.admin_panel_settings_outlined,
+                                          size: 16, color: AppColors.blue),
                                       SizedBox(width: 8),
                                       Text('Make Admin (एडमिन बनाएं)'),
                                     ],
@@ -2030,8 +2057,10 @@ class _DriverListDialog extends StatelessWidget {
                             ),
                             IconButton(
                               tooltip: 'Remove',
-                              onPressed: () async => controller.removeDriver(index),
-                              icon: const Icon(Icons.delete_outline_rounded, size: 19, color: Color(0xFFEF4444)),
+                              onPressed: () async =>
+                                  controller.removeDriver(index),
+                              icon: const Icon(Icons.delete_outline_rounded,
+                                  size: 19, color: Color(0xFFEF4444)),
                             ),
                           ],
                         )
@@ -2257,3 +2286,6 @@ class _AddDriverDialogState extends State<_AddDriverDialog> {
     );
   }
 }
+/** THIS  PAGE  IS  SHOWING GETTING  FOR THE  INCRESE  THE  VERSION  OF  THE  GETTING  STOCKER  OF  THE PAGE  on  going  to  the  showing  of  the  page  
+ *  and  handle  the  page  when  its going  to  the  orgiaze and  getting  propally  and  how  it  your answer 
+ */
