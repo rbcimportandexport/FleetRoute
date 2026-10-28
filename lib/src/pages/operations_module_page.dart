@@ -194,7 +194,21 @@ class OperationsModulePage extends StatelessWidget {
                           spacing: 8,
                           runSpacing: 8,
                           children: [
-                            if (module == OperationsModule.drivers)
+                            if (module == OperationsModule.drivers) ...[
+                              OutlinedButton.icon(
+                                onPressed: () async {
+                                  await controller.restoreDefaultDrivers();
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('All fleet drivers restored successfully!'),
+                                      ),
+                                    );
+                                  }
+                                },
+                                icon: const Icon(Icons.restore_rounded, size: 16),
+                                label: const Text('Restore Drivers'),
+                              ),
                               OutlinedButton.icon(
                                 onPressed: () => SeatbeltRecordsDialog.show(
                                   context,
@@ -204,6 +218,7 @@ class OperationsModulePage extends StatelessWidget {
                                     size: 16),
                                 label: const Text('Seatbelt Photos'),
                               ),
+                            ],
                             if (canManage)
                               FilledButton.icon(
                                 onPressed: () => _add(context),
@@ -235,6 +250,21 @@ class OperationsModulePage extends StatelessWidget {
                           ),
                         ),
                         if (module == OperationsModule.drivers) ...[
+                          OutlinedButton.icon(
+                            onPressed: () async {
+                              await controller.restoreDefaultDrivers();
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('All fleet drivers restored successfully!'),
+                                  ),
+                                );
+                              }
+                            },
+                            icon: const Icon(Icons.restore_rounded, size: 16),
+                            label: const Text('Restore Drivers'),
+                          ),
+                          const SizedBox(width: 8),
                           OutlinedButton.icon(
                             onPressed: () => SeatbeltRecordsDialog.show(
                               context,

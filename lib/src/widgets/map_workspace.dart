@@ -4451,23 +4451,25 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                   // Keep controls above Google logo/copyright/Terms strip.
                   // Leave room for Google Maps' native compass control below.
                   bottom: compact ? 90 : 88,
-                  child: Column(
-                    children: [
-                      if (!compact) ...[
-                        _ZoomControls(onZoom: _zoomBy),
-                        const SizedBox(height: 9),
+                  child: PointerInterceptor(
+                    child: Column(
+                      children: [
+                        if (!compact) ...[
+                          _ZoomControls(onZoom: _zoomBy),
+                          const SizedBox(height: 9),
+                        ],
+                        _LocationButton(
+                          locating: _locating,
+                          onPressed: _showCurrentLocation,
+                        ),
+                        const SizedBox(height: 12),
+                        _FleetGpsButton(
+                          onPressed: _showFleetLocation,
+                        ),
+                        const SizedBox(height: 12),
+                        _MapCompassButton(onPressed: _resetMapCompass),
                       ],
-                      _LocationButton(
-                        locating: _locating,
-                        onPressed: _showCurrentLocation,
-                      ),
-                      const SizedBox(height: 12),
-                      _FleetGpsButton(
-                        onPressed: _showFleetLocation,
-                      ),
-                      const SizedBox(height: 12),
-                      _MapCompassButton(onPressed: _resetMapCompass),
-                    ],
+                    ),
                   ),
                 ),
 
@@ -4476,121 +4478,123 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                 Positioned(
                   left: 14,
                   bottom: compact ? 14 : 18,
-                  child: compact
-                      ? Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Color(0x260F2035),
-                                blurRadius: 8,
-                                offset: Offset(0, 2),
-                              ),
-                            ],
-                            border: Border.all(color: const Color(0xFFE2E8F0)),
-                          ),
-                          child: InkWell(
-                            onTap: () {
-                              setState(() => _cardExpanded = !_cardExpanded);
-                            },
-                            borderRadius: BorderRadius.circular(20),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  widget.controller.vehicle.icon,
-                                  size: 14,
-                                  color: const Color(0xFF2563EB),
-                                ),
-                                const SizedBox(width: 5),
-                                Text(
-                                  '${_trafficReport!.formattedDistance} · ${_trafficReport!.formattedDuration}',
-                                  style: const TextStyle(
-                                    color: AppColors.navy,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                Container(
-                                  width: 6,
-                                  height: 6,
-                                  decoration: BoxDecoration(
-                                    color: _trafficReport!.level.color,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  _trafficReport!.level.label,
-                                  style: TextStyle(
-                                    color: _trafficReport!.level ==
-                                            TrafficLevel.smooth
-                                        ? const Color(0xFF047857)
-                                        : (_trafficReport!.level ==
-                                                TrafficLevel.moderate
-                                            ? const Color(0xFFB45309)
-                                            : const Color(0xFFB91C1C)),
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                InkWell(
-                                  onTap: _startLiveNavigation,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 3),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF10B981),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: const Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(Icons.navigation_rounded,
-                                            size: 11, color: Colors.white),
-                                        SizedBox(width: 3),
-                                        Text(
-                                          'START',
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 10.5,
-                                            fontWeight: FontWeight.w900,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
+                  child: PointerInterceptor(
+                    child: compact
+                        ? Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Color(0x260F2035),
+                                  blurRadius: 8,
+                                  offset: Offset(0, 2),
                                 ),
                               ],
+                              border: Border.all(color: const Color(0xFFE2E8F0)),
                             ),
+                            child: InkWell(
+                              onTap: () {
+                                setState(() => _cardExpanded = !_cardExpanded);
+                              },
+                              borderRadius: BorderRadius.circular(20),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    widget.controller.vehicle.icon,
+                                    size: 14,
+                                    color: const Color(0xFF2563EB),
+                                  ),
+                                  const SizedBox(width: 5),
+                                  Text(
+                                    '${_trafficReport!.formattedDistance} · ${_trafficReport!.formattedDuration}',
+                                    style: const TextStyle(
+                                      color: AppColors.navy,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    width: 6,
+                                    height: 6,
+                                    decoration: BoxDecoration(
+                                      color: _trafficReport!.level.color,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    _trafficReport!.level.label,
+                                    style: TextStyle(
+                                      color: _trafficReport!.level ==
+                                              TrafficLevel.smooth
+                                          ? const Color(0xFF047857)
+                                          : (_trafficReport!.level ==
+                                                  TrafficLevel.moderate
+                                              ? const Color(0xFFB45309)
+                                              : const Color(0xFFB91C1C)),
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  InkWell(
+                                    onTap: _startLiveNavigation,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF10B981),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: const Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.navigation_rounded,
+                                              size: 11, color: Colors.white),
+                                          SizedBox(width: 3),
+                                          Text(
+                                            'START',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 10.5,
+                                              fontWeight: FontWeight.w900,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        : _RouteTrafficCard(
+                            report: _trafficReport!,
+                            origin: widget.controller.origin.isNotEmpty
+                                ? widget.controller.origin
+                                : _format(_effectiveOrigin!),
+                            destination: widget.controller.destination.isNotEmpty
+                                ? widget.controller.destination
+                                : _format(_effectiveDestination!),
+                            vehicle: widget.controller.vehicle,
+                            trafficEnabled: _trafficEnabled,
+                            isLoadingRoute: _loadingRoute,
+                            isExpanded: _cardExpanded,
+                            onToggleExpand: () {
+                              setState(() => _cardExpanded = !_cardExpanded);
+                            },
+                            onStartNavigation: _startLiveNavigation,
+                            onFitRoute: _fitRoute,
+                            onToggleTraffic: _toggleLiveTraffic,
+                            onOpenNavigation: _openExternalNav,
+                            routeSummary: widget.controller.routePathSummary,
                           ),
-                        )
-                      : _RouteTrafficCard(
-                          report: _trafficReport!,
-                          origin: widget.controller.origin.isNotEmpty
-                              ? widget.controller.origin
-                              : _format(_effectiveOrigin!),
-                          destination: widget.controller.destination.isNotEmpty
-                              ? widget.controller.destination
-                              : _format(_effectiveDestination!),
-                          vehicle: widget.controller.vehicle,
-                          trafficEnabled: _trafficEnabled,
-                          isLoadingRoute: _loadingRoute,
-                          isExpanded: _cardExpanded,
-                          onToggleExpand: () {
-                            setState(() => _cardExpanded = !_cardExpanded);
-                          },
-                          onStartNavigation: _startLiveNavigation,
-                          onFitRoute: _fitRoute,
-                          onToggleTraffic: _toggleLiveTraffic,
-                          onOpenNavigation: _openExternalNav,
-                          routeSummary: widget.controller.routePathSummary,
-                        ),
+                  ),
                 ),
 
               // ==================== LIVE NAVIGATION BOTTOM CONTROLS ====================

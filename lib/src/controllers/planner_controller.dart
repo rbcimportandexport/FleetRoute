@@ -29,6 +29,7 @@ class PlannerController extends ChangeNotifier {
 
   static const _driversKey = 'transport_one.drivers';
   static const _deletedDriversKey = 'transport_one.deleted_drivers';
+  static const _deletedTripsKey = 'transport_one.deleted_trips';
   static const _truckModelsKey = 'transport_one.truck_models';
   static const _tripsKey = 'transport_one.trips';
   static const _alertsKey = 'transport_one.alerts';
@@ -49,6 +50,7 @@ class PlannerController extends ChangeNotifier {
   static const _lastPhoneKey = 'transport_one.last_phone';
   static const _fleetBootstrapKey = 'transport_one.fleet_bootstrap_v5';
   final Set<String> deletedDriverEmails = {};
+  final Set<String> deletedTripReferences = {};
 
   /// Display-only admin address. Authorization comes exclusively from the
   /// Firebase custom claim (`role: admin` or `role: super_admin`).
@@ -586,7 +588,6 @@ class PlannerController extends ChangeNotifier {
       for (final defDriver in defaultFleetDrivers) {
         final email = defDriver.email.trim().toLowerCase();
         final phone = defDriver.phone.replaceAll(RegExp(r'\D'), '');
-        if (deletedDriverEmails.contains(email)) continue;
         final exists = drivers.any((d) =>
             d.email.trim().toLowerCase() == email ||
             (phone.isNotEmpty && d.phone.replaceAll(RegExp(r'\D'), '') == phone));
@@ -658,11 +659,26 @@ class PlannerController extends ChangeNotifier {
       }
       await _saveTruckModels();
 
+      final loadedDeletedTrips = await _storage.getString(_deletedTripsKey);
+      if (loadedDeletedTrips != null && loadedDeletedTrips.isNotEmpty) {
+        try {
+          final list = jsonDecode(loadedDeletedTrips);
+          if (list is List) {
+            deletedTripReferences
+              ..clear()
+              ..addAll(list.map((e) => e.toString().trim().toUpperCase()));
+          }
+        } catch (_) {}
+      }
+
       final loadedTrips = _decodeRecords(tripJson, TripRecord.fromJson);
       trips.clear();
       final legacyTripReferences = <String>{};
       if (loadedTrips != null && loadedTrips.isNotEmpty) {
-        trips.addAll(loadedTrips);
+        trips.addAll(loadedTrips.where((t) =>
+            !deletedTripReferences.contains(t.reference.trim().toUpperCase()) &&
+            !deletedTripReferences
+                .contains(t.effectiveTripNumber.trim().toUpperCase())));
         legacyTripReferences.addAll(trips
             .where((t) =>
                 t.reference.trim().toUpperCase() == 'TRIP-969538' ||
@@ -832,7 +848,6 @@ class PlannerController extends ChangeNotifier {
     for (final driver in defaultFleetDrivers) {
       final email = driver.email.trim().toLowerCase();
       final phone = driver.phone.replaceAll(RegExp(r'\D'), '');
-      if (deletedDriverEmails.contains(email)) continue;
       final exists = drivers.any((current) {
         final currentPhone = current.phone.replaceAll(RegExp(r'\D'), '');
         return current.email.trim().toLowerCase() == email ||
@@ -1268,8 +1283,14 @@ class PlannerController extends ChangeNotifier {
     if (remoteTrips.isEmpty) return;
     var changed = false;
     for (final remote in remoteTrips) {
-      if (remote.reference.trim().toUpperCase() == 'TRIP-969538' ||
-          remote.effectiveTripNumber.trim().toUpperCase() == 'TRIP-969538' ||
+      final ref = remote.reference.trim().toUpperCase();
+      final effNum = remote.effectiveTripNumber.trim().toUpperCase();
+      if (deletedTripReferences.contains(ref) ||
+          deletedTripReferences.contains(effNum)) {
+        continue;
+      }
+      if (ref == 'TRIP-969538' ||
+          effNum == 'TRIP-969538' ||
           remote.reference == 'TRIP-2026-081' ||
           remote.reference == 'TRIP-2026-079' ||
           remote.tripNumber.startsWith('MOCK-') ||
@@ -2002,6 +2023,23 @@ class PlannerController extends ChangeNotifier {
     );
   }
 
+  Future<void> restoreDefaultDrivers() async {
+    deletedDriverEmails.clear();
+    await _saveDeletedDrivers();
+    for (final defDriver in defaultFleetDrivers) {
+      final email = defDriver.email.trim().toLowerCase();
+      final phone = defDriver.phone.replaceAll(RegExp(r'\D'), '');
+      final exists = drivers.any((d) =>
+          d.email.trim().toLowerCase() == email ||
+          (phone.isNotEmpty && d.phone.replaceAll(RegExp(r'\D'), '') == phone));
+      if (!exists) {
+        drivers.add(defDriver);
+      }
+    }
+    notifyListeners();
+    await _saveDrivers();
+  }
+
   Future<void> removeDriver(int index) async {
     if (!isAdmin) {
       throw StateError(
@@ -2035,6 +2073,14 @@ class PlannerController extends ChangeNotifier {
   }
 
   Future<void> addTrip(TripRecord trip) async {
+    final ref = trip.reference.trim().toUpperCase();
+    final effNum = trip.effectiveTripNumber.trim().toUpperCase();
+    if (ref.isNotEmpty) deletedTripReferences.remove(ref);
+    if (effNum.isNotEmpty) deletedTripReferences.remove(effNum);
+    if (trip.tripNumber.trim().isNotEmpty) {
+      deletedTripReferences.remove(trip.tripNumber.trim().toUpperCase());
+    }
+    await _saveDeletedTrips();
     trips.removeWhere((existing) =>
         existing.reference.trim().toUpperCase() ==
         trip.reference.trim().toUpperCase());
@@ -2076,9 +2122,22 @@ class PlannerController extends ChangeNotifier {
     if (index < 0 || index >= trips.length) return;
     final removed = trips[index];
     trips.removeAt(index);
+    if (removed.reference.trim().isNotEmpty) {
+      deletedTripReferences.add(removed.reference.trim().toUpperCase());
+    }
+    if (removed.effectiveTripNumber.trim().isNotEmpty) {
+      deletedTripReferences.add(removed.effectiveTripNumber.trim().toUpperCase());
+    }
+    if (removed.tripNumber.trim().isNotEmpty) {
+      deletedTripReferences.add(removed.tripNumber.trim().toUpperCase());
+    }
+    await _saveDeletedTrips();
     notifyListeners();
     await _saveTrips();
     await FirebaseBackendService.instance.deleteTripRecord(removed.reference);
+    if (removed.tripNumber.isNotEmpty && removed.tripNumber != removed.reference) {
+      await FirebaseBackendService.instance.deleteTripRecord(removed.tripNumber);
+    }
     await logActivity(
       title: 'Trip Deleted',
       details: 'Trip ${removed.reference} was removed.',
@@ -2086,6 +2145,11 @@ class PlannerController extends ChangeNotifier {
       action: 'removed',
     );
   }
+
+  Future<void> _saveDeletedTrips() => _storage.setString(
+        _deletedTripsKey,
+        jsonEncode(deletedTripReferences.toList()),
+      );
 
   Future<void> updateTripStatus(int index, String status) async {
     if (index < 0 || index >= trips.length) return;

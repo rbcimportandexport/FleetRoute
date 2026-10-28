@@ -493,58 +493,115 @@ class TripDetailReportDialog extends StatelessWidget {
 
                           // Intermediate Stops & Toll Plazas
                           if (trip.stops.isNotEmpty) ...[
-                            const Text(
-                              'Via Stops & Toll Nakas / Plazas En Route:',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.navy,
-                              ),
+                            Row(
+                              children: [
+                                const Text(
+                                  'Via Stops & Toll Nakas / Plazas En Route:',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.navy,
+                                  ),
+                                ),
+                                const Spacer(),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    '${trip.stops.length} Stops',
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 6),
-                            Wrap(
-                              spacing: 6,
-                              runSpacing: 6,
-                              children: trip.stops.map((stop) {
+                            const SizedBox(height: 8),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: trip.stops.asMap().entries.map((entry) {
+                                final index = entry.key;
+                                final stop = entry.value;
                                 final isToll =
                                     stop.toLowerCase().contains('toll') ||
                                         stop.toLowerCase().contains('naka') ||
                                         stop.toLowerCase().contains('plaza');
                                 return Container(
+                                  margin: const EdgeInsets.only(bottom: 6),
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 9, vertical: 4.5),
+                                      horizontal: 10, vertical: 8),
                                   decoration: BoxDecoration(
                                     color: isToll
                                         ? const Color(0xFFFEF3C7)
-                                        : const Color(0xFFF1F5F9),
-                                    borderRadius: BorderRadius.circular(6),
+                                        : const Color(0xFFF8FAFC),
+                                    borderRadius: BorderRadius.circular(8),
                                     border: Border.all(
                                       color: isToll
                                           ? const Color(0xFFFDE68A)
-                                          : AppColors.border,
+                                          : const Color(0xFFE2E8F0),
                                     ),
                                   ),
                                   child: Row(
-                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Icon(
-                                        isToll
-                                            ? Icons.toll_rounded
-                                            : Icons.place_outlined,
-                                        size: 13,
-                                        color: isToll
-                                            ? const Color(0xFFB45309)
-                                            : AppColors.slate,
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        stop,
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w600,
+                                      Container(
+                                        padding: const EdgeInsets.all(4),
+                                        margin: const EdgeInsets.only(top: 2),
+                                        decoration: BoxDecoration(
                                           color: isToll
-                                              ? const Color(0xFF92400E)
-                                              : AppColors.navy,
+                                              ? const Color(0xFFFDE68A)
+                                              : const Color(0xFFE2E8F0),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Icon(
+                                          isToll
+                                              ? Icons.toll_rounded
+                                              : Icons.place_rounded,
+                                          size: 13,
+                                          color: isToll
+                                              ? const Color(0xFFB45309)
+                                              : AppColors.primary,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Text(
+                                                  isToll ? 'Toll Plaza / Naka #${index + 1}' : 'Stop #${index + 1}',
+                                                  style: TextStyle(
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.w800,
+                                                    color: isToll
+                                                        ? const Color(0xFFB45309)
+                                                        : AppColors.slate,
+                                                    letterSpacing: 0.3,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              stop,
+                                              style: TextStyle(
+                                                fontSize: 11.5,
+                                                fontWeight: FontWeight.w600,
+                                                color: isToll
+                                                    ? const Color(0xFF92400E)
+                                                    : AppColors.navy,
+                                                height: 1.3,
+                                              ),
+                                              softWrap: true,
+                                            ),
+                                          ],
                                         ),
                                       ),
                                     ],
