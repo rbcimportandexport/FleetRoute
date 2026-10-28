@@ -1090,20 +1090,26 @@ class _TripsPageState extends State<TripsPage> {
         );
 
         if (compact) {
-          final mapHeight = (constraints.maxHeight * .5).clamp(300.0, 430.0);
-          return SingleChildScrollView(
-            physics: const BouncingScrollPhysics(
-              parent: AlwaysScrollableScrollPhysics(),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                SizedBox(height: mapHeight, child: map),
-                const SizedBox(height: 12),
-                panel,
-                const SizedBox(height: 90),
-              ],
-            ),
+          final mapHeight = (constraints.maxHeight * .46).clamp(280.0, 420.0);
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Fixed map section: Dragging/panning the map remains isolated and won't accidentally scroll the form/page
+              SizedBox(height: mapHeight, child: map),
+              const SizedBox(height: 10),
+              // Dedicated scrollable panel for trip details & cargo form
+              Expanded(
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(
+                    parent: AlwaysScrollableScrollPhysics(),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 90),
+                    child: panel,
+                  ),
+                ),
+              ),
+            ],
           );
         }
         return Row(

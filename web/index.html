@@ -26,14 +26,23 @@
   <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyArJB3w8s8l66nuhGLbLy6LvZi5EgqXscQ"></script>
   <script>
     // Intercept Google Maps constructor so gestureHandling is greedy by default.
-    // This permanently prevents the annoying "Use two fingers to move the map" banner on mobile/touch screens.
+    // Also isolate touch/wheel events on the map element so scrolling/dragging inside the map
+    // never bubbles up or drags the outer browser page.
     (function() {
       if (window.google && window.google.maps && window.google.maps.Map) {
         var OriginalMap = window.google.maps.Map;
         window.google.maps.Map = function(element, options) {
           options = options || {};
           options.gestureHandling = 'greedy';
-          return new OriginalMap(element, options);
+          var mapInstance = new OriginalMap(element, options);
+          if (element && element.addEventListener) {
+            var stopProp = function(e) {
+              e.stopPropagation();
+            };
+            element.addEventListener('wheel', stopProp, { passive: false });
+            element.addEventListener('touchmove', stopProp, { passive: false });
+          }
+          return mapInstance;
         };
         window.google.maps.Map.prototype = OriginalMap.prototype;
       }
