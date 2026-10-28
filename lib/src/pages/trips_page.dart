@@ -831,46 +831,110 @@ class _TripsPageState extends State<TripsPage> {
                   },
                 ),
               ),
+              // Top Controls: Street/Satellite toggle + Search / Paste Location Button
               Positioned(
                 left: 12,
                 top: 12,
-                child: SegmentedButton<MapViewStyle>(
-                  segments: const [
-                    ButtonSegment(
-                      value: MapViewStyle.street,
-                      label: Text('Street'),
-                      icon: Icon(Icons.map_outlined),
+                right: 12,
+                child: Row(
+                  children: [
+                    SegmentedButton<MapViewStyle>(
+                      segments: const [
+                        ButtonSegment(
+                          value: MapViewStyle.street,
+                          label: Text('Street'),
+                          icon: Icon(Icons.map_outlined),
+                        ),
+                        ButtonSegment(
+                          value: MapViewStyle.satellite,
+                          label: Text('Satellite'),
+                          icon: Icon(Icons.satellite_alt_outlined),
+                        ),
+                      ],
+                      selected: {mapStyle},
+                      onSelectionChanged: (value) {
+                        if (value.isNotEmpty) {
+                          setState(() => mapStyle = value.first);
+                        }
+                      },
+                      style: const ButtonStyle(
+                        backgroundColor: WidgetStatePropertyAll(Colors.white),
+                        visualDensity: VisualDensity.compact,
+                      ),
                     ),
-                    ButtonSegment(
-                      value: MapViewStyle.satellite,
-                      label: Text('Satellite'),
-                      icon: Icon(Icons.satellite_alt_outlined),
+                    const Spacer(),
+                    FilledButton.icon(
+                      onPressed: () {
+                        final title = origin == null
+                            ? 'Pickup Location Search / Paste Link'
+                            : destination == null
+                                ? 'Drop Location Search / Paste Link'
+                                : 'Add Intermediate Stop (Via Waypoint)';
+                        _handleSearchLocation(
+                          title: title,
+                          onSelected: (point) {
+                            if (origin == null) {
+                              setState(() => origin = point);
+                            } else if (destination == null) {
+                              setState(() => destination = point);
+                            } else {
+                              _addViaStop(point);
+                            }
+                          },
+                        );
+                      },
+                      icon: const Icon(Icons.search_rounded, size: 16),
+                      label: const Text(
+                        'SEARCH / ADD PIN',
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
+                      ),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        visualDensity: VisualDensity.compact,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        elevation: 3,
+                      ),
                     ),
                   ],
-                  selected: {mapStyle},
-                  onSelectionChanged: (value) {
-                    if (value.isNotEmpty) {
-                      setState(() => mapStyle = value.first);
-                    }
-                  },
-                  style: const ButtonStyle(
-                    backgroundColor: WidgetStatePropertyAll(Colors.white),
-                  ),
                 ),
               ),
               Positioned(
                 left: 14,
                 right: 14,
                 bottom: 14,
-                child: IgnorePointer(
-                  child: Center(
+                child: Center(
+                  child: InkWell(
+                    onTap: () {
+                      final title = origin == null
+                          ? 'Pickup Location Search / Paste Link'
+                          : destination == null
+                              ? 'Drop Location Search / Paste Link'
+                              : 'Add Intermediate Stop (Via Waypoint)';
+                      _handleSearchLocation(
+                        title: title,
+                        onSelected: (point) {
+                          if (origin == null) {
+                            setState(() => origin = point);
+                          } else if (destination == null) {
+                            setState(() => destination = point);
+                          } else {
+                            _addViaStop(point);
+                          }
+                        },
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(24),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 8),
+                          horizontal: 14, vertical: 8),
                       decoration: BoxDecoration(
-                        color: const Color(0xEFFFFFFF),
+                        color: Colors.white,
                         borderRadius: BorderRadius.circular(24),
-                        border: Border.all(color: const Color(0xFFB8C7D9)),
+                        border: Border.all(color: AppColors.primaryBorder, width: 1.2),
                         boxShadow: const [
                           BoxShadow(
                             color: Color(0x24000000),
@@ -882,20 +946,20 @@ class _TripsPageState extends State<TripsPage> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.touch_app_rounded,
+                          const Icon(Icons.search_rounded,
                               size: 17, color: AppColors.primary),
                           const SizedBox(width: 7),
                           Flexible(
                             child: Text(
                               origin == null
-                                  ? 'Pickup ke liye map par tap karein ya search karein'
+                                  ? 'Pickup search karein ya map par tap karein'
                                   : destination == null
-                                      ? 'Drop ke liye map par tap karein ya search karein'
-                                      : 'Via Stop add karne ke liye map par tap karein',
+                                      ? 'Drop search karein ya map par tap karein'
+                                      : '+ Stop search karein ya map par tap karein',
                               textAlign: TextAlign.center,
                               style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w800,
                                 color: AppColors.navy,
                               ),
                             ),
