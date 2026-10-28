@@ -191,14 +191,16 @@ class ReverseGeocodingService {
 
     final results = <GeocodedPlace>[];
 
-    // Check predefined cities & local Gujarat towns first
+    // Check predefined cities & local Gujarat towns first with correct state names
     for (final entry in RouteTrafficService.cityCoordinates.entries) {
       if (entry.key.toLowerCase().contains(clean.toLowerCase())) {
+        final stateName = RouteTrafficService.cityStates[entry.key.toLowerCase()] ?? 'India';
+        final stateSuffix = stateName == 'India' ? 'India' : '$stateName, India';
         results.add(
           GeocodedPlace(
             coordinates: entry.value,
             displayName:
-                '${entry.key[0].toUpperCase()}${entry.key.substring(1)}, Gujarat, India',
+                '${entry.key[0].toUpperCase()}${entry.key.substring(1)}, $stateSuffix',
             shortName:
                 '${entry.key[0].toUpperCase()}${entry.key.substring(1)}',
           ),
