@@ -1672,51 +1672,88 @@ class _TripSetupPanelState extends State<_TripSetupPanel> {
                 const SizedBox(height: 8),
                 Row(
                   children: [
+                    // 1. Item Name
                     Expanded(
                       flex: 4,
                       child: TextField(
                         controller: _quickItemNameCtrl,
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           labelText: 'Item Name',
                           hintText: 'e.g. Chair',
                           isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 11),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
                       ),
                     ),
                     const SizedBox(width: 6),
+                    // 2. Quantity
                     Expanded(
-                      flex: 2,
+                      flex: 3,
                       child: TextField(
                         controller: _quickItemQtyCtrl,
                         keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'Qty (संख्या)',
+                        decoration: InputDecoration(
+                          labelText: 'Qty (Pcs)',
                           hintText: '10',
                           isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 11),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
                       ),
                     ),
                     const SizedBox(width: 6),
+                    // 3. Weight per piece
                     Expanded(
                       flex: 3,
                       child: TextField(
                         controller: _quickItemWeightCtrl,
                         keyboardType: TextInputType.number,
                         decoration: InputDecoration(
-                          labelText: 'Wt/pc ($_quickItemUnit)',
+                          labelText: 'Wt/pc (KG)',
                           hintText: '50',
                           isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 11),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 6),
-                    IconButton.filled(
+                    const SizedBox(width: 8),
+                    // 4. Add Button with text & icon
+                    FilledButton(
                       onPressed: _addQuickItem,
-                      icon: const Icon(Icons.add, size: 18),
-                      tooltip: 'Add Cargo Item',
-                      style: IconButton.styleFrom(
+                      style: FilledButton.styleFrom(
                         backgroundColor: AppColors.primary,
-                        visualDensity: VisualDensity.compact,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        minimumSize: const Size(44, 44),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.add_rounded, size: 20),
+                          SizedBox(width: 2),
+                          Text(
+                            'ADD',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
