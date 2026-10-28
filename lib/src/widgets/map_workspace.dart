@@ -3337,11 +3337,10 @@ class _MapWorkspaceState extends State<MapWorkspace> {
               ),
             );
           },
-        ),
-      );
-    },
-  );
-}
+        );
+      },
+    );
+  }
 
   void _showMapWaypointActionSheet(LatLng point) {
     final coordStr = _format(point);
