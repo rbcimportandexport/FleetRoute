@@ -139981,7 +139981,7 @@ A.b35.prototype={
 $0(){return this.a.nY(B.hG)},
 $S:0}
 A.b3h.prototype={
-$1(a){return!a.f},
+$1(a){return!a.f&&a.r!=="compliance"},
 $S:38}
 A.b3i.prototype={
 $1(a){return a.e==="in_transit"},

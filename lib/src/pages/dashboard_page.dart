@@ -373,7 +373,9 @@ class _DashboardPageState extends State<DashboardPage>
   }
 
   Widget _buildSimpleStats(PlannerController ctrl) {
-    final openAlerts = ctrl.alerts.where((a) => !a.isResolved).length;
+    final openAlerts = ctrl.alerts
+        .where((a) => !a.isResolved && a.category != 'compliance')
+        .length;
     final transit = ctrl.trips.where((t) => t.status == 'in_transit').length;
     final stats = [
       (
