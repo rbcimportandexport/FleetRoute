@@ -26,7 +26,13 @@ class GeocodedPlace {
 class ReverseGeocodingService {
   ReverseGeocodingService._();
 
+  static final Map<String, String> _labelCache = {};
+
   static Future<String?> addressFor(LatLng point) async {
+    final key = '${point.latitude.toStringAsFixed(5)},${point.longitude.toStringAsFixed(5)}';
+    if (_labelCache.containsKey(key)) {
+      return _labelCache[key];
+    }
     try {
       final uri = Uri.https('nominatim.openstreetmap.org', '/reverse', {
         'format': 'jsonv2',
@@ -38,12 +44,16 @@ class ReverseGeocodingService {
       final response = await http.get(uri, headers: const {
         'User-Agent': 'TransportOne/1.2 (support@rbcsalonfurniture.com)',
         'Accept-Language': 'en-IN,en;q=0.9,hi;q=0.8',
-      }).timeout(const Duration(seconds: 10));
+      }).timeout(const Duration(seconds: 2));
       if (response.statusCode != 200) return null;
       final json = jsonDecode(response.body);
       if (json is! Map) return null;
       final name = json['display_name']?.toString().trim();
-      return name == null || name.isEmpty ? null : name;
+      if (name != null && name.isNotEmpty) {
+        _labelCache[key] = name;
+        return name;
+      }
+      return null;
     } catch (_) {
       return null;
     }
@@ -52,8 +62,17 @@ class ReverseGeocodingService {
   static Future<String> labelFor(LatLng point) async {
     final coordinates =
         '${point.latitude.toStringAsFixed(6)}, ${point.longitude.toStringAsFixed(6)}';
-    final address = await addressFor(point);
-    return address == null ? coordinates : '$address ($coordinates)';
+    final key = '${point.latitude.toStringAsFixed(5)},${point.longitude.toStringAsFixed(5)}';
+    if (_labelCache.containsKey(key)) {
+      return '${_labelCache[key]!} ($coordinates)';
+    }
+    // Fast path: Try with short timeout so saving/clicking is instantaneous
+    try {
+      final address = await addressFor(point).timeout(const Duration(seconds: 2));
+      return address == null ? coordinates : '$address ($coordinates)';
+    } catch (_) {
+      return coordinates;
+    }
   }
 
   /// Geocodes a text query / place name (e.g. "Krishna textile hub", "Surat", etc.) to LatLng.

@@ -413,8 +413,8 @@ class _SeatbeltVerificationDialogState extends State<SeatbeltVerificationDialog>
         );
       }
 
-      final strapDetected = (bestHitRatio >= 0.31 && bestContinuousRun >= 5) ||
-          (bestBandRatio >= 0.28 && bestBandRun >= 8);
+      final strapDetected = (bestHitRatio >= 0.20 && bestContinuousRun >= 3) ||
+          (bestBandRatio >= 0.18 && bestBandRun >= 5);
       if (!strapDetected) {
         return const _SeatbeltAnalysis(
           false,

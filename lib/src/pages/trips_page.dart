@@ -1566,10 +1566,15 @@ class _TripSetupPanelState extends State<_TripSetupPanel> {
             ),
             items: widget.truckModels.map((truck) {
               final isInactive = truck.isDisabled || truck.isUnderMaintenance;
+              final capText = truck.payloadCapacity.trim().isNotEmpty
+                  ? ' (${truck.payloadCapacity.trim()})'
+                  : (truck.capacity.trim().isNotEmpty
+                      ? ' (${truck.capacity.trim()})'
+                      : '');
               return DropdownMenuItem<String>(
                 value: truck.code,
                 child: Text(
-                  '${truck.code} (${truck.payloadCapacity})${isInactive ? " [${truck.vehicleStatus.toUpperCase()}]" : ""}',
+                  '${truck.code}$capText${isInactive ? " [${truck.vehicleStatus.toUpperCase()}]" : ""}',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,

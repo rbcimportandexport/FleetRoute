@@ -125,7 +125,7 @@ class PlannerController extends ChangeNotifier {
         code: 'GJ19Y2720',
         name: 'GJ19Y2720 (Sandeep)',
         axles: '2',
-        capacity: '7.5 Ton',
+        capacity: '',
         maxSpeed: 80,
         imei: '355139082439925',
         assignedDriver: 'Sandeep',
@@ -134,7 +134,7 @@ class PlannerController extends ChangeNotifier {
         code: 'GJ19J6633',
         name: 'GJ19J6633 (Dadarao / Ramrao)',
         axles: '2',
-        capacity: '7.5 Ton',
+        capacity: '',
         maxSpeed: 80,
         assignedDriver: 'Dadarao',
       ),
@@ -142,7 +142,7 @@ class PlannerController extends ChangeNotifier {
         code: 'GJ19Y4628',
         name: 'GJ19Y4628 (Devidas)',
         axles: '2',
-        capacity: '7.5 Ton',
+        capacity: '',
         maxSpeed: 80,
         assignedDriver: 'Devidas',
       ),
@@ -150,7 +150,7 @@ class PlannerController extends ChangeNotifier {
         code: 'GJ19Y0829',
         name: 'GJ19Y0829 (Ashok Tempo)',
         axles: '2',
-        capacity: '3.5 Ton',
+        capacity: '',
         maxSpeed: 80,
         assignedDriver: 'Ashok Tempo',
       ),
@@ -158,7 +158,7 @@ class PlannerController extends ChangeNotifier {
         code: 'GJ19Z0901',
         name: 'GJ19Z0901 (Ajay)',
         axles: '2',
-        capacity: '7.5 Ton',
+        capacity: '',
         maxSpeed: 80,
         assignedDriver: 'Ajay',
       ),
@@ -640,7 +640,10 @@ class PlannerController extends ChangeNotifier {
             .toList();
         final isOnDuty = isVehicleDriverOnDuty(t.code);
         final shouldClearCoordinates = t.isDemoTelemetry || (!isOnDuty && t.currentLat != null && t.imei.trim().isEmpty);
+        final shouldClearCapacity = t.capacity.contains('Ton') || t.payloadCapacity.contains('Ton');
         truckModels[i] = t.copyWith(
+          capacity: shouldClearCapacity ? '' : t.capacity,
+          payloadCapacity: shouldClearCapacity ? '' : t.payloadCapacity,
           serviceHistory: cleanServices,
           fastagRecharges: cleanRecharges,
           tyres: cleanTyres,

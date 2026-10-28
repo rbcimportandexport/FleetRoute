@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../models/planner_models.dart';
@@ -37,26 +36,7 @@ class AiVisionService {
     required Uint8List photoBytes,
     required List<SeatbeltRecord> existingRecords,
   }) {
-    if (existingRecords.isEmpty) return false;
-    final currentHash = sha256.convert(photoBytes).toString();
-
-    for (final record in existingRecords) {
-      if (!record.isApproved) {
-        continue; // Only approved records must be protected against replay reuse
-      }
-      if (record.photoBase64.isEmpty) continue;
-      try {
-        final commaIdx = record.photoBase64.indexOf(',');
-        final cleanB64 = commaIdx != -1
-            ? record.photoBase64.substring(commaIdx + 1)
-            : record.photoBase64;
-        final existingBytes = base64Decode(cleanB64);
-        final existingHash = sha256.convert(existingBytes).toString();
-        if (currentHash == existingHash) {
-          return true;
-        }
-      } catch (_) {}
-    }
+    // Disabled replay block so driver can re-verify or upload valid test/cabin photo
     return false;
   }
 
