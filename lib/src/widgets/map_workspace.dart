@@ -285,24 +285,22 @@ class _MapWorkspaceState extends State<MapWorkspace> {
       });
       widget.controller.setOrigin(_format(userPos));
 
-      // Link real device GPS coordinates to driver's assigned vehicle or selected fleet vehicle immediately
-      final assignedCode = widget.controller.selectedDriver?.assignedVehicle.trim().toUpperCase() ??
-          (widget.controller.isDriver && _selectedLiveTruck != null ? _selectedLiveTruck!.code.toUpperCase() : '');
-      final targetCode = assignedCode.isNotEmpty
-          ? assignedCode
-          : (_selectedLiveTruck?.code.toUpperCase() ??
-              (widget.controller.truckModels.isNotEmpty ? widget.controller.truckModels.first.code.toUpperCase() : ''));
-      if (targetCode.isNotEmpty) {
-        final vIdx = widget.controller.truckModels.indexWhere((t) => t.code.toUpperCase() == targetCode);
-        if (vIdx >= 0) {
-          final current = widget.controller.truckModels[vIdx];
-          widget.controller.truckModels[vIdx] = current.copyWith(
-            currentLat: pos.latitude,
-            currentLng: pos.longitude,
-            hasValidGpsFix: true,
-            isDemoTelemetry: false,
-            lastGpsUpdate: DateTime.now().toIso8601String(),
-          );
+      // Link real device GPS coordinates ONLY if driver is actively logged in and on duty
+      if (widget.controller.isDriver) {
+        final assignedCode = widget.controller.selectedDriver?.assignedVehicle.trim().toUpperCase() ?? '';
+        final isOnDuty = assignedCode.isNotEmpty && widget.controller.isVehicleDriverOnDuty(assignedCode);
+        if (assignedCode.isNotEmpty && isOnDuty) {
+          final vIdx = widget.controller.truckModels.indexWhere((t) => t.code.toUpperCase() == assignedCode);
+          if (vIdx >= 0) {
+            final current = widget.controller.truckModels[vIdx];
+            widget.controller.truckModels[vIdx] = current.copyWith(
+              currentLat: pos.latitude,
+              currentLng: pos.longitude,
+              hasValidGpsFix: true,
+              isDemoTelemetry: false,
+              lastGpsUpdate: DateTime.now().toIso8601String(),
+            );
+          }
         }
       }
 
@@ -1902,9 +1900,6 @@ class _MapWorkspaceState extends State<MapWorkspace> {
         },
       ));
     }
-    // Depot base location for RBC Import & Export fleet (Jolva / Palsana, Surat)
-    const depotJolva = LatLng(21.1648, 73.0028);
-
     final activeAssignedCode = widget.controller.selectedDriver?.assignedVehicle.trim().toUpperCase() ??
         (widget.controller.isDriver && _selectedLiveTruck != null ? _selectedLiveTruck!.code.toUpperCase() : '');
     final currentSelectedCode = (widget.controller.truckModels.isNotEmpty && widget.controller.truckIndex != null && widget.controller.truckIndex! >= 0 && widget.controller.truckIndex! < widget.controller.truckModels.length)
@@ -1913,26 +1908,28 @@ class _MapWorkspaceState extends State<MapWorkspace> {
 
     for (int tIdx = 0; tIdx < widget.controller.truckModels.length; tIdx++) {
       final truck = widget.controller.truckModels[tIdx];
+      final isOnDuty = widget.controller.isVehicleDriverOnDuty(truck.code);
+      final bool hasRealGps = truck.hasCoordinates &&
+          truck.hasValidGpsFix &&
+          !truck.isDemoTelemetry;
+
+      // DO NOT show fake/dummy location markers for vehicles that are NOT on duty
+      // and do not have an active GPS hardware/mobile fix.
+      if (!hasRealGps && !isOnDuty) {
+        continue;
+      }
+
       final isDriverActiveVehicle = activeAssignedCode.isNotEmpty &&
           truck.code.toUpperCase() == activeAssignedCode;
       final isSelectedVehicle = truck.code.toUpperCase() == currentSelectedCode;
-      final isOnDuty = widget.controller.isVehicleDriverOnDuty(truck.code);
-      final fallbackToUserLoc = (isDriverActiveVehicle || isSelectedVehicle) && _userLocation != null;
 
-      // Slight offset for depot parking slots so trucks at base don't overlap completely
-      final slotOffsetLat = (tIdx % 3 - 1) * 0.00035;
-      final slotOffsetLng = (tIdx ~/ 3) * 0.00045;
+      final double? truckLat = truck.latitude;
+      final double? truckLng = truck.longitude;
+      if (truckLat == null || truckLng == null) {
+        continue;
+      }
 
-      final double truckLat = truck.latitude ??
-          (fallbackToUserLoc
-              ? _userLocation!.latitude
-              : (_pinnedOrigin?.latitude ?? (depotJolva.latitude + slotOffsetLat)));
-      final double truckLng = truck.longitude ??
-          (fallbackToUserLoc
-              ? _userLocation!.longitude
-              : (_pinnedOrigin?.longitude ?? (depotJolva.longitude + slotOffsetLng)));
-
-      final bool isLiveGps = truck.hasCoordinates && truck.hasValidGpsFix;
+      final bool isLiveGps = hasRealGps;
       final double markerHue = isLiveGps
           ? (truck.isMoving ? gm.BitmapDescriptor.hueAzure : gm.BitmapDescriptor.hueGreen)
           : (isOnDuty ? gm.BitmapDescriptor.hueGreen : gm.BitmapDescriptor.hueCyan);
@@ -1941,9 +1938,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
           ? (truck.isMoving
               ? 'Real-Time Moving · ${truck.currentSpeed.toStringAsFixed(0)} km/h'
               : 'Live GPS · Stationary')
-          : (isOnDuty
-              ? 'ON DUTY (Online) · Base Depot / Office'
-              : 'Fleet Base Depot · ${truck.name}');
+          : 'ON DUTY (Online)';
 
       markers.add(gm.Marker(
         markerId: gm.MarkerId('truck_${truck.code}'),

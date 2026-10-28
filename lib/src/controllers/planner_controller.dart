@@ -638,16 +638,18 @@ class PlannerController extends ChangeNotifier {
                 tyre.tyreNumber != 'APO-3942' &&
                 tyre.tyreNumber != 'CEAT-502')
             .toList();
+        final isOnDuty = isVehicleDriverOnDuty(t.code);
+        final shouldClearCoordinates = t.isDemoTelemetry || (!isOnDuty && t.currentLat != null && t.imei.trim().isEmpty);
         truckModels[i] = t.copyWith(
           serviceHistory: cleanServices,
           fastagRecharges: cleanRecharges,
           tyres: cleanTyres,
-          clearGpsCoordinates: t.isDemoTelemetry,
-          currentSpeed: t.isDemoTelemetry ? 0 : t.currentSpeed,
-          course: t.isDemoTelemetry ? 0 : t.course,
-          isIgnitionOn: t.isDemoTelemetry ? false : t.isIgnitionOn,
+          clearGpsCoordinates: shouldClearCoordinates,
+          currentSpeed: shouldClearCoordinates ? 0 : t.currentSpeed,
+          course: shouldClearCoordinates ? 0 : t.course,
+          isIgnitionOn: shouldClearCoordinates ? false : t.isIgnitionOn,
           hasValidGpsFix:
-              !t.isDemoTelemetry && t.hasCoordinates && !t.isGpsStale,
+              !shouldClearCoordinates && t.hasCoordinates && !t.isGpsStale,
           isDemoTelemetry: false,
         );
       }
@@ -1993,11 +1995,34 @@ class PlannerController extends ChangeNotifier {
     trips.add(trip);
     notifyListeners();
     await _saveTrips();
+    unawaited(FirebaseBackendService.instance.syncTripRecord(record: trip));
     await logActivity(
       title: 'Trip Created',
       details: 'Trip ${trip.reference}: ${trip.origin} -> ${trip.destination}',
       category: ActivityCategory.trip,
       action: 'added',
+    );
+  }
+
+  Future<void> updateTripRecord(TripRecord updatedTrip) async {
+    final idx = trips.indexWhere((t) =>
+        t.reference.trim().toUpperCase() ==
+        updatedTrip.reference.trim().toUpperCase());
+    if (idx >= 0) {
+      trips[idx] = updatedTrip;
+    } else {
+      trips.insert(0, updatedTrip);
+    }
+    notifyListeners();
+    await _saveTrips();
+    unawaited(
+        FirebaseBackendService.instance.syncTripRecord(record: updatedTrip));
+    await logActivity(
+      title: 'Trip Record Updated',
+      details:
+          'Trip ${updatedTrip.reference}: ${updatedTrip.origin} -> ${updatedTrip.destination}',
+      category: ActivityCategory.trip,
+      action: 'updated',
     );
   }
 

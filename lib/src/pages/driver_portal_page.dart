@@ -13,6 +13,7 @@ import 'route_planner_page.dart';
 import '../widgets/cargo_workflow_dialogs.dart';
 import '../widgets/delivery_proof_dialog.dart';
 import '../widgets/driver_trip_history_dialog.dart';
+import '../widgets/location_search_dialog.dart';
 import '../widgets/seatbelt_records_dialog.dart';
 import '../widgets/trip_detail_report_dialog.dart';
 
@@ -1353,7 +1354,7 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
           _buildOperationalStepper(trip),
           const SizedBox(height: 14),
 
-          // Route: Origin -> Destination
+          // Route: Origin -> Destination (Interactive with Search / Map Chooser)
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
@@ -1361,42 +1362,174 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
               borderRadius: BorderRadius.circular(10),
               border: Border.all(color: AppColors.primaryBorder),
             ),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.radio_button_checked,
-                    size: 14, color: AppColors.iconColor),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    trip.origin,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.navy,
-                      fontFamily: 'sans-serif',
+                Row(
+                  children: [
+                    const Icon(Icons.radio_button_checked,
+                        size: 14, color: AppColors.iconColor),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        trip.origin,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.navy,
+                          fontFamily: 'sans-serif',
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 4),
-                  child: Icon(Icons.arrow_forward_rounded,
-                      size: 14, color: AppColors.iconColor),
-                ),
-                const Icon(Icons.location_on_rounded,
-                    size: 14, color: Color(0xFFEF4444)),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Text(
-                    trip.destination,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.navy,
-                      fontFamily: 'sans-serif',
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 4),
+                      child: Icon(Icons.arrow_forward_rounded,
+                          size: 14, color: AppColors.iconColor),
                     ),
-                    overflow: TextOverflow.ellipsis,
+                    const Icon(Icons.location_on_rounded,
+                        size: 14, color: Color(0xFFEF4444)),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        trip.destination,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.navy,
+                          fontFamily: 'sans-serif',
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                if (trip.stops.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: [
+                      for (int s = 0; s < trip.stops.length; s++)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEF3C7),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: const Color(0xFFFDE68A)),
+                          ),
+                          child: Text(
+                            'Via Stop ${s + 1}: ${trip.stops[s]}',
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF92400E),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
+                ],
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    // Search / Change Drop Location Button (Text search or Google Maps Link)
+                    Expanded(
+                      child: InkWell(
+                        onTap: () async {
+                          final place = await LocationSearchDialog.show(
+                            context,
+                            initialQuery: trip.destination,
+                            title: 'Drop Location Search / Link',
+                            hint:
+                                'Location likhein ya WhatsApp/Google Maps link paste karein',
+                          );
+                          if (place != null && mounted) {
+                            final newDest = place.displayName.isNotEmpty
+                                ? place.displayName
+                                : (place.shortName.isNotEmpty
+                                    ? place.shortName
+                                    : '${place.coordinates.latitude.toStringAsFixed(6)}, ${place.coordinates.longitude.toStringAsFixed(6)}');
+                            final updatedTrip =
+                                trip.copyWith(destination: newDest);
+                            await widget.controller.updateTripRecord(updatedTrip);
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Drop Location updated: $newDest'),
+                                  backgroundColor: const Color(0xFF16A34A),
+                                ),
+                              );
+                              setState(() {});
+                            }
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(6),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: AppColors.primaryBorder),
+                          ),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.search_rounded,
+                                  size: 13, color: AppColors.primary),
+                              SizedBox(width: 4),
+                              Text(
+                                'SEARCH / PASTE LINK',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // Open Navigation / Google Maps Chooser
+                    Expanded(
+                      child: InkWell(
+                        onTap: () => _openNavigationChooser(
+                          origin: trip.origin.trim(),
+                          destination: trip.destination.trim(),
+                          stops: trip.stops,
+                        ),
+                        borderRadius: BorderRadius.circular(6),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.navigation_rounded,
+                                  size: 13, color: Colors.white),
+                              SizedBox(width: 4),
+                              Text(
+                                'NAVIGATE / GOOGLE MAP',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -2198,26 +2331,12 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                         status: 'in_transit',
                       );
                     }
-                    widget.controller.setRoute(
-                      newOrigin: trip.origin.trim(),
-                      newDestination: trip.destination.trim(),
-                      newStops: trip.stops,
-                    );
-                    if (widget.adminPreview || Navigator.of(context).canPop()) {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => Scaffold(
-                            appBar: AppBar(
-                              title: const Text('Route Map & Live Navigation'),
-                              backgroundColor: AppColors.navy,
-                              foregroundColor: Colors.white,
-                            ),
-                            body: RoutePlannerPage(controller: widget.controller),
-                          ),
-                        ),
+                    if (mounted) {
+                      await _openNavigationChooser(
+                        origin: trip.origin.trim(),
+                        destination: trip.destination.trim(),
+                        stops: trip.stops,
                       );
-                    } else {
-                      widget.onNavigate(WorkspaceSection.planner);
                     }
                   },
                   icon: const Icon(Icons.navigation_rounded, size: 18),
@@ -2275,26 +2394,12 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                 status: 'in_transit',
               );
             }
-            widget.controller.setRoute(
-              newOrigin: trip.origin.trim(),
-              newDestination: trip.destination.trim(),
-              newStops: trip.stops,
-            );
-            if (widget.adminPreview || Navigator.of(context).canPop()) {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => Scaffold(
-                    appBar: AppBar(
-                      title: const Text('Route Map & Live Navigation'),
-                      backgroundColor: AppColors.navy,
-                      foregroundColor: Colors.white,
-                    ),
-                    body: RoutePlannerPage(controller: widget.controller),
-                  ),
-                ),
+            if (mounted) {
+              await _openNavigationChooser(
+                origin: trip.origin.trim(),
+                destination: trip.destination.trim(),
+                stops: trip.stops,
               );
-            } else {
-              widget.onNavigate(WorkspaceSection.planner);
             }
           }
         };
@@ -3985,29 +4090,14 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
           ),
           FilledButton(
             onPressed: () {
-              if (activeTrip != null) {
-                widget.controller.setRoute(
-                  newOrigin: activeTrip.origin.trim(),
-                  newDestination: activeTrip.destination.trim(),
-                  newStops: activeTrip.stops,
-                );
-              }
-              if (widget.adminPreview || Navigator.of(context).canPop()) {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => Scaffold(
-                      appBar: AppBar(
-                        title: const Text('Route Map & Live Navigation'),
-                        backgroundColor: AppColors.navy,
-                        foregroundColor: Colors.white,
-                      ),
-                      body: RoutePlannerPage(controller: widget.controller),
-                    ),
-                  ),
-                );
-              } else {
-                widget.onNavigate(WorkspaceSection.planner);
-              }
+              final origin = activeTrip?.origin.trim() ?? '';
+              final destination = activeTrip?.destination.trim() ?? '';
+              final stops = activeTrip?.stops ?? const <String>[];
+              _openNavigationChooser(
+                origin: origin,
+                destination: destination,
+                stops: stops,
+              );
             },
             style: FilledButton.styleFrom(
               backgroundColor: AppColors.primary,
@@ -4026,6 +4116,200 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Future<void> _openNavigationChooser({
+    required String origin,
+    required String destination,
+    List<String> stops = const [],
+  }) async {
+    final cleanDest = destination.trim();
+    final cleanOrigin = origin.trim();
+
+    widget.controller.setRoute(
+      newOrigin: cleanOrigin,
+      newDestination: cleanDest,
+      newStops: stops,
+    );
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primarySoft,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.navigation_rounded,
+                      color: AppColors.primary,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Choose Navigation App',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.navy,
+                          ),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          'Map kis app mein open karna hai?',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.slate,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(sheetContext),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: const BorderSide(color: AppColors.primaryBorder),
+                ),
+                tileColor: AppColors.primarySoft,
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.map_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+                title: const Text(
+                  'Transport One In-App Map',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 14,
+                    color: AppColors.navy,
+                  ),
+                ),
+                subtitle: const Text(
+                  'Live GPS, turn-by-turn guidance, waypoints aur speed monitor',
+                  style: TextStyle(fontSize: 11, color: AppColors.slate),
+                ),
+                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  if (widget.adminPreview || Navigator.of(context).canPop()) {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => Scaffold(
+                          appBar: AppBar(
+                            title: const Text('Route Map & Live Navigation'),
+                            backgroundColor: AppColors.navy,
+                            foregroundColor: Colors.white,
+                          ),
+                          body: RoutePlannerPage(controller: widget.controller),
+                        ),
+                      ),
+                    );
+                  } else {
+                    widget.onNavigate(WorkspaceSection.planner);
+                  }
+                },
+              ),
+              const SizedBox(height: 10),
+              ListTile(
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(color: Colors.grey.shade300),
+                ),
+                tileColor: Colors.white,
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF4285F4),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.directions_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+                title: const Text(
+                  'Google Maps Navigation',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 14,
+                    color: AppColors.navy,
+                  ),
+                ),
+                subtitle: const Text(
+                  'Google Maps app mein live voice navigation shuru karein',
+                  style: TextStyle(fontSize: 11, color: AppColors.slate),
+                ),
+                trailing: const Icon(Icons.open_in_new_rounded, size: 16),
+                onTap: () async {
+                  Navigator.pop(sheetContext);
+                  final queryParams = <String, String>{
+                    'api': '1',
+                    'origin': cleanOrigin,
+                    'destination': cleanDest,
+                    'travelmode': 'driving',
+                    'dir_action': 'navigate',
+                  };
+                  if (stops.isNotEmpty) {
+                    queryParams['waypoints'] = stops.join('|');
+                  }
+                  final routeUri =
+                      Uri.https('www.google.com', '/maps/dir/', queryParams);
+                  final opened = await launchUrl(
+                    routeUri,
+                    mode: LaunchMode.externalApplication,
+                  );
+                  if (!opened && mounted) {
+                    final fallbackUri = Uri.parse(
+                      'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(cleanDest)}',
+                    );
+                    await launchUrl(fallbackUri,
+                        mode: LaunchMode.externalApplication);
+                  }
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
       ),
     );
   }
