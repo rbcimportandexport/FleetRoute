@@ -175,6 +175,18 @@ class FirebaseBackendService {
   }) =>
       _put('trips', record.reference, record.toJson(), client: client);
 
+  Stream<List<TripRecord>> watchTrips() {
+    if (!isConfigured) return const Stream.empty();
+    return FirebaseFirestore.instance
+        .collection('trips')
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => TripRecord.fromJson(
+                  <String, dynamic>{'reference': doc.id, ...doc.data()},
+                ))
+            .toList(growable: false));
+  }
+
   Future<bool> deleteTripRecord(String reference) async {
     if (!isConfigured) return false;
     final documentId =

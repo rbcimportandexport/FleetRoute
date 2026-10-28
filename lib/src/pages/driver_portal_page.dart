@@ -9,6 +9,7 @@ import '../services/app_localization_service.dart';
 import '../services/safety_notification_service.dart';
 import '../theme/app_theme.dart';
 import 'fleet_workspace.dart';
+import 'route_planner_page.dart';
 import '../widgets/cargo_workflow_dialogs.dart';
 import '../widgets/delivery_proof_dialog.dart';
 import '../widgets/driver_trip_history_dialog.dart';
@@ -2202,7 +2203,22 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                       newDestination: trip.destination.trim(),
                       newStops: trip.stops,
                     );
-                    widget.onNavigate(WorkspaceSection.planner);
+                    if (widget.adminPreview || Navigator.of(context).canPop()) {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => Scaffold(
+                            appBar: AppBar(
+                              title: const Text('Route Map & Live Navigation'),
+                              backgroundColor: AppColors.navy,
+                              foregroundColor: Colors.white,
+                            ),
+                            body: RoutePlannerPage(controller: widget.controller),
+                          ),
+                        ),
+                      );
+                    } else {
+                      widget.onNavigate(WorkspaceSection.planner);
+                    }
                   },
                   icon: const Icon(Icons.navigation_rounded, size: 18),
                   label: Text(
@@ -2264,7 +2280,22 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
               newDestination: trip.destination.trim(),
               newStops: trip.stops,
             );
-            widget.onNavigate(WorkspaceSection.planner);
+            if (widget.adminPreview || Navigator.of(context).canPop()) {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => Scaffold(
+                    appBar: AppBar(
+                      title: const Text('Route Map & Live Navigation'),
+                      backgroundColor: AppColors.navy,
+                      foregroundColor: Colors.white,
+                    ),
+                    body: RoutePlannerPage(controller: widget.controller),
+                  ),
+                ),
+              );
+            } else {
+              widget.onNavigate(WorkspaceSection.planner);
+            }
           }
         };
         break;
@@ -3955,15 +3986,28 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
           FilledButton(
             onPressed: () {
               if (activeTrip != null) {
-                if (activeTrip.origin.trim().isNotEmpty) {
-                  widget.controller.setOrigin(activeTrip.origin.trim());
-                }
-                if (activeTrip.destination.trim().isNotEmpty) {
-                  widget.controller
-                      .setDestination(activeTrip.destination.trim());
-                }
+                widget.controller.setRoute(
+                  newOrigin: activeTrip.origin.trim(),
+                  newDestination: activeTrip.destination.trim(),
+                  newStops: activeTrip.stops,
+                );
               }
-              widget.onNavigate(WorkspaceSection.planner);
+              if (widget.adminPreview || Navigator.of(context).canPop()) {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => Scaffold(
+                      appBar: AppBar(
+                        title: const Text('Route Map & Live Navigation'),
+                        backgroundColor: AppColors.navy,
+                        foregroundColor: Colors.white,
+                      ),
+                      body: RoutePlannerPage(controller: widget.controller),
+                    ),
+                  ),
+                );
+              } else {
+                widget.onNavigate(WorkspaceSection.planner);
+              }
             },
             style: FilledButton.styleFrom(
               backgroundColor: AppColors.primary,

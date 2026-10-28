@@ -1130,6 +1130,7 @@ class PlannerController extends ChangeNotifier {
   StreamSubscription<List<Map<String, dynamic>>>? _fleetTelemetrySubscription;
   StreamSubscription<List<AttendanceRecord>>? _attendanceSubscription;
   StreamSubscription<List<SeatbeltRecord>>? _seatbeltSubscription;
+  StreamSubscription<List<TripRecord>>? _tripsSubscription;
 
   void startGpsAutoPolling({Duration interval = const Duration(seconds: 15)}) {
     _gpsAutoPollTimer?.cancel();
@@ -1137,11 +1138,18 @@ class PlannerController extends ChangeNotifier {
     _fleetTelemetrySubscription?.cancel();
     _attendanceSubscription?.cancel();
     _seatbeltSubscription?.cancel();
+    _tripsSubscription?.cancel();
     // Do not launch background periodic timers in unit/widget test environments
     if (const bool.fromEnvironment('FLUTTER_TEST') ||
         (kDebugMode && Zone.current[#test.declarer] != null)) {
       return;
     }
+    // Listen to real-time trips synchronization across all devices (phones, laptops, tabs)
+    _tripsSubscription = FirebaseBackendService.instance
+        .watchTrips()
+        .listen(_applyRemoteTrips, onError: (Object error) {
+      debugPrint('Live trips sync failed: $error');
+    });
     if (isAdmin) {
       _fleetTelemetrySubscription = FirebaseBackendService.instance
           .watchFleetTelemetry()
@@ -1206,6 +1214,45 @@ class PlannerController extends ChangeNotifier {
       ..addAll(records);
     attendanceRecords.sort((a, b) => b.startTime.compareTo(a.startTime));
     notifyListeners();
+  }
+
+  void _applyRemoteTrips(List<TripRecord> remoteTrips) {
+    if (remoteTrips.isEmpty) return;
+    var changed = false;
+    for (final remote in remoteTrips) {
+      if (remote.reference.trim().toUpperCase() == 'TRIP-969538' ||
+          remote.effectiveTripNumber.trim().toUpperCase() == 'TRIP-969538' ||
+          remote.reference == 'TRIP-2026-081' ||
+          remote.reference == 'TRIP-2026-079' ||
+          remote.tripNumber.startsWith('MOCK-') ||
+          remote.customerName == 'Tata Steel Tubes Ltd.' ||
+          remote.customerName == 'Reliance Logistics Hazira') {
+        continue;
+      }
+      final idx = trips.indexWhere((t) =>
+          t.reference == remote.reference ||
+          (t.tripNumber.isNotEmpty && t.tripNumber == remote.tripNumber));
+      if (idx < 0) {
+        trips.insert(0, remote);
+        changed = true;
+      } else {
+        final local = trips[idx];
+        if (local.status != remote.status ||
+            local.assignedDriver != remote.assignedDriver ||
+            local.assignedVehicle != remote.assignedVehicle ||
+            local.operationalStep != remote.operationalStep ||
+            local.stops.length != remote.stops.length ||
+            local.cargoItems.length != remote.cargoItems.length ||
+            local.destination != remote.destination) {
+          trips[idx] = remote;
+          changed = true;
+        }
+      }
+    }
+    if (changed) {
+      unawaited(_saveTrips());
+      notifyListeners();
+    }
   }
 
   Future<void> _startDriverMobileLocationSharing() async {
@@ -1368,6 +1415,8 @@ class PlannerController extends ChangeNotifier {
     _attendanceSubscription = null;
     _seatbeltSubscription?.cancel();
     _seatbeltSubscription = null;
+    _tripsSubscription?.cancel();
+    _tripsSubscription = null;
   }
 
   bool isVehicleDriverOnDuty(String vehicleCode) {
