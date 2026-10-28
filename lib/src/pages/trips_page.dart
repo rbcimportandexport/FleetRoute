@@ -1670,90 +1670,133 @@ class _TripSetupPanelState extends State<_TripSetupPanel> {
                   ],
                 ),
                 const SizedBox(height: 8),
+                // Responsive & Clean Input Row with full labels & zero cut-off
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     // 1. Item Name
                     Expanded(
                       flex: 4,
-                      child: TextField(
-                        controller: _quickItemNameCtrl,
-                        decoration: InputDecoration(
-                          labelText: 'Item Name',
-                          hintText: 'e.g. Chair',
-                          isDense: true,
-                          contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 11),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            'Item Name',
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.slate,
+                            ),
                           ),
-                        ),
+                          const SizedBox(height: 3),
+                          SizedBox(
+                            height: 38,
+                            child: TextField(
+                              controller: _quickItemNameCtrl,
+                              style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+                              decoration: InputDecoration(
+                                hintText: 'Chair, Table...',
+                                hintStyle: const TextStyle(fontSize: 11, color: Colors.grey),
+                                isDense: true,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(width: 6),
                     // 2. Quantity
                     Expanded(
-                      flex: 3,
-                      child: TextField(
-                        controller: _quickItemQtyCtrl,
-                        keyboardType: TextInputType.number,
-                        decoration: InputDecoration(
-                          labelText: 'Qty (Pcs)',
-                          hintText: '10',
-                          isDense: true,
-                          contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 11),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    // 3. Weight per piece
-                    Expanded(
-                      flex: 3,
-                      child: TextField(
-                        controller: _quickItemWeightCtrl,
-                        keyboardType: TextInputType.number,
-                        decoration: InputDecoration(
-                          labelText: 'Wt/pc (KG)',
-                          hintText: '50',
-                          isDense: true,
-                          contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 11),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    // 4. Add Button with text & icon
-                    FilledButton(
-                      onPressed: _addQuickItem,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        minimumSize: const Size(44, 44),
-                      ),
-                      child: const Row(
+                      flex: 2,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.add_rounded, size: 20),
-                          SizedBox(width: 2),
-                          Text(
-                            'ADD',
+                          const Text(
+                            'Qty',
                             style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w800,
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.slate,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          SizedBox(
+                            height: 38,
+                            child: TextField(
+                              controller: _quickItemQtyCtrl,
+                              keyboardType: TextInputType.number,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+                              decoration: InputDecoration(
+                                hintText: '10',
+                                hintStyle: const TextStyle(fontSize: 11, color: Colors.grey),
+                                isDense: true,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
                             ),
                           ),
                         ],
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    // 3. Weight per piece (KG)
+                    Expanded(
+                      flex: 2,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            'KG/pc',
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.slate,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          SizedBox(
+                            height: 38,
+                            child: TextField(
+                              controller: _quickItemWeightCtrl,
+                              keyboardType: TextInputType.number,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+                              decoration: InputDecoration(
+                                hintText: '50',
+                                hintStyle: const TextStyle(fontSize: 11, color: Colors.grey),
+                                isDense: true,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // 4. Compact Clean ADD Button
+                    SizedBox(
+                      height: 38,
+                      child: FilledButton.icon(
+                        onPressed: _addQuickItem,
+                        icon: const Icon(Icons.add_rounded, size: 16),
+                        label: const Text(
+                          'ADD',
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
+                        ),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFF16A34A),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          visualDensity: VisualDensity.compact,
+                        ),
                       ),
                     ),
                   ],
