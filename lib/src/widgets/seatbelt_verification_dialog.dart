@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
 
 import '../controllers/planner_controller.dart';
 import '../models/planner_models.dart';
@@ -47,10 +48,12 @@ class SeatbeltVerificationDialog extends StatefulWidget {
     final result = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => SeatbeltVerificationDialog(
-        controller: controller,
-        vehicleNumber: vehicleNumber,
-        location: location,
+      builder: (_) => PointerInterceptor(
+        child: SeatbeltVerificationDialog(
+          controller: controller,
+          vehicleNumber: vehicleNumber,
+          location: location,
+        ),
       ),
     );
     return result ?? false;

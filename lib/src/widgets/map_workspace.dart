@@ -3337,10 +3337,11 @@ class _MapWorkspaceState extends State<MapWorkspace> {
               ),
             );
           },
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
+}
 
   void _showMapWaypointActionSheet(LatLng point) {
     final coordStr = _format(point);
@@ -3351,13 +3352,14 @@ class _MapWorkspaceState extends State<MapWorkspace> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
       ),
       builder: (ctx) {
-        return FutureBuilder<String>(
-          future: ReverseGeocodingService.labelFor(point),
-          builder: (context, snapshot) {
-            final label = snapshot.data ?? coordStr;
-            final shortName = label.split(',').first.trim();
+        return PointerInterceptor(
+          child: FutureBuilder<String>(
+            future: ReverseGeocodingService.labelFor(point),
+            builder: (context, snapshot) {
+              final label = snapshot.data ?? coordStr;
+              final shortName = label.split(',').first.trim();
 
-            return SafeArea(
+              return SafeArea(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(18, 14, 18, 16),
                 child: Column(
@@ -3504,13 +3506,14 @@ class _MapWorkspaceState extends State<MapWorkspace> {
               ),
             );
           },
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
+}
 
   Future<void> _handleMapTap(LatLng point) async {
-    if (_isNavigating) return;
+    if (_isNavigating || _isVerifyingSeatbelt) return;
 
     final coordString = _format(point);
 
