@@ -24,6 +24,21 @@
     }
   </style>
   <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyArJB3w8s8l66nuhGLbLy6LvZi5EgqXscQ"></script>
+  <script>
+    // Intercept Google Maps constructor so gestureHandling is greedy by default.
+    // This permanently prevents the annoying "Use two fingers to move the map" banner on mobile/touch screens.
+    (function() {
+      if (window.google && window.google.maps && window.google.maps.Map) {
+        var OriginalMap = window.google.maps.Map;
+        window.google.maps.Map = function(element, options) {
+          options = options || {};
+          options.gestureHandling = 'greedy';
+          return new OriginalMap(element, options);
+        };
+        window.google.maps.Map.prototype = OriginalMap.prototype;
+      }
+    })();
+  </script>
 </head>
 <body>
   <script>
