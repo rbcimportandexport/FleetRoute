@@ -408,7 +408,7 @@ class _PreTripCustomerDetailsDialogState
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Route: ${widget.origin} ➔ ${widget.destination}',
+                                    'Route: ${widget.origin}  ${widget.destination}',
                                     style: const TextStyle(
                                       fontWeight: FontWeight.w700,
                                       fontSize: 12,

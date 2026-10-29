@@ -412,7 +412,7 @@ class TripDetailReportDialog extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Origin ➔ Destination Route Banner
+                          // Origin  Destination Route Banner
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(

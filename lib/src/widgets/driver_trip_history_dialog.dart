@@ -353,7 +353,7 @@ class _DriverTripHistoryDialogState extends State<DriverTripHistoryDialog> {
                                 ),
                                 const SizedBox(height: 8),
 
-                                // Origin ➔ Destination
+                                // Origin  Destination
                                 Row(
                                   children: [
                                     const Icon(Icons.circle,
@@ -443,7 +443,7 @@ class _DriverTripHistoryDialogState extends State<DriverTripHistoryDialog> {
                                     ],
                                     const Spacer(),
                                     const Text(
-                                      'View Report ➔',
+                                      'View Report ',
                                       style: TextStyle(
                                         fontSize: 11,
                                         fontWeight: FontWeight.w800,

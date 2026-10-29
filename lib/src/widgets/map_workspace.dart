@@ -1980,7 +1980,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
         icon: gm.BitmapDescriptor.defaultMarkerWithHue(markerHue),
         zIndexInt: isSelectedVehicle || isDriverActiveVehicle ? 10 : (isOnDuty ? 5 : 2),
         infoWindow: gm.InfoWindow(
-          title: '🚛 ${truck.code} · ${truck.name}',
+          title: ' ${truck.code} · ${truck.name}',
           snippet: statusSnippet,
         ),
         onTap: () {
