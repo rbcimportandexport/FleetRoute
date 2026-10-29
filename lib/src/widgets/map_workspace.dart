@@ -938,27 +938,39 @@ class _MapWorkspaceState extends State<MapWorkspace> {
       }
     }
 
-    // 2. Mandatory Pre-Trip Driver Seatbelt & Cabin Safety Check
-    final isVerified = await SeatbeltVerificationDialog.show(
-      context,
-      controller: widget.controller,
-      vehicleNumber: vehicleCode,
-      location: widget.controller.origin,
-    );
+    // 2. Pre-Trip Driver Seatbelt & Cabin Safety Check:
+    // Check if driver/vehicle already passed seatbelt safety check recently (e.g. today or in active session)
+    final now = DateTime.now();
+    final hasRecentApprovedSeatbelt = widget.controller.seatbeltRecords.any((rec) {
+      if (!rec.isApproved) return false;
+      final diff = now.difference(rec.timestamp);
+      // Valid for current shift / trip (12 hours) or same vehicle
+      final matchVehicle = vehicleCode.isEmpty || rec.vehicleNumber.trim().toUpperCase() == vehicleCode.trim().toUpperCase();
+      return diff.inHours < 12 && matchVehicle;
+    });
 
-    if (!mounted) {
-      _isVerifyingSeatbelt = false;
-      return;
-    }
+    if (!hasRecentApprovedSeatbelt) {
+      final isVerified = await SeatbeltVerificationDialog.show(
+        context,
+        controller: widget.controller,
+        vehicleNumber: vehicleCode,
+        location: widget.controller.origin,
+      );
 
-    if (!isVerified) {
-      _isVerifyingSeatbelt = false;
-      if (widget.controller.isNavigating) {
-        widget.controller.stopNavigation();
+      if (!mounted) {
+        _isVerifyingSeatbelt = false;
+        return;
       }
-      _showMessage(
-          'Trip Authorization Denied: Mandatory seatbelt verification failed.');
-      return;
+
+      if (!isVerified) {
+        _isVerifyingSeatbelt = false;
+        if (widget.controller.isNavigating) {
+          widget.controller.stopNavigation();
+        }
+        _showMessage(
+            'Trip Authorization Denied: Mandatory seatbelt verification failed.');
+        return;
+      }
     }
 
     // Re-verify that route points are still valid after the async verification dialog
