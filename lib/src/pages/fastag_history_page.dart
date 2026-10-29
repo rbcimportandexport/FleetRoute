@@ -100,67 +100,6 @@ class _FastagHistoryPageState extends State<FastagHistoryPage> {
     }
   }
 
-  void _showSetRealBalanceDialog(TruckModel vehicle) {
-    final ctrl = TextEditingController(
-        text: vehicle.fastagBalance > 0
-            ? vehicle.fastagBalance.toStringAsFixed(0)
-            : '0');
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Set Live FASTag Balance · ${vehicle.code}'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Agar aapne FASTag bank app (Paytm/ICICI/SBI) se real balance dekha hai, toh yahan exact amount daal sakte hain:',
-              style: TextStyle(fontSize: 12.5, color: AppColors.slate),
-            ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: ctrl,
-              keyboardType: TextInputType.number,
-              autofocus: true,
-              decoration: const InputDecoration(
-                labelText: 'Real FASTag Balance (₹)',
-                prefixText: '₹ ',
-                isDense: true,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              final val = double.tryParse(ctrl.text.trim()) ?? 0.0;
-              await widget.controller.updateFastagBalanceDirect(
-                vehicleCode: vehicle.code,
-                newBalance: val < 0 ? 0 : val,
-              );
-              if (mounted) {
-                Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                        'FASTag Balance updated to ₹${val.toStringAsFixed(0)}'),
-                    backgroundColor: AppColors.primary,
-                  ),
-                );
-              }
-            },
-            style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
-            child: const Text('Update Balance'),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _confirmDeleteRecord(TruckModel vehicle, FastagRechargeRecord item) {
     showDialog<void>(
       context: context,
@@ -418,66 +357,35 @@ class _FastagHistoryPageState extends State<FastagHistoryPage> {
                         ],
                       ),
                       const SizedBox(height: 14),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () => _showSetRealBalanceDialog(vehicle),
-                              icon: const Icon(Icons.edit_note_rounded,
-                                  color: Colors.white, size: 16),
-                              label: const Text(
-                                'Set Balance',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                              style: OutlinedButton.styleFrom(
-                                side: const BorderSide(
-                                    color: Color(0x66FFFFFF), width: 1.2),
-                                backgroundColor: const Color(0x26FFFFFF),
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 11),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          onPressed: () => showDialog<void>(
+                            context: context,
+                            builder: (_) => FastagRechargeDialog(
+                              vehicle: vehicle,
+                              truckIndex: tIdx >= 0 ? tIdx : 0,
+                              controller: widget.controller,
                             ),
                           ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            flex: 2,
-                            child: FilledButton.icon(
-                              onPressed: () => showDialog<void>(
-                                context: context,
-                                builder: (_) => FastagRechargeDialog(
-                                  vehicle: vehicle,
-                                  truckIndex: tIdx >= 0 ? tIdx : 0,
-                                  controller: widget.controller,
-                                ),
-                              ),
-                              icon: const Icon(Icons.send_to_mobile_rounded,
-                                  size: 16),
-                              label: const Text(
-                                'Recharge / Send Money',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                              style: FilledButton.styleFrom(
-                                backgroundColor: Colors.white,
-                                foregroundColor: const Color(0xFF065F46),
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 11),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
+                          icon: const Icon(Icons.send_to_mobile_rounded, size: 16),
+                          label: const Text(
+                            'Recharge / Send Money via UPI',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
                             ),
                           ),
-                        ],
+                          style: FilledButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: const Color(0xFF065F46),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 14),
                       Container(

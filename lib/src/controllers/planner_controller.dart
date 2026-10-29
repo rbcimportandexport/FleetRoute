@@ -643,8 +643,8 @@ class PlannerController extends ChangeNotifier {
             !r.refNumber.startsWith('FTG-') &&
             r.notes != 'Auto-test' &&
             !r.id.startsWith('FT-17')).toList();
-        final hadMockRecords = cleanRecharges.length != t.fastagRecharges.length;
-        final cleanBalance = hadMockRecords ? 0.0 : t.fastagBalance;
+        // Only keep balance if there are genuine verified recharge transactions, else 0.0
+        final cleanBalance = (cleanRecharges.isEmpty || t.fastagBalance > 50000) ? 0.0 : t.fastagBalance;
         final cleanTyres = t.tyres
             .where((tyre) =>
                 !tyre.tyreNumber.startsWith('MRF-782') &&
@@ -991,8 +991,7 @@ class PlannerController extends ChangeNotifier {
           r.id != 'FT-101' &&
           !r.refNumber.startsWith('FTG-') &&
           !r.id.startsWith('FT-17')).toList();
-      final hadMock = cleanRecharges.length != t.fastagRecharges.length;
-      final cleanBal = hadMock ? 0.0 : t.fastagBalance;
+      final cleanBal = (cleanRecharges.isEmpty || t.fastagBalance > 50000) ? 0.0 : t.fastagBalance;
       final cleanTyres = t.tyres
           .where((tyre) =>
               !tyre.tyreNumber.startsWith('MRF-782') &&
