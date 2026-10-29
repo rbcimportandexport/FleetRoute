@@ -261,25 +261,13 @@ class _FastagHistoryPageState extends State<FastagHistoryPage> {
               backgroundColor: const Color(0xFF0F172A),
               foregroundColor: Colors.white,
               iconTheme: const IconThemeData(color: Colors.white),
-              title: const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'FASTag Wallet & Recharge',
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
-                    ),
-                  ),
-                  Text(
-                    'Real NETC NPCI Vehicle UPI Payment',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Color(0xFFE2E8F0),
-                    ),
-                  ),
-                ],
+              title: const Text(
+                'FASTag Wallet & Recharge',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                ),
               ),
               actions: [
                 if (widget.controller.truckModels.length > 1)
