@@ -3656,7 +3656,8 @@ class _MapWorkspaceState extends State<MapWorkspace> {
 }
 
   Future<void> _handleMapTap(LatLng point) async {
-    if (_isNavigating || _isVerifyingSeatbelt) return;
+    if (_isVerifyingSeatbelt) return;
+    if (_isNavigating && !widget.controller.pinMode && _activePinMode != 'stop') return;
 
     final coordString = _format(point);
 
@@ -4446,6 +4447,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                           : MapViewStyle.satellite;
                       widget.controller.setMapStyle(next);
                     },
+                    onAddStop: _openSetLocationSheet,
                   ),
                 ),
 
@@ -4796,6 +4798,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                     compact: compact,
                     onRecenter: _recenterNavCamera,
                     onStop: _stopLiveNavigation,
+                    onAddStop: _openSetLocationSheet,
                   ),
                 ),
 
@@ -5188,6 +5191,7 @@ class _NavigationTopHud extends StatelessWidget {
     required this.onExit,
     this.isSatellite = false,
     this.onToggleSatellite,
+    this.onAddStop,
   });
 
   final NavigationTurnInfo? turnInfo;
@@ -5202,6 +5206,7 @@ class _NavigationTopHud extends StatelessWidget {
   final VoidCallback onExit;
   final bool isSatellite;
   final VoidCallback? onToggleSatellite;
+  final VoidCallback? onAddStop;
 
   @override
   Widget build(BuildContext context) {
@@ -5396,6 +5401,27 @@ class _NavigationTopHud extends StatelessWidget {
                   ),
                   SizedBox(width: compact ? 4 : 8),
 
+                  // Add Intermediate Stop / Waypoint button during navigation
+                  if (onAddStop != null)
+                    IconButton(
+                      onPressed: onAddStop,
+                      tooltip: '+ Add Stop / 3rd Location (रास्ते का स्टॉप जोड़ें)',
+                      style: IconButton.styleFrom(
+                        backgroundColor: const Color(0xFFFFFBEB),
+                        foregroundColor: const Color(0xFFD97706),
+                        side: const BorderSide(color: Color(0xFFFDE68A)),
+                        visualDensity: compact
+                            ? VisualDensity.compact
+                            : VisualDensity.standard,
+                      ),
+                      icon: const Icon(
+                        Icons.add_location_alt_rounded,
+                        size: 20,
+                        color: Color(0xFFD97706),
+                      ),
+                    ),
+                  if (onAddStop != null) SizedBox(width: compact ? 4 : 8),
+
                   // Satellite Mode Toggle Button
                   if (onToggleSatellite != null)
                     IconButton(
@@ -5532,6 +5558,7 @@ class _NavigationBottomControls extends StatelessWidget {
     required this.compact,
     required this.onRecenter,
     required this.onStop,
+    this.onAddStop,
   });
 
   final bool isLocked;
@@ -5540,6 +5567,7 @@ class _NavigationBottomControls extends StatelessWidget {
   final bool compact;
   final VoidCallback onRecenter;
   final VoidCallback onStop;
+  final VoidCallback? onAddStop;
 
   @override
   Widget build(BuildContext context) {
@@ -5571,19 +5599,42 @@ class _NavigationBottomControls extends StatelessWidget {
                 style: FilledButton.styleFrom(
                   backgroundColor: const Color(0xFFEF4444),
                   padding: EdgeInsets.symmetric(
-                    horizontal: compact ? 10 : 14,
-                    vertical: 10,
+                    horizontal: compact ? 8 : 12,
+                    vertical: 9,
                   ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(9),
                   ),
                 ),
-                icon: const Icon(Icons.stop_circle_rounded, size: 16),
+                icon: const Icon(Icons.stop_circle_rounded, size: 15),
                 label: const Text(
                   'STOP (रोकें)',
-                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 11),
+                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 10.5),
                 ),
               ),
+
+              // Add Stop Button in Navigation
+              if (onAddStop != null)
+                FilledButton.icon(
+                  onPressed: onAddStop,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFFFFBEB),
+                    foregroundColor: const Color(0xFFB45309),
+                    side: const BorderSide(color: Color(0xFFFDE68A)),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: compact ? 8 : 12,
+                      vertical: 9,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(9),
+                    ),
+                  ),
+                  icon: const Icon(Icons.add_location_alt_rounded, size: 15, color: Color(0xFFD97706)),
+                  label: const Text(
+                    '+ STOP',
+                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 10.5),
+                  ),
+                ),
 
               // Real GPS Status Indicator Badge
               Container(
