@@ -1001,14 +1001,8 @@ class _MapWorkspaceState extends State<MapWorkspace> {
     // always used this phone's GPS, so an admin could not follow the truck.
     final liveTruck = _selectedLiveTruck;
     final hasVehicleFix = _hasFreshTrackerFix(liveTruck);
-    final mayUsePhoneGps = !widget.controller.isAdmin || liveTruck == null;
-    if (widget.controller.isAdmin && liveTruck != null && !hasVehicleFix) {
-      _isVerifyingSeatbelt = false;
-      _showMessage(
-        'Selected vehicle tracker is stale/offline. Fresh Protrack location ke bina live vehicle navigation start nahi hogi.',
-      );
-      return;
-    }
+    // Allow phone GPS tracking directly for both driver and admin without blocking on Protrack
+    final mayUsePhoneGps = true;
     if (hasVehicleFix) {
       initialPos = LatLng(liveTruck!.latitude!, liveTruck.longitude!);
       initialBearing = liveTruck.course;
