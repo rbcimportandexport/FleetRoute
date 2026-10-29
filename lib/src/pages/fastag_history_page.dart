@@ -408,93 +408,90 @@ class _FastagHistoryPageState extends State<FastagHistoryPage> {
                             ),
                         ],
                       ),
-                      const SizedBox(height: 20),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.end,
+                      const SizedBox(height: 16),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Available FASTag Balance',
+                          const Text(
+                            'Available FASTag Balance',
+                            style: TextStyle(
+                              color: Color(0xFFD1FAE5),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              '₹${vehicle.fastagBalance.toStringAsFixed(0)}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 34,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () => _showSetRealBalanceDialog(vehicle),
+                              icon: const Icon(Icons.edit_note_rounded,
+                                  color: Colors.white, size: 16),
+                              label: const Text(
+                                'Set Balance',
                                 style: TextStyle(
-                                  color: Color(0xFFD1FAE5),
+                                  color: Colors.white,
                                   fontSize: 12,
-                                  fontWeight: FontWeight.w600,
+                                  fontWeight: FontWeight.w800,
                                 ),
                               ),
-                              const SizedBox(height: 2),
-                              Row(
-                                children: [
-                                  Text(
-                                    '₹${vehicle.fastagBalance.toStringAsFixed(0)}',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 34,
-                                      fontWeight: FontWeight.w900,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Tooltip(
-                                    message: 'Set Exact Live Bank Balance',
-                                    child: InkWell(
-                                      onTap: () => _showSetRealBalanceDialog(vehicle),
-                                      borderRadius: BorderRadius.circular(8),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 10, vertical: 5),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0x40FFFFFF),
-                                          borderRadius: BorderRadius.circular(8),
-                                          border: Border.all(color: const Color(0x66FFFFFF)),
-                                        ),
-                                        child: const Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Icon(Icons.edit_note_rounded, color: Colors.white, size: 15),
-                                            SizedBox(width: 4),
-                                            Text(
-                                              'Set Real Balance',
-                                              style: TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 11,
-                                                  fontWeight: FontWeight.w800),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(
+                                    color: Color(0x66FFFFFF), width: 1.2),
+                                backgroundColor: const Color(0x26FFFFFF),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 11),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
                               ),
-                            ],
+                            ),
                           ),
-                          FilledButton.icon(
-                            onPressed: () => showDialog<void>(
-                              context: context,
-                              builder: (_) => FastagRechargeDialog(
-                                vehicle: vehicle,
-                                truckIndex: tIdx >= 0 ? tIdx : 0,
-                                controller: widget.controller,
+                          const SizedBox(width: 10),
+                          Expanded(
+                            flex: 2,
+                            child: FilledButton.icon(
+                              onPressed: () => showDialog<void>(
+                                context: context,
+                                builder: (_) => FastagRechargeDialog(
+                                  vehicle: vehicle,
+                                  truckIndex: tIdx >= 0 ? tIdx : 0,
+                                  controller: widget.controller,
+                                ),
                               ),
-                            ),
-                            icon: const Icon(Icons.send_to_mobile_rounded,
-                                size: 16),
-                            label: const Text(
-                              'Recharge / Send Money',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w800,
+                              icon: const Icon(Icons.send_to_mobile_rounded,
+                                  size: 16),
+                              label: const Text(
+                                'Recharge / Send Money',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                ),
                               ),
-                            ),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: const Color(0xFF065F46),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 14, vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                              style: FilledButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: const Color(0xFF065F46),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 11),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
                               ),
                             ),
                           ),
