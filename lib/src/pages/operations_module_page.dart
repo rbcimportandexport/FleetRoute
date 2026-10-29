@@ -1461,6 +1461,7 @@ class _RecordCard extends StatelessWidget {
 
 class FastagRechargeDialog extends StatefulWidget {
   const FastagRechargeDialog({
+    super.key,
     required this.vehicle,
     required this.truckIndex,
     required this.controller,
@@ -1479,7 +1480,7 @@ class FastagRechargeDialogState extends State<FastagRechargeDialog> {
   final _refCtrl = TextEditingController();
   final _notesCtrl = TextEditingController();
   String _provider = 'Paytm Payments Bank';
-  bool _showQr = false;
+  bool _showQr = true;
 
   @override
   void dispose() {
@@ -1508,6 +1509,38 @@ class FastagRechargeDialogState extends State<FastagRechargeDialog> {
     );
   }
 
+  Future<void> _launchApp(String appName, String appScheme) async {
+    final amt = double.tryParse(_amountCtrl.text.trim()) ?? 0.0;
+    if (amt <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a valid recharge amount'),
+          backgroundColor: Color(0xFFDC2626),
+        ),
+      );
+      return;
+    }
+
+    final launched = await RealFastagService.instance.launchUpiApp(
+      appScheme: appScheme,
+      vehicleNumber: widget.vehicle.code,
+      bankId: _getBankId(),
+      amount: amt,
+      payeeName: 'NETC FASTag ${widget.vehicle.code}',
+    );
+
+    if (mounted) {
+      if (!launched) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$appName install nahi mila. Aap niche QR Code scan karke bhi pay kar sakte hain.'),
+            backgroundColor: const Color(0xFF0284C7),
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _payRealUpi() async {
     final amt = double.tryParse(_amountCtrl.text.trim()) ?? 0.0;
     if (amt <= 0) {
@@ -1532,7 +1565,7 @@ class FastagRechargeDialogState extends State<FastagRechargeDialog> {
       setState(() => _showQr = true);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('UPI Intent launched. If on desktop/web or app did not open, please scan the QR code to complete payment.'),
+          content: Text('UPI Intent launched. If UPI app did not open, please click GPay/PhonePe/Paytm or scan the QR code.'),
           backgroundColor: Color(0xFF0284C7),
         ),
       );
@@ -1572,6 +1605,12 @@ class FastagRechargeDialogState extends State<FastagRechargeDialog> {
         ),
       );
     }
+  }
+
+  String _formatBalance(double balance) {
+    if (balance.isNaN || balance.isInfinite) return '0';
+    if (balance > 100000000) return '0';
+    return balance.toStringAsFixed(0);
   }
 
   @override
@@ -1615,7 +1654,7 @@ class FastagRechargeDialogState extends State<FastagRechargeDialog> {
             ),
             const SizedBox(height: 12),
             Text(
-              'Current Balance: ₹${widget.vehicle.fastagBalance.toStringAsFixed(0)}',
+              'Current Balance: ₹${_formatBalance(widget.vehicle.fastagBalance)}',
               style: const TextStyle(
                   fontWeight: FontWeight.w700, color: AppColors.slate),
             ),
@@ -1655,11 +1694,73 @@ class FastagRechargeDialogState extends State<FastagRechargeDialog> {
               onChanged: (val) =>
                   setState(() => _provider = val ?? 'Paytm Payments Bank'),
             ),
+            const SizedBox(height: 14),
+
+            // Pay Directly via UPI Apps (GPay, PhonePe, Paytm, BHIM, Cred)
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Direct Pay via UPI Apps',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.navy,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _buildAppButton(
+                        label: 'Google Pay',
+                        icon: Icons.account_balance_wallet_rounded,
+                        color: const Color(0xFF1A73E8),
+                        onTap: () => _launchApp('Google Pay', 'gpay'),
+                      ),
+                      _buildAppButton(
+                        label: 'PhonePe',
+                        icon: Icons.flash_on_rounded,
+                        color: const Color(0xFF5F259F),
+                        onTap: () => _launchApp('PhonePe', 'phonepe'),
+                      ),
+                      _buildAppButton(
+                        label: 'Paytm',
+                        icon: Icons.payments_rounded,
+                        color: const Color(0xFF00B9F1),
+                        onTap: () => _launchApp('Paytm', 'paytm'),
+                      ),
+                      _buildAppButton(
+                        label: 'BHIM UPI',
+                        icon: Icons.qr_code_rounded,
+                        color: const Color(0xFF00796B),
+                        onTap: () => _launchApp('BHIM UPI', 'bhim'),
+                      ),
+                      _buildAppButton(
+                        label: 'CRED',
+                        icon: Icons.credit_card_rounded,
+                        color: const Color(0xFF1E293B),
+                        onTap: () => _launchApp('CRED', 'cred'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
             const SizedBox(height: 10),
             TextField(
               controller: _refCtrl,
               decoration: const InputDecoration(
-                labelText: 'Recharge Ref / UTR / Order ID',
+                labelText: 'Recharge Ref / UTR / Order ID (Optional)',
                 isDense: true,
               ),
             ),
@@ -1676,7 +1777,7 @@ class FastagRechargeDialogState extends State<FastagRechargeDialog> {
               child: TextButton.icon(
                 onPressed: () => setState(() => _showQr = !_showQr),
                 icon: Icon(_showQr ? Icons.visibility_off_outlined : Icons.qr_code_2_rounded),
-                label: Text(_showQr ? 'Hide UPI QR Code' : 'Show Real UPI QR Code'),
+                label: Text(_showQr ? 'Hide Instant UPI QR' : 'Show Instant UPI QR Code'),
               ),
             ),
             if (_showQr) ...[
@@ -1701,7 +1802,8 @@ class FastagRechargeDialogState extends State<FastagRechargeDialog> {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'Scan with GPay / PhonePe / Paytm',
+                        'Scan with any UPI App (GPay / PhonePe / Paytm / BHIM)',
+                        textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 10.5,
                           fontWeight: FontWeight.w700,
@@ -1728,9 +1830,44 @@ class FastagRechargeDialogState extends State<FastagRechargeDialog> {
           onPressed: _payRealUpi,
           icon: const Icon(Icons.bolt_rounded, size: 16),
           style: FilledButton.styleFrom(backgroundColor: const Color(0xFF10B981)),
-          label: const Text('Pay via UPI / FASTag'),
+          label: const Text('Pay Any UPI App'),
         ),
       ],
+    );
+  }
+
+  Widget _buildAppButton({
+    required String label,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: color),
+            const SizedBox(width: 5),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

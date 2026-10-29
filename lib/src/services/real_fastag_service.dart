@@ -135,6 +135,75 @@ class RealFastagService {
     return false;
   }
 
+
+  /// Launches a specific UPI App directly (GPay, PhonePe, Paytm, BHIM, Cred)
+  Future<bool> launchUpiApp({
+    required String appScheme,
+    required String vehicleNumber,
+    required String bankId,
+    required double amount,
+    String? payeeName,
+  }) async {
+    final vpa = buildNetcUpiVpa(vehicleNumber: vehicleNumber, bankId: bankId);
+    final cleanVehicle =
+        vehicleNumber.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toUpperCase();
+    final amtStr = amount.toStringAsFixed(2);
+    final pn = payeeName?.isNotEmpty == true ? payeeName! : 'NETC FASTag $cleanVehicle';
+    final note = 'FASTag Recharge for $cleanVehicle';
+    final params = 'pa=$vpa&pn=${Uri.encodeComponent(pn)}&am=$amtStr&cu=INR&tn=${Uri.encodeComponent(note)}';
+
+    Uri? targetUri;
+    switch (appScheme.toLowerCase()) {
+      case 'gpay':
+      case 'googlepay':
+        targetUri = Uri.parse('tez://upi/pay?$params');
+        break;
+      case 'phonepe':
+        targetUri = Uri.parse('phonepe://pay?$params');
+        break;
+      case 'paytm':
+        targetUri = Uri.parse('paytmmp://pay?$params');
+        break;
+      case 'bhim':
+        targetUri = Uri.parse('bhim://pay?$params');
+        break;
+      case 'cred':
+        targetUri = Uri.parse('credpay://upi/pay?$params');
+        break;
+      default:
+        targetUri = Uri.parse('upi://pay?$params');
+        break;
+    }
+
+    try {
+      if (await canLaunchUrl(targetUri)) {
+        return await launchUrl(targetUri, mode: LaunchMode.externalApplication);
+      }
+    } catch (e) {
+      debugPrint('[RealFastagService] Error launching $appScheme: $e');
+    }
+
+    // Fallback: try generic upi://
+    final genericUri = Uri.parse('upi://pay?$params');
+    try {
+      if (await canLaunchUrl(genericUri)) {
+        return await launchUrl(genericUri, mode: LaunchMode.externalApplication);
+      }
+    } catch (_) {}
+
+    // Fallback 2: web recharge
+    if (appScheme.toLowerCase() == 'paytm') {
+      final webUri = Uri.parse('https://paytm.com/fastag-recharge?vehicle=$cleanVehicle');
+      try {
+        if (await canLaunchUrl(webUri)) {
+          return await launchUrl(webUri, mode: LaunchMode.externalApplication);
+        }
+      } catch (_) {}
+    }
+
+    return false;
+  }
+
   /// Fetches real-time FASTag balance and recent toll plaza transaction logs
   /// via NPCI NETC / Bharat Bill Payment System (BBPS) API.
   Future<Map<String, dynamic>?> fetchLiveFastagBalance({
