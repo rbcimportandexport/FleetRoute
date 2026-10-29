@@ -50,6 +50,13 @@ jobs:
             echo "storeFile=transportone-release.jks" >> android/key.properties
           fi
 
+      - name: Extract Version from pubspec.yaml
+        id: get_version
+        run: |
+          VERSION=$(grep '^version:' pubspec.yaml | awk '{print $2}')
+          echo "APP_VERSION=$VERSION" >> $GITHUB_ENV
+          echo "TAG_NAME=v$VERSION" >> $GITHUB_ENV
+
       - name: Build Android Release APK
         run: flutter build apk --release
 
@@ -68,16 +75,17 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
         with:
-          tag_name: latest
-          name: "Transport One Latest Release (Auto-Updated)"
+          tag_name: ${{ env.TAG_NAME }}
+          name: "Transport One ${{ env.TAG_NAME }} (Auto-Build)"
           body: |
-            ## Transport One Latest Auto-Build
+            ## Transport One Auto-Build (${{ env.TAG_NAME }})
             This APK is automatically built on every `git push` to `main`.
             
+            - **App Version:** ${{ env.APP_VERSION }}
             - **Commit:** ${{ github.sha }}
-            - **Date:** $(date -u +'%Y-%m-%d %H:%M UTC')
             
-            Download the attached `TransportOne-Release.apk` directly to your phone.
+            Download the attached `TransportOne-Release.apk` directly on your Android phone to install the update.
           files: TransportOne-Release.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
