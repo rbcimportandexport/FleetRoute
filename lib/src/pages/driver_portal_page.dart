@@ -2607,91 +2607,155 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
           Row(
             children: [
               Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(9),
-                  decoration: BoxDecoration(
-                    color: AppColors.primarySoft,
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.primaryBorder),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        AppLocalizationService.instance
-                            .tr('driving_license_label'),
-                        style: const TextStyle(
-                          fontSize: 9.5,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.primaryDark,
-                          fontFamily: 'sans-serif',
-                        ),
+                    onTap: () => _openPhotoCapture(context,
+                        category: 'Driving License (DL)'),
+                    child: Container(
+                      padding: const EdgeInsets.all(9),
+                      decoration: BoxDecoration(
+                        color: AppColors.primarySoft,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppColors.primaryBorder),
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        dl,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.navy,
-                          fontFamily: 'sans-serif',
-                        ),
-                        overflow: TextOverflow.ellipsis,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  AppLocalizationService.instance
+                                      .tr('driving_license_label'),
+                                  style: const TextStyle(
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.primaryDark,
+                                    fontFamily: 'sans-serif',
+                                  ),
+                                ),
+                              ),
+                              const Icon(Icons.camera_alt_outlined,
+                                  size: 13, color: AppColors.primaryDark),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            dl,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.navy,
+                              fontFamily: 'sans-serif',
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            'Exp: $dlExp',
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: AppColors.slate,
+                              fontFamily: 'sans-serif',
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          const Row(
+                            children: [
+                              Icon(Icons.upload_file_rounded,
+                                  size: 11, color: AppColors.primary),
+                              SizedBox(width: 3),
+                              Text(
+                                'Upload Photo',
+                                style: TextStyle(
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                      Text(
-                        'Exp: $dlExp',
-                        style: const TextStyle(
-                          fontSize: 10,
-                          color: AppColors.slate,
-                          fontFamily: 'sans-serif',
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(9),
-                  decoration: BoxDecoration(
-                    color: AppColors.primarySoft,
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.primaryBorder),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        AppLocalizationService.instance
-                            .tr('driver_insurance_label'),
-                        style: const TextStyle(
-                          fontSize: 9.5,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.primaryDark,
-                          fontFamily: 'sans-serif',
-                        ),
+                    onTap: () => _openPhotoCapture(context,
+                        category: 'Driver Bima (Insurance)'),
+                    child: Container(
+                      padding: const EdgeInsets.all(9),
+                      decoration: BoxDecoration(
+                        color: AppColors.primarySoft,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppColors.primaryBorder),
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        ins,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.navy,
-                          fontFamily: 'sans-serif',
-                        ),
-                        overflow: TextOverflow.ellipsis,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  AppLocalizationService.instance
+                                      .tr('driver_insurance_label'),
+                                  style: const TextStyle(
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.primaryDark,
+                                    fontFamily: 'sans-serif',
+                                  ),
+                                ),
+                              ),
+                              const Icon(Icons.camera_alt_outlined,
+                                  size: 13, color: AppColors.primaryDark),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            ins,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.navy,
+                              fontFamily: 'sans-serif',
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            'Exp: $insExp',
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: AppColors.slate,
+                              fontFamily: 'sans-serif',
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          const Row(
+                            children: [
+                              Icon(Icons.upload_file_rounded,
+                                  size: 11, color: AppColors.primary),
+                              SizedBox(width: 3),
+                              Text(
+                                'Upload Photo',
+                                style: TextStyle(
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                      Text(
-                        'Exp: $insExp',
-                        style: const TextStyle(
-                          fontSize: 10,
-                          color: AppColors.slate,
-                          fontFamily: 'sans-serif',
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               ),
