@@ -791,10 +791,30 @@ class _ReportsPageState extends State<ReportsPage> {
     final printableRows = data.rows
         .map((row) => row.map(_pdfSafe).toList(growable: false))
         .toList(growable: false);
+    // Calculate column widths map dynamically if trip summary or wide table
+    Map<int, pw.TableColumnWidth>? colWidths;
+    if (_selectedReport == LogisticsReportType.tripSummary && printableHeaders.length >= 13) {
+      colWidths = {
+        0: const pw.FixedColumnWidth(55),  // Trip #
+        1: const pw.FixedColumnWidth(48),  // Customer
+        2: const pw.FlexColumnWidth(2.0), // Origin
+        3: const pw.FlexColumnWidth(2.0), // Destination
+        4: const pw.FixedColumnWidth(52),  // Vehicle
+        5: const pw.FixedColumnWidth(48),  // Driver
+        6: const pw.FixedColumnWidth(55),  // Assigned By
+        7: const pw.FixedColumnWidth(38),  // Speed/Dist
+        8: const pw.FixedColumnWidth(36),  // Diesel
+        9: const pw.FixedColumnWidth(36),  // Total Exp
+        10: const pw.FixedColumnWidth(44), // Proof/POD
+        11: const pw.FixedColumnWidth(52), // Status
+        12: const pw.FixedColumnWidth(38), // Freight
+      };
+    }
+
     document.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4.landscape,
-        margin: const pw.EdgeInsets.all(24),
+        margin: const pw.EdgeInsets.symmetric(horizontal: 14, vertical: 16),
         header: (context) => pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
@@ -820,9 +840,11 @@ class _ReportsPageState extends State<ReportsPage> {
           pw.TableHelper.fromTextArray(
             headers: printableHeaders,
             data: printableRows,
+            columnWidths: colWidths,
+            cellPadding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3),
             headerStyle:
-                pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold),
-            cellStyle: const pw.TextStyle(fontSize: 6.5),
+                pw.TextStyle(fontSize: 6.2, fontWeight: pw.FontWeight.bold),
+            cellStyle: const pw.TextStyle(fontSize: 5.8),
             headerDecoration:
                 const pw.BoxDecoration(color: PdfColor.fromInt(0xFFE2E8F0)),
             cellAlignment: pw.Alignment.centerLeft,
@@ -881,11 +903,15 @@ class _ReportsPageState extends State<ReportsPage> {
     return 'transport_one_${type}_$date';
   }
 
-  String _pdfSafe(String value) => value
-      .replaceAll('₹', 'Rs. ')
-      .replaceAll('â‚¹', 'Rs. ')
-      .replaceAll('·', '-')
-      .replaceAll('Â·', '-');
+  String _pdfSafe(String value) {
+    var s = value
+        .replaceAll('₹', 'Rs. ')
+        .replaceAll('â‚¹', 'Rs. ')
+        .replaceAll('·', '-')
+        .replaceAll('Â·', '-');
+    // Strip non-ASCII or replace non-latin characters that standard PDF fonts cannot render and turn into black boxes
+    return s.replaceAll(RegExp(r'[^\x20-\x7E]'), ' ').replaceAll(RegExp(r'\s+'), ' ').trim();
+  }
 
   void _showExportMessage(String message, {bool isError = false}) {
     ScaffoldMessenger.of(context)
