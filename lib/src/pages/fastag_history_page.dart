@@ -383,12 +383,6 @@ class _FastagHistoryPageState extends State<FastagHistoryPage> {
                               ],
                             ),
                           ),
-                          IconButton(
-                            tooltip: 'Set Real Balance',
-                            icon: const Icon(Icons.edit_outlined,
-                                color: Colors.white70, size: 18),
-                            onPressed: () => _showSetRealBalanceDialog(vehicle),
-                          ),
                           if (vehicle.isFastagLow)
                             Container(
                               padding: const EdgeInsets.symmetric(
