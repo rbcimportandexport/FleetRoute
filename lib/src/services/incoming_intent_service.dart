@@ -184,7 +184,7 @@ class IncomingIntentService {
           lng >= -180 &&
           lng <= 180) {
         final placeMatch = RegExp(r'/place/([^/@!]+)').firstMatch(decoded);
-        var label = placeMatch?.group(1)?.replaceAll('+', ' ')?.trim();
+        var label = placeMatch?.group(1)?.replaceAll('+', ' ').trim();
         return IncomingLocationData(
           coordinates: LatLng(lat, lng),
           addressQuery: (label != null && label.isNotEmpty) ? label : null,
