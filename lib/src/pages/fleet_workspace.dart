@@ -122,10 +122,8 @@ class _FleetWorkspaceState extends State<FleetWorkspace> {
           setState(() => selected = WorkspaceSection.planner);
         }
       }
-      // Check for APK updates from GitHub Releases
-      if (mounted) {
-        AppUpdateService.instance.checkForUpdates(context, silentIfCurrent: true);
-      }
+      // Silently check and apply updates in the background without any UI dialog
+      AppUpdateService.instance.checkAndApplyUpdateSilently();
     });
   }
 

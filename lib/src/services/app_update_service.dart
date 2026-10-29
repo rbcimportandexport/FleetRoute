@@ -1,12 +1,12 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:ota_update/ota_update.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 /// Checks GitHub Releases for a newer version of the Transport One APK.
-/// When found, prompts the user to download and update with 1 click.
+/// When found, automatically and silently downloads and triggers the installation
+/// without displaying any dialogs, buttons, or prompt UI to the user.
 class AppUpdateService {
   AppUpdateService._();
   static final AppUpdateService instance = AppUpdateService._();
@@ -15,15 +15,19 @@ class AppUpdateService {
   static const String _latestReleaseApi =
       'https://api.github.com/repos/$_githubRepo/releases/latest';
 
-  bool _checkedThisSession = false;
+  bool _isCheckingOrUpdating = false;
 
-  Future<void> checkForUpdates(BuildContext context, {bool silentIfCurrent = true}) async {
-    // Only check once per app launch session unless user manually requested it
-    if (_checkedThisSession && silentIfCurrent) return;
-    _checkedThisSession = true;
+  /// Silently checks for updates and triggers installation automatically.
+  /// Zero UI shown in the app.
+  Future<void> checkAndApplyUpdateSilently() async {
+    if (_isCheckingOrUpdating) return;
+    _isCheckingOrUpdating = true;
 
-    // Web builds are always up to date from the server, OTA is for Android APK
-    if (kIsWeb) return;
+    // Web builds are always up to date from the hosting server
+    if (kIsWeb) {
+      _isCheckingOrUpdating = false;
+      return;
+    }
 
     try {
       final packageInfo = await PackageInfo.fromPlatform();
@@ -33,18 +37,18 @@ class AppUpdateService {
       final res = await http.get(
         Uri.parse(_latestReleaseApi),
         headers: {'Accept': 'application/vnd.github.v3+json'},
-      ).timeout(const Duration(seconds: 8));
+      ).timeout(const Duration(seconds: 10));
 
-      if (res.statusCode != 200) return;
+      if (res.statusCode != 200) {
+        _isCheckingOrUpdating = false;
+        return;
+      }
 
       final data = jsonDecode(res.body) as Map<String, dynamic>;
       final rawTag = (data['tag_name'] as String? ?? '').trim();
       final tagName = rawTag.replaceAll('v', '').trim();
-      final releaseName = data['name'] as String? ?? 'New Update Available';
-      final releaseBody = data['body'] as String? ?? 'Bug fixes & UI performance improvements.';
-      final publishedAtStr = data['published_at'] as String? ?? '';
 
-      // Find the direct download URL for the apk asset
+      // Find direct download URL for the .apk asset
       String? apkDownloadUrl;
       final assets = data['assets'] as List<dynamic>? ?? [];
       for (final asset in assets) {
@@ -55,41 +59,51 @@ class AppUpdateService {
         }
       }
 
-      // Fallback release page if asset URL missing
-      final updateUrl = apkDownloadUrl ?? (data['html_url'] as String? ?? 'https://github.com/$_githubRepo/releases/latest');
+      if (apkDownloadUrl == null || apkDownloadUrl.isEmpty) {
+        _isCheckingOrUpdating = false;
+        return;
+      }
 
-      // Compare versions
-      bool isNewer = _isVersionNewer(
+      // Check if remote version is newer
+      final bool isNewer = _isVersionNewer(
         remoteTag: tagName,
-        remotePublishedAt: publishedAtStr,
         localVersion: currentVersion,
         localBuild: currentBuildNumber,
       );
 
-      if (isNewer && context.mounted) {
-        _showUpdateDialog(
-          context,
-          newVersion: tagName.isNotEmpty ? tagName : 'Latest',
-          releaseTitle: releaseName,
-          releaseNotes: releaseBody,
-          downloadUrl: updateUrl,
-        );
-      } else if (!silentIfCurrent && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Aapka Transport One app pehle se hi latest version par hai!'),
-            backgroundColor: Color(0xFF10B981),
-          ),
-        );
+      if (isNewer) {
+        debugPrint('[AppUpdateService] Newer update found: $tagName. Starting silent auto-update...');
+        _startSilentOtaUpdate(apkDownloadUrl);
       }
     } catch (e) {
-      debugPrint('[AppUpdateService] Error checking for updates: $e');
+      debugPrint('[AppUpdateService] Silent update check error: $e');
+    } finally {
+      _isCheckingOrUpdating = false;
+    }
+  }
+
+  void _startSilentOtaUpdate(String url) {
+    try {
+      OtaUpdate()
+          .execute(
+        url,
+        destinationFilename: 'TransportOne-Release.apk',
+      )
+          .listen(
+        (OtaEvent event) {
+          debugPrint('[AppUpdateService] Silent OTA status: ${event.status}, value: ${event.value}');
+        },
+        onError: (dynamic error) {
+          debugPrint('[AppUpdateService] Silent OTA error: $error');
+        },
+      );
+    } catch (e) {
+      debugPrint('[AppUpdateService] Could not trigger OTA update: $e');
     }
   }
 
   bool _isVersionNewer({
     required String remoteTag,
-    required String remotePublishedAt,
     required String localVersion,
     required int localBuild,
   }) {
@@ -116,118 +130,5 @@ class AppUpdateService {
     }
 
     return false;
-  }
-
-  void _showUpdateDialog(
-    BuildContext context, {
-    required String newVersion,
-    required String releaseTitle,
-    required String releaseNotes,
-    required String downloadUrl,
-  }) {
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFECFDF5),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.system_update_rounded,
-                  color: Color(0xFF10B981),
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'App Update Available',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF0F172A),
-                      ),
-                    ),
-                    SizedBox(height: 2),
-                    Text(
-                      'Naya update tayar hai',
-                      style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.new_releases_outlined, size: 16, color: Color(0xFF2563EB)),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Version $newVersion available',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF1E293B),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Naye UI updates, intermediate stops aur safety fixes ke sath app ko update karein.',
-                style: TextStyle(fontSize: 12.5, color: Color(0xFF334155), height: 1.4),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Baad me (Later)', style: TextStyle(color: Color(0xFF64748B))),
-            ),
-            FilledButton.icon(
-              onPressed: () async {
-                Navigator.pop(ctx);
-                final uri = Uri.parse(downloadUrl);
-                if (await canLaunchUrl(uri)) {
-                  await launchUrl(uri, mode: LaunchMode.externalApplication);
-                }
-              },
-              style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF10B981),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              icon: const Icon(Icons.download_rounded, size: 16),
-              label: const Text(
-                'Update Karein (1-Click)',
-                style: TextStyle(fontWeight: FontWeight.w800),
-              ),
-            ),
-          ],
-        );
-      },
-    );
   }
 }
