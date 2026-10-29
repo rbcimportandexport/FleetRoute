@@ -434,23 +434,34 @@ class _FastagHistoryPageState extends State<FastagHistoryPage> {
                                       fontWeight: FontWeight.w900,
                                     ),
                                   ),
-                                  const SizedBox(width: 8),
-                                  InkWell(
-                                    onTap: () =>
-                                        _showSetRealBalanceDialog(vehicle),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 6, vertical: 3),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0x33FFFFFF),
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: const Text(
-                                        'Edit Real',
-                                        style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w700),
+                                  const SizedBox(width: 10),
+                                  Tooltip(
+                                    message: 'Set Exact Live Bank Balance',
+                                    child: InkWell(
+                                      onTap: () => _showSetRealBalanceDialog(vehicle),
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 10, vertical: 5),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0x40FFFFFF),
+                                          borderRadius: BorderRadius.circular(8),
+                                          border: Border.all(color: const Color(0x66FFFFFF)),
+                                        ),
+                                        child: const Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(Icons.edit_note_rounded, color: Colors.white, size: 15),
+                                            SizedBox(width: 4),
+                                            Text(
+                                              'Set Real Balance',
+                                              style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w800),
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   ),

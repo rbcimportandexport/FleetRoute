@@ -637,8 +637,14 @@ class PlannerController extends ChangeNotifier {
         final t = truckModels[i];
         final cleanServices =
             t.serviceHistory.where((s) => s.id != 'SRV-INIT').toList();
-        final cleanRecharges =
-            t.fastagRecharges.where((r) => r.id != 'FT-101').toList();
+        // Remove mock/test FTG recharge records and reset fake accumulated balance
+        final cleanRecharges = t.fastagRecharges.where((r) =>
+            r.id != 'FT-101' &&
+            !r.refNumber.startsWith('FTG-') &&
+            r.notes != 'Auto-test' &&
+            !r.id.startsWith('FT-17')).toList();
+        final hadMockRecords = cleanRecharges.length != t.fastagRecharges.length;
+        final cleanBalance = hadMockRecords ? 0.0 : t.fastagBalance;
         final cleanTyres = t.tyres
             .where((tyre) =>
                 !tyre.tyreNumber.startsWith('MRF-782') &&
@@ -654,6 +660,7 @@ class PlannerController extends ChangeNotifier {
           payloadCapacity: shouldClearCapacity ? '' : t.payloadCapacity,
           serviceHistory: cleanServices,
           fastagRecharges: cleanRecharges,
+          fastagBalance: cleanBalance,
           tyres: cleanTyres,
           clearGpsCoordinates: shouldClearCoordinates,
           currentSpeed: shouldClearCoordinates ? 0 : t.currentSpeed,
@@ -980,8 +987,12 @@ class PlannerController extends ChangeNotifier {
       final t = truckModels[i];
       final cleanServices =
           t.serviceHistory.where((s) => s.id != 'SRV-INIT').toList();
-      final cleanRecharges =
-          t.fastagRecharges.where((r) => r.id != 'FT-101').toList();
+      final cleanRecharges = t.fastagRecharges.where((r) =>
+          r.id != 'FT-101' &&
+          !r.refNumber.startsWith('FTG-') &&
+          !r.id.startsWith('FT-17')).toList();
+      final hadMock = cleanRecharges.length != t.fastagRecharges.length;
+      final cleanBal = hadMock ? 0.0 : t.fastagBalance;
       final cleanTyres = t.tyres
           .where((tyre) =>
               !tyre.tyreNumber.startsWith('MRF-782') &&
@@ -992,6 +1003,7 @@ class PlannerController extends ChangeNotifier {
       truckModels[i] = t.copyWith(
         serviceHistory: cleanServices,
         fastagRecharges: cleanRecharges,
+        fastagBalance: cleanBal,
         tyres: cleanTyres,
       );
     }
