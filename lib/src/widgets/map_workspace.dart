@@ -2802,6 +2802,9 @@ class _MapWorkspaceState extends State<MapWorkspace> {
   void _openSetLocationSheet({String? initialMode}) {
     final originCtrl = TextEditingController(text: widget.controller.origin);
     final destCtrl = TextEditingController(text: widget.controller.destination);
+    final stopCtrls = widget.controller.stops
+        .map((s) => TextEditingController(text: s))
+        .toList();
     bool locatingPickup = false;
     bool locatingDrop = false;
 
@@ -2831,507 +2834,627 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                 top: false,
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(18, 14, 18, 18),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Header & Handle
-                      Center(
-                        child: Container(
-                          width: 40,
-                          height: 4,
-                          margin: const EdgeInsets.only(bottom: 12),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFCBD5E1),
-                            borderRadius: BorderRadius.circular(2),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Header & Handle
+                        Center(
+                          child: Container(
+                            width: 40,
+                            height: 4,
+                            margin: const EdgeInsets.only(bottom: 12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFCBD5E1),
+                              borderRadius: BorderRadius.circular(2),
+                            ),
                           ),
                         ),
-                      ),
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: AppColors.primarySoft,
-                              borderRadius: BorderRadius.circular(10),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: AppColors.primarySoft,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(
+                                Icons.edit_location_alt_rounded,
+                                color: AppColors.primary,
+                                size: 20,
+                              ),
                             ),
-                            child: const Icon(
-                              Icons.edit_location_alt_rounded,
-                              color: AppColors.primary,
-                              size: 20,
+                            const SizedBox(width: 10),
+                            const Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Set Route (Pickup, Stops & Drop)',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 15,
+                                      color: AppColors.navy,
+                                    ),
+                                  ),
+                                  SizedBox(height: 2),
+                                  Text(
+                                    'Type location, add via stops, or tap map directly',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: AppColors.slate,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
+                            IconButton(
+                              icon: const Icon(Icons.close_rounded, size: 20),
+                              onPressed: () => Navigator.pop(bottomSheetContext),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+
+                        // Direct Tap Map Shortcut Bar
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
                           ),
-                          const SizedBox(width: 10),
-                          const Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                          child: Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              const Text(
+                                'Tap Map directly:',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.slate,
+                                ),
+                              ),
+                              InkWell(
+                                onTap: () {
+                                  Navigator.pop(bottomSheetContext);
+                                  setState(() => _activePinMode = 'pickup');
+                                  widget.controller.setPinMode(true);
+                                  _showMessage(
+                                      'Pickup Mode ON: Map par tap karke Pickup set karein (Green Pin).');
+                                },
+                                borderRadius: BorderRadius.circular(8),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFECFDF5),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                        color: const Color(0xFF10B981)),
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.place_rounded,
+                                          size: 14, color: Color(0xFF10B981)),
+                                      SizedBox(width: 3),
+                                      Text(
+                                        'Pickup',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w800,
+                                          color: Color(0xFF047857),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              InkWell(
+                                onTap: () {
+                                  Navigator.pop(bottomSheetContext);
+                                  setState(() => _activePinMode = 'stop');
+                                  widget.controller.setPinMode(true);
+                                  _showMessage(
+                                      'Via Stop Mode ON: Map par tap karke 3rd location / Stop jodein (Orange Pin).');
+                                },
+                                borderRadius: BorderRadius.circular(8),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFFFBEB),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                        color: const Color(0xFFF59E0B)),
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.add_location_alt_rounded,
+                                          size: 14, color: Color(0xFFF59E0B)),
+                                      SizedBox(width: 3),
+                                      Text(
+                                        '+ Via Stop',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w800,
+                                          color: Color(0xFFB45309),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              InkWell(
+                                onTap: () {
+                                  Navigator.pop(bottomSheetContext);
+                                  setState(() => _activePinMode = 'drop');
+                                  widget.controller.setPinMode(true);
+                                  _showMessage(
+                                      'Drop Mode ON: Map par tap karke Drop set karein (Red Pin).');
+                                },
+                                borderRadius: BorderRadius.circular(8),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFEF2F2),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                        color: const Color(0xFFEF4444)),
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.location_on_rounded,
+                                          size: 14, color: Color(0xFFEF4444)),
+                                      SizedBox(width: 3),
+                                      Text(
+                                        'Drop',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w800,
+                                          color: Color(0xFFB91C1C),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Pickup Field with Clear and Current GPS button
+                        TextField(
+                          controller: originCtrl,
+                          autofocus: initialMode == 'pickup',
+                          decoration: InputDecoration(
+                            labelText: '1. Pickup Point (कहाँ से माल लोड होगा)',
+                            hintText: 'e.g. Surat, Bardoli, Ring Road...',
+                            prefixIcon: const Icon(Icons.my_location_rounded,
+                                color: Color(0xFF10B981), size: 20),
+                            suffixIcon: Row(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text(
-                                  'Set Route / Pickup & Drop',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 15,
-                                    color: AppColors.navy,
+                                if (originCtrl.text.isNotEmpty)
+                                  IconButton(
+                                    icon:
+                                        const Icon(Icons.clear_rounded, size: 18),
+                                    tooltip: 'Clear Pickup',
+                                    onPressed: () {
+                                      originCtrl.clear();
+                                      setSheetState(() {});
+                                    },
                                   ),
-                                ),
-                                SizedBox(height: 2),
-                                Text(
-                                  'Type location, pick GPS, or tap map directly',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: AppColors.slate,
-                                  ),
-                                ),
+                                locatingPickup
+                                    ? const Padding(
+                                        padding: EdgeInsets.all(12),
+                                        child: SizedBox(
+                                          width: 16,
+                                          height: 16,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Color(0xFF10B981),
+                                          ),
+                                        ),
+                                      )
+                                    : IconButton(
+                                        icon: const Icon(Icons.gps_fixed_rounded,
+                                            color: Color(0xFF10B981), size: 20),
+                                        tooltip: 'Use My GPS Location as Pickup',
+                                        onPressed: () async {
+                                          setSheetState(
+                                              () => locatingPickup = true);
+                                          try {
+                                            final pos = await Geolocator
+                                                .getCurrentPosition(
+                                              locationSettings:
+                                                  const LocationSettings(
+                                                accuracy: LocationAccuracy.medium,
+                                                timeLimit: Duration(seconds: 8),
+                                              ),
+                                            );
+                                            final userPos = LatLng(
+                                                pos.latitude, pos.longitude);
+                                            final place =
+                                                await ReverseGeocodingService
+                                                    .labelFor(userPos);
+                                            originCtrl.text = place;
+                                            setState(() {
+                                              _userLocation = userPos;
+                                              _pinnedOrigin = userPos;
+                                              _activePinMode = 'drop';
+                                            });
+                                            widget.controller.setOrigin(place);
+                                            try {
+                                              _mapController.move(userPos, 15.0);
+                                            } catch (_) {}
+                                            _googleMapController?.animateCamera(
+                                              gm.CameraUpdate.newLatLngZoom(
+                                                  _googlePoint(userPos), 16),
+                                            );
+                                          } catch (e) {
+                                            _showMessage('GPS fetch skipped: $e');
+                                          } finally {
+                                            setSheetState(
+                                                () => locatingPickup = false);
+                                          }
+                                        },
+                                      ),
                               ],
                             ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide:
+                                  const BorderSide(color: Color(0xFFCBD5E1)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: const BorderSide(
+                                  color: Color(0xFF10B981), width: 1.8),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 12),
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.close_rounded, size: 20),
-                            onPressed: () => Navigator.pop(bottomSheetContext),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
-
-                      // Direct Tap Map Shortcut Bar
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF8FAFC),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
                         ),
-                        child: Row(
+                        const SizedBox(height: 8),
+
+                        // Intermediate Stops / Waypoints List & Add Button
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFFBEB),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: const Color(0xFFFDE68A)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.alt_route_rounded,
+                                      size: 16, color: Color(0xFFD97706)),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Via Stops / 3rd Location (रास्ते के स्टॉप्स): ${stopCtrls.length}',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w800,
+                                      color: Color(0xFF92400E),
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  TextButton.icon(
+                                    style: TextButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 4),
+                                      minimumSize: Size.zero,
+                                      tapTargetSize:
+                                          MaterialTapTargetSize.shrinkWrap,
+                                    ),
+                                    onPressed: () {
+                                      setSheetState(() {
+                                        stopCtrls.add(TextEditingController());
+                                      });
+                                    },
+                                    icon: const Icon(Icons.add_circle_outline_rounded,
+                                        size: 14, color: Color(0xFFD97706)),
+                                    label: const Text(
+                                      '+ Stop Jodein',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w800,
+                                        color: Color(0xFFB45309),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              if (stopCtrls.isEmpty)
+                                const Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 4),
+                                  child: Text(
+                                    'Agar 3 ya usse zyada jagah jana hai, to "+ Stop Jodein" dabakar beech ki location daalein.',
+                                    style: TextStyle(
+                                      fontSize: 10.5,
+                                      color: Color(0xFFB45309),
+                                    ),
+                                  ),
+                                ),
+                              for (int i = 0; i < stopCtrls.length; i++) ...[
+                                const SizedBox(height: 6),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: TextField(
+                                        controller: stopCtrls[i],
+                                        decoration: InputDecoration(
+                                          labelText: 'Stop ${i + 1} (तीसरी / बीच की लोकेशन)',
+                                          hintText: 'e.g. Vadodara, Bharuch, Highway Point...',
+                                          prefixIcon: const Icon(
+                                              Icons.location_on_outlined,
+                                              color: Color(0xFFF59E0B),
+                                              size: 18),
+                                          isDense: true,
+                                          contentPadding: const EdgeInsets.symmetric(
+                                              horizontal: 10, vertical: 10),
+                                          border: OutlineInputBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                            borderSide: const BorderSide(
+                                                color: Color(0xFFFCD34D)),
+                                          ),
+                                          focusedBorder: OutlineInputBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                            borderSide: const BorderSide(
+                                                color: Color(0xFFF59E0B),
+                                                width: 1.5),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    IconButton(
+                                      icon: const Icon(Icons.remove_circle_outline_rounded,
+                                          color: Color(0xFFDC2626), size: 20),
+                                      tooltip: 'Stop hatayein',
+                                      onPressed: () {
+                                        setSheetState(() {
+                                          stopCtrls.removeAt(i);
+                                        });
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+
+                        // Destination Field
+                        TextField(
+                          controller: destCtrl,
+                          autofocus: initialMode == 'drop',
+                          decoration: InputDecoration(
+                            labelText: 'Destination (Drop / आख़िरी लोकेशन)',
+                            hintText: 'e.g. Kamrej, Mumbai, Ahmedabad...',
+                            prefixIcon: const Icon(Icons.location_on_rounded,
+                                color: Color(0xFFEF4444), size: 20),
+                            suffixIcon: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (destCtrl.text.isNotEmpty)
+                                  IconButton(
+                                    icon:
+                                        const Icon(Icons.clear_rounded, size: 18),
+                                    tooltip: 'Clear Drop',
+                                    onPressed: () {
+                                      destCtrl.clear();
+                                      setSheetState(() {});
+                                    },
+                                  ),
+                                locatingDrop
+                                    ? const Padding(
+                                        padding: EdgeInsets.all(12),
+                                        child: SizedBox(
+                                          width: 16,
+                                          height: 16,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Color(0xFFEF4444),
+                                          ),
+                                        ),
+                                      )
+                                    : IconButton(
+                                        icon: const Icon(Icons.gps_fixed_rounded,
+                                            color: Color(0xFFEF4444), size: 20),
+                                        tooltip: 'Use My GPS Location as Drop',
+                                        onPressed: () async {
+                                          setSheetState(
+                                              () => locatingDrop = true);
+                                          try {
+                                            final pos = await Geolocator
+                                                .getCurrentPosition(
+                                              locationSettings:
+                                                  const LocationSettings(
+                                                accuracy: LocationAccuracy.medium,
+                                                timeLimit: Duration(seconds: 8),
+                                              ),
+                                            );
+                                            final userPos = LatLng(
+                                                pos.latitude, pos.longitude);
+                                            final place =
+                                                await ReverseGeocodingService
+                                                    .labelFor(userPos);
+                                            destCtrl.text = place;
+                                            setState(() {
+                                              _pinnedDestination = userPos;
+                                            });
+                                            widget.controller
+                                                .setDestination(place);
+                                            try {
+                                              _mapController.move(userPos, 15.0);
+                                            } catch (_) {}
+                                            _googleMapController?.animateCamera(
+                                              gm.CameraUpdate.newLatLngZoom(
+                                                  _googlePoint(userPos), 16),
+                                            );
+                                          } catch (e) {
+                                            _showMessage('GPS fetch skipped: $e');
+                                          } finally {
+                                            setSheetState(
+                                                () => locatingDrop = false);
+                                          }
+                                        },
+                                      ),
+                              ],
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide:
+                                  const BorderSide(color: Color(0xFFCBD5E1)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: const BorderSide(
+                                  color: Color(0xFFEF4444), width: 1.8),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 12),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+
+                        // Quick Selection Chips for Major Hubs
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
                           children: [
-                            const Text(
-                              'Tap Map directly:',
-                              style: TextStyle(
+                            'Surat',
+                            'Bardoli',
+                            'Kamrej',
+                            'Navsari',
+                            'Ahmedabad',
+                            'Mumbai',
+                            'Ankleshwar',
+                            'Vapi',
+                          ].map((city) {
+                            return ActionChip(
+                              label: Text(city),
+                              labelStyle: const TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700,
-                                color: AppColors.slate,
+                                color: AppColors.navy,
+                              ),
+                              backgroundColor: const Color(0xFFF1F5F9),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
+                              onPressed: () {
+                                if (originCtrl.text.trim().isEmpty) {
+                                  originCtrl.text = city;
+                                } else if (destCtrl.text.trim().isEmpty) {
+                                  destCtrl.text = city;
+                                } else {
+                                  stopCtrls.add(TextEditingController(text: city));
+                                }
+                                setSheetState(() {});
+                              },
+                            );
+                          }).toList(),
+                        ),
+                        const SizedBox(height: 14),
+
+                        // Action Buttons
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () {
+                                  Navigator.pop(bottomSheetContext);
+                                  if (!widget.controller.pinMode) {
+                                    widget.controller.togglePinMode();
+                                  }
+                                  _showMessage(
+                                    'Tap Mode Active: Map par tap karke Pickup, Stops ya Drop choose karein.',
+                                  );
+                                },
+                                icon:
+                                    const Icon(Icons.touch_app_rounded, size: 16),
+                                label: const Text('Tap on Map'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: AppColors.navy,
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
                               ),
                             ),
-                            const Spacer(),
-                            InkWell(
-                              onTap: () {
-                                Navigator.pop(bottomSheetContext);
-                                setState(() => _activePinMode = 'pickup');
-                                widget.controller.setPinMode(true);
-                                _showMessage(
-                                    'Pickup Mode ON: Map par tap karke Pickup set karein (Green Pin).');
-                              },
-                              borderRadius: BorderRadius.circular(8),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFECFDF5),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                      color: const Color(0xFF10B981)),
-                                ),
-                                child: const Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.place_rounded,
-                                        size: 14, color: Color(0xFF10B981)),
-                                    SizedBox(width: 3),
-                                    Text(
-                                      'Pick on Map',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w800,
-                                        color: Color(0xFF047857),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            InkWell(
-                              onTap: () {
-                                Navigator.pop(bottomSheetContext);
-                                setState(() => _activePinMode = 'drop');
-                                widget.controller.setPinMode(true);
-                                _showMessage(
-                                    'Drop Mode ON: Map par tap karke Drop set karein (Red Pin).');
-                              },
-                              borderRadius: BorderRadius.circular(8),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFFEF2F2),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                      color: const Color(0xFFEF4444)),
-                                ),
-                                child: const Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.location_on_rounded,
-                                        size: 14, color: Color(0xFFEF4444)),
-                                    SizedBox(width: 3),
-                                    Text(
-                                      'Drop on Map',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w800,
-                                        color: Color(0xFFB91C1C),
-                                      ),
-                                    ),
-                                  ],
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: FilledButton.icon(
+                                onPressed: () {
+                                  final orig = originCtrl.text.trim();
+                                  final dest = destCtrl.text.trim();
+                                  if (orig.isNotEmpty) {
+                                    final pt =
+                                        RouteTrafficService.parseLocation(orig);
+                                    if (pt != null) {
+                                      setState(() => _pinnedOrigin = pt);
+                                    }
+                                    widget.controller.setOrigin(orig);
+                                  }
+                                  if (dest.isNotEmpty) {
+                                    final pt =
+                                        RouteTrafficService.parseLocation(dest);
+                                    if (pt != null) {
+                                      setState(() => _pinnedDestination = pt);
+                                    }
+                                    widget.controller.setDestination(dest);
+                                  }
+                                  // Update stops in controller
+                                  final activeStops = stopCtrls
+                                      .map((c) => c.text.trim())
+                                      .where((s) => s.isNotEmpty)
+                                      .toList();
+                                  widget.controller.stops
+                                    ..clear()
+                                    ..addAll(activeStops);
+                                  widget.controller.notifyListeners();
+
+                                  Navigator.pop(bottomSheetContext);
+                                  _showMessage(
+                                      'Locations updated! 3+ location route calculating...');
+                                },
+                                icon: const Icon(Icons.check_circle_rounded,
+                                    size: 16),
+                                label: const Text('Apply Route'),
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                  foregroundColor: Colors.white,
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
                                 ),
                               ),
                             ),
                           ],
                         ),
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Pickup Field with Clear and Current GPS button
-                      TextField(
-                        controller: originCtrl,
-                        autofocus: initialMode == 'pickup',
-                        decoration: InputDecoration(
-                          labelText: '1. Pickup Point (कहाँ से माल लोड होगा)',
-                          hintText: 'e.g. Surat, Bardoli, Ring Road...',
-                          prefixIcon: const Icon(Icons.my_location_rounded,
-                              color: Color(0xFF10B981), size: 20),
-                          suffixIcon: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (originCtrl.text.isNotEmpty)
-                                IconButton(
-                                  icon:
-                                      const Icon(Icons.clear_rounded, size: 18),
-                                  tooltip: 'Clear Pickup',
-                                  onPressed: () {
-                                    originCtrl.clear();
-                                    setSheetState(() {});
-                                  },
-                                ),
-                              locatingPickup
-                                  ? const Padding(
-                                      padding: EdgeInsets.all(12),
-                                      child: SizedBox(
-                                        width: 16,
-                                        height: 16,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          color: Color(0xFF10B981),
-                                        ),
-                                      ),
-                                    )
-                                  : IconButton(
-                                      icon: const Icon(Icons.gps_fixed_rounded,
-                                          color: Color(0xFF10B981), size: 20),
-                                      tooltip: 'Use My GPS Location as Pickup',
-                                      onPressed: () async {
-                                        setSheetState(
-                                            () => locatingPickup = true);
-                                        try {
-                                          final pos = await Geolocator
-                                              .getCurrentPosition(
-                                            locationSettings:
-                                                const LocationSettings(
-                                              accuracy: LocationAccuracy.medium,
-                                              timeLimit: Duration(seconds: 8),
-                                            ),
-                                          );
-                                          final userPos = LatLng(
-                                              pos.latitude, pos.longitude);
-                                          final place =
-                                              await ReverseGeocodingService
-                                                  .labelFor(userPos);
-                                          originCtrl.text = place;
-                                          setState(() {
-                                            _userLocation = userPos;
-                                            _pinnedOrigin = userPos;
-                                            _activePinMode = 'drop';
-                                          });
-                                          widget.controller.setOrigin(place);
-                                          try {
-                                            _mapController.move(userPos, 15.0);
-                                          } catch (_) {}
-                                          _googleMapController?.animateCamera(
-                                            gm.CameraUpdate.newLatLngZoom(
-                                                _googlePoint(userPos), 16),
-                                          );
-                                        } catch (e) {
-                                          _showMessage('GPS fetch skipped: $e');
-                                        } finally {
-                                          setSheetState(
-                                              () => locatingPickup = false);
-                                        }
-                                      },
-                                    ),
-                            ],
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide:
-                                const BorderSide(color: Color(0xFFCBD5E1)),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: const BorderSide(
-                                color: Color(0xFF10B981), width: 1.8),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 12),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-
-                      // Swap Origin and Destination
-                      Center(
-                        child: InkWell(
-                          onTap: () {
-                            final tmp = originCtrl.text;
-                            originCtrl.text = destCtrl.text;
-                            destCtrl.text = tmp;
-                            final tmpPoint = _pinnedOrigin;
-                            setState(() {
-                              _pinnedOrigin = _pinnedDestination;
-                              _pinnedDestination = tmpPoint;
-                            });
-                            setSheetState(() {});
-                          },
-                          borderRadius: BorderRadius.circular(20),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF1F5F9),
-                              borderRadius: BorderRadius.circular(15),
-                              border:
-                                  Border.all(color: const Color(0xFFCBD5E1)),
-                            ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.swap_vert_rounded,
-                                    size: 16, color: AppColors.navy),
-                                SizedBox(width: 4),
-                                Text(
-                                  'Swap Pickup & Drop',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.navy,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-
-                      // Destination Field
-                      TextField(
-                        controller: destCtrl,
-                        autofocus: initialMode == 'drop',
-                        decoration: InputDecoration(
-                          labelText: '2. Destination (Drop / कहाँ पहुँचना है)',
-                          hintText: 'e.g. Kamrej, Mumbai, Ahmedabad...',
-                          prefixIcon: const Icon(Icons.location_on_rounded,
-                              color: Color(0xFFEF4444), size: 20),
-                          suffixIcon: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (destCtrl.text.isNotEmpty)
-                                IconButton(
-                                  icon:
-                                      const Icon(Icons.clear_rounded, size: 18),
-                                  tooltip: 'Clear Drop',
-                                  onPressed: () {
-                                    destCtrl.clear();
-                                    setSheetState(() {});
-                                  },
-                                ),
-                              locatingDrop
-                                  ? const Padding(
-                                      padding: EdgeInsets.all(12),
-                                      child: SizedBox(
-                                        width: 16,
-                                        height: 16,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          color: Color(0xFFEF4444),
-                                        ),
-                                      ),
-                                    )
-                                  : IconButton(
-                                      icon: const Icon(Icons.gps_fixed_rounded,
-                                          color: Color(0xFFEF4444), size: 20),
-                                      tooltip: 'Use My GPS Location as Drop',
-                                      onPressed: () async {
-                                        setSheetState(
-                                            () => locatingDrop = true);
-                                        try {
-                                          final pos = await Geolocator
-                                              .getCurrentPosition(
-                                            locationSettings:
-                                                const LocationSettings(
-                                              accuracy: LocationAccuracy.medium,
-                                              timeLimit: Duration(seconds: 8),
-                                            ),
-                                          );
-                                          final userPos = LatLng(
-                                              pos.latitude, pos.longitude);
-                                          final place =
-                                              await ReverseGeocodingService
-                                                  .labelFor(userPos);
-                                          destCtrl.text = place;
-                                          setState(() {
-                                            _pinnedDestination = userPos;
-                                          });
-                                          widget.controller
-                                              .setDestination(place);
-                                          try {
-                                            _mapController.move(userPos, 15.0);
-                                          } catch (_) {}
-                                          _googleMapController?.animateCamera(
-                                            gm.CameraUpdate.newLatLngZoom(
-                                                _googlePoint(userPos), 16),
-                                          );
-                                        } catch (e) {
-                                          _showMessage('GPS fetch skipped: $e');
-                                        } finally {
-                                          setSheetState(
-                                              () => locatingDrop = false);
-                                        }
-                                      },
-                                    ),
-                            ],
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide:
-                                const BorderSide(color: Color(0xFFCBD5E1)),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: const BorderSide(
-                                color: Color(0xFFEF4444), width: 1.8),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 12),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Quick Selection Chips for Major Hubs
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: [
-                          'Surat',
-                          'Bardoli',
-                          'Kamrej',
-                          'Navsari',
-                          'Ahmedabad',
-                          'Mumbai',
-                          'Ankleshwar',
-                          'Vapi',
-                        ].map((city) {
-                          return ActionChip(
-                            label: Text(city),
-                            labelStyle: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.navy,
-                            ),
-                            backgroundColor: const Color(0xFFF1F5F9),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
-                            onPressed: () {
-                              if (originCtrl.text.trim().isEmpty) {
-                                originCtrl.text = city;
-                              } else {
-                                destCtrl.text = city;
-                              }
-                              setSheetState(() {});
-                            },
-                          );
-                        }).toList(),
-                      ),
-                      const SizedBox(height: 14),
-
-                      // Action Buttons
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () {
-                                Navigator.pop(bottomSheetContext);
-                                if (!widget.controller.pinMode) {
-                                  widget.controller.togglePinMode();
-                                }
-                                _showMessage(
-                                  'Tap Mode Active: Map par tap karke Pickup aur Drop choose karein.',
-                                );
-                              },
-                              icon:
-                                  const Icon(Icons.touch_app_rounded, size: 16),
-                              label: const Text('Tap on Map'),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: AppColors.navy,
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 12),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: FilledButton.icon(
-                              onPressed: () {
-                                final orig = originCtrl.text.trim();
-                                final dest = destCtrl.text.trim();
-                                if (orig.isNotEmpty) {
-                                  final pt =
-                                      RouteTrafficService.parseLocation(orig);
-                                  if (pt != null) {
-                                    setState(() => _pinnedOrigin = pt);
-                                  }
-                                  widget.controller.setOrigin(orig);
-                                }
-                                if (dest.isNotEmpty) {
-                                  final pt =
-                                      RouteTrafficService.parseLocation(dest);
-                                  if (pt != null) {
-                                    setState(() => _pinnedDestination = pt);
-                                  }
-                                  widget.controller.setDestination(dest);
-                                }
-                                Navigator.pop(bottomSheetContext);
-                                _showMessage(
-                                    'Locations updated! Calculating route...');
-                              },
-                              icon: const Icon(Icons.check_circle_rounded,
-                                  size: 16),
-                              label: const Text('Apply Route'),
-                              style: FilledButton.styleFrom(
-                                backgroundColor: AppColors.primary,
-                                foregroundColor: Colors.white,
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 12),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -3522,7 +3645,24 @@ class _MapWorkspaceState extends State<MapWorkspace> {
       return;
     }
 
-    // 1. If in Drop mode, ALWAYS set / update Drop!
+    // 1. If in Stop mode, add an intermediate stop / waypoint!
+    if (_activePinMode == 'stop') {
+      widget.controller.addStop(coordString);
+      final stopNum = widget.controller.stops.length;
+      _showMessage('Via Stop $stopNum Pinned ($coordString). Name resolving...');
+      ReverseGeocodingService.labelFor(point).then((locationName) {
+        if (!mounted) return;
+        final currentIdx = widget.controller.stops.indexOf(coordString);
+        if (currentIdx >= 0) {
+          widget.controller.updateStop(currentIdx, locationName);
+          _showMessage('Via Stop ${currentIdx + 1} Set: $locationName');
+        }
+      });
+      widget.controller.setPinMode(false);
+      return;
+    }
+
+    // 2. If in Drop mode, ALWAYS set / update Drop!
     if (_activePinMode == 'drop') {
       if (widget.controller.origin.trim().isEmpty || _pinnedOrigin == null) {
         final fallbackOrigin = _userLocation ?? const LatLng(21.1702, 72.8311);
@@ -4324,6 +4464,12 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                                   _showMessage(
                                       'Drop Mode ON: Map par tap karein drop point set karne ke liye (Red Pin).');
                                 },
+                                onSetStop: () {
+                                  setState(() => _activePinMode = 'stop');
+                                  widget.controller.setPinMode(true);
+                                  _showMessage(
+                                      'Via Stop Mode ON: Map par tap karke 3rd location / Stop jodein (Orange Pin).');
+                                },
                               ),
                             ),
                           )
@@ -4355,6 +4501,20 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                                     widget.controller.setPinMode(true);
                                     _showMessage(
                                         'Pickup Mode ON: Map par tap karein pickup badalne ke liye (Green Pin).');
+                                  },
+                                ),
+                                _MapButton(
+                                  icon: Icons.add_location_alt_rounded,
+                                  label: widget.controller.stops.isNotEmpty
+                                      ? '+ Stop ()'
+                                      : '+ Stop',
+                                  active: _activePinMode == 'stop',
+                                  activeColor: const Color(0xFFF59E0B),
+                                  onTap: () {
+                                    setState(() => _activePinMode = 'stop');
+                                    widget.controller.setPinMode(true);
+                                    _showMessage(
+                                        'Via Stop Mode ON: Map par tap karke 3rd location / Stop jodein (Orange Pin).');
                                   },
                                 ),
                                 _MapButton(
@@ -4724,6 +4884,43 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                                       color: _activePinMode == 'pickup'
                                           ? Colors.white
                                           : const Color(0xFF047857),
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 5),
+                              InkWell(
+                                borderRadius: BorderRadius.circular(14),
+                                onTap: () {
+                                  setState(() => _activePinMode = 'stop');
+                                  widget.controller.setPinMode(true);
+                                  _showMessage(
+                                      'Via Stop Mode ON: Map par tap karke 3rd location / Stop jodein (Orange Pin).');
+                                },
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 180),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 9, vertical: 4.5),
+                                  decoration: BoxDecoration(
+                                    color: _activePinMode == 'stop'
+                                        ? const Color(0xFFF59E0B)
+                                        : const Color(0xFFFFFBEB),
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(
+                                      color: _activePinMode == 'stop'
+                                          ? const Color(0xFFD97706)
+                                          : const Color(0xFFFDE68A),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    widget.controller.stops.isNotEmpty ? '+ Stop ()' : '+ Stop',
+                                    style: TextStyle(
+                                      color: _activePinMode == 'stop'
+                                          ? Colors.white
+                                          : const Color(0xFFB45309),
                                       fontSize: 11,
                                       fontWeight: FontWeight.w800,
                                     ),
@@ -6180,6 +6377,7 @@ class _CompactMapBar extends StatelessWidget {
     required this.onSetLocation,
     required this.onSetPickup,
     required this.onSetDrop,
+    required this.onSetStop,
   });
 
   final PlannerController controller;
@@ -6194,6 +6392,7 @@ class _CompactMapBar extends StatelessWidget {
   final VoidCallback onSetLocation;
   final VoidCallback onSetPickup;
   final VoidCallback onSetDrop;
+  final VoidCallback onSetStop;
 
   @override
   Widget build(BuildContext context) {
@@ -6295,6 +6494,52 @@ class _CompactMapBar extends StatelessWidget {
                       color: activePinMode == 'pickup'
                           ? Colors.white
                           : const Color(0xFF047857),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
+
+          // Dedicated Add Via-Stop Button (Orange)
+          InkWell(
+            onTap: onSetStop,
+            borderRadius: BorderRadius.circular(7),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+              decoration: BoxDecoration(
+                color: activePinMode == 'stop'
+                    ? const Color(0xFFF59E0B)
+                    : const Color(0xFFFFFBEB),
+                borderRadius: BorderRadius.circular(7),
+                border: Border.all(
+                  color: activePinMode == 'stop'
+                      ? const Color(0xFFD97706)
+                      : const Color(0xFFFDE68A),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.add_location_alt_rounded,
+                    size: 13,
+                    color: activePinMode == 'stop'
+                        ? Colors.white
+                        : const Color(0xFFB45309),
+                  ),
+                  const SizedBox(width: 2),
+                  Text(
+                    controller.stops.isNotEmpty ? '+Stop()' : '+Stop',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: activePinMode == 'stop'
+                          ? Colors.white
+                          : const Color(0xFFB45309),
                     ),
                   ),
                 ],
