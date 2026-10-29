@@ -68,6 +68,24 @@ class FirebaseBackendService {
     }
   }
 
+  Future<bool> deleteSeatbeltRecord(String rawDocumentId) async {
+    if (!isConfigured) return true;
+    final documentId =
+        rawDocumentId.trim().replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
+    if (documentId.isEmpty) return false;
+    try {
+      await FirebaseFirestore.instance
+          .collection('seatbelt_records')
+          .doc(documentId)
+          .delete()
+          .timeout(const Duration(seconds: 12));
+      return true;
+    } catch (e) {
+      debugPrint('[FirebaseSync] Failed to delete seatbelt_record: ');
+      return false;
+    }
+  }
+
   Future<bool> syncSeatbeltRecord({
     required SeatbeltRecord record,
     http.Client? client,

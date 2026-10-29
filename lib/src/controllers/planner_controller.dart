@@ -29,6 +29,7 @@ class PlannerController extends ChangeNotifier {
 
   static const _driversKey = 'transport_one.drivers';
   static const _deletedDriversKey = 'transport_one.deleted_drivers';
+  static const _deletedSeatbeltIdsKey = 'transport_one.deleted_seatbelt_ids';
   static const _deletedTripsKey = 'transport_one.deleted_trips';
   static const _truckModelsKey = 'transport_one.truck_models';
   static const _tripsKey = 'transport_one.trips';
@@ -50,6 +51,7 @@ class PlannerController extends ChangeNotifier {
   static const _lastPhoneKey = 'transport_one.last_phone';
   static const _fleetBootstrapKey = 'transport_one.fleet_bootstrap_v5';
   final Set<String> deletedDriverEmails = {};
+  final Set<String> deletedSeatbeltIds = {};
   final Set<String> deletedTripReferences = {};
 
   /// Display-only admin address. Authorization comes exclusively from the
@@ -558,6 +560,11 @@ class PlannerController extends ChangeNotifier {
         }
       }
 
+      final loadedDeletedSeatbelts = await _storage.getString(_deletedSeatbeltIdsKey);
+      if (loadedDeletedSeatbelts != null) {
+        final ids = jsonDecode(loadedDeletedSeatbelts) as List<dynamic>;
+        deletedSeatbeltIds.addAll(ids.map((e) => e.toString()));
+      }
       final loadedDeleted = await _storage.getString(_deletedDriversKey);
       if (loadedDeleted != null && loadedDeleted.isNotEmpty) {
         try {
@@ -1252,6 +1259,7 @@ class PlannerController extends ChangeNotifier {
     if (records.isEmpty) return;
     var changed = false;
     for (final remote in records) {
+      if (deletedSeatbeltIds.contains(remote.id)) continue;
       final idx = seatbeltRecords.indexWhere((r) => r.id == remote.id);
       if (idx < 0) {
         seatbeltRecords.add(remote);
@@ -3775,15 +3783,23 @@ class PlannerController extends ChangeNotifier {
   }
 
   Future<void> removeSeatbeltRecord(String id) async {
+    deletedSeatbeltIds.add(id);
     seatbeltRecords.removeWhere((r) => r.id == id);
     notifyListeners();
     await _saveSeatbeltRecords();
+    await _storage.setString(_deletedSeatbeltIdsKey, jsonEncode(deletedSeatbeltIds.toList()));
+    unawaited(FirebaseBackendService.instance.deleteSeatbeltRecord(id));
   }
 
   Future<void> clearSeatbeltRecords() async {
+    for (final r in seatbeltRecords) {
+      deletedSeatbeltIds.add(r.id);
+      unawaited(FirebaseBackendService.instance.deleteSeatbeltRecord(r.id));
+    }
     seatbeltRecords.clear();
     notifyListeners();
     await _saveSeatbeltRecords();
+    await _storage.setString(_deletedSeatbeltIdsKey, jsonEncode(deletedSeatbeltIds.toList()));
   }
 
   Future<void> _saveDeletedDrivers() => _storage.setString(
