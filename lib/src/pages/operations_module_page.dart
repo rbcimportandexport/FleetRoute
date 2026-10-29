@@ -1,3 +1,4 @@
+import '../services/real_fastag_service.dart';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -1486,6 +1487,44 @@ class _FastagRechargeDialogState extends State<_FastagRechargeDialog> {
     super.dispose();
   }
 
+  Future<void> _payRealUpi() async {
+    final amt = double.tryParse(_amountCtrl.text.trim()) ?? 0.0;
+    if (amt <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a valid recharge amount'),
+          backgroundColor: Color(0xFFDC2626),
+        ),
+      );
+      return;
+    }
+    String bankId = 'icici';
+    if (_provider.contains('IDFC')) bankId = 'idfc';
+    if (_provider.contains('Axis')) bankId = 'axis';
+    if (_provider.contains('SBI')) bankId = 'sbi';
+    if (_provider.contains('Paytm') || _provider.contains('HDFC')) bankId = 'paytm';
+
+    final launched = await RealFastagService.instance.initiateRealUpiPayment(
+      vehicleNumber: widget.vehicle.code,
+      bankId: bankId,
+      amount: amt,
+      vehicleName: widget.vehicle.name,
+    );
+
+    if (launched) {
+      await _submit();
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not open UPI payment app. Please verify payment apps on device.'),
+            backgroundColor: Color(0xFFDC2626),
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _submit() async {
     final amt = double.tryParse(_amountCtrl.text.trim()) ?? 0.0;
     if (amt <= 0) {
@@ -1591,7 +1630,15 @@ class _FastagRechargeDialogState extends State<_FastagRechargeDialog> {
         TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancel')),
-        FilledButton(onPressed: _submit, child: const Text('Recharge Now')),
+        OutlinedButton(
+          onPressed: _submit,
+          child: const Text('Save Manual Entry'),
+        ),
+        FilledButton(
+          onPressed: _payRealUpi,
+          style: FilledButton.styleFrom(backgroundColor: const Color(0xFF10B981)),
+          child: const Text('Pay via UPI / FASTag'),
+        ),
       ],
     );
   }
