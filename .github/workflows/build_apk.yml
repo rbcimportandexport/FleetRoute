@@ -1,0 +1,83 @@
+name: Build & Release Android APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Signed APK & Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Decode Keystore and Signing Config
+        run: |
+          mkdir -p android/app
+          # Decode keystore and key.properties from GitHub Secrets if available,
+          # otherwise fallback to repo build keys
+          if [ -n "${{ secrets.KEYSTORE_JKS_BASE64 }}" ]; then
+            echo "${{ secrets.KEYSTORE_JKS_BASE64 }}" | base64 --decode > android/app/transportone-release.jks
+          else
+            echo "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" | base64 --decode > android/app/transportone-release.jks
+          fi
+
+          if [ -n "${{ secrets.KEY_PROPERTIES_BASE64 }}" ]; then
+            echo "${{ secrets.KEY_PROPERTIES_BASE64 }}" | base64 --decode > android/key.properties
+          else
+            echo "storePassword=TransportOneSecureKey2026" > android/key.properties
+            echo "keyPassword=TransportOneSecureKey2026" >> android/key.properties
+            echo "keyAlias=transportone" >> android/key.properties
+            echo "storeFile=transportone-release.jks" >> android/key.properties
+          fi
+
+      - name: Build Android Release APK
+        run: flutter build apk --release
+
+      - name: Rename APK for Distribution
+        run: |
+          cp build/app/outputs/flutter-apk/app-release.apk TransportOne-Release.apk
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TransportOne-Release-APK
+          path: TransportOne-Release.apk
+          if-no-files-found: error
+
+      - name: Create or Update GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
+        with:
+          tag_name: latest
+          name: "Transport One Latest Release (Auto-Updated)"
+          body: |
+            ## Transport One Latest Auto-Build
+            This APK is automatically built on every `git push` to `main`.
+            
+            - **Commit:** ${{ github.sha }}
+            - **Date:** $(date -u +'%Y-%m-%d %H:%M UTC')
+            
+            Download the attached `TransportOne-Release.apk` directly to your phone.
+          files: TransportOne-Release.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
