@@ -209,10 +209,21 @@ class _PreTripCustomerDetailsDialogState
           : '';
 
       final activeDriver = widget.controller.selectedDriver;
-      final driverName = widget.controller.loggedInName ??
-          activeDriver?.name ??
-          widget.controller.activeDriverName ??
-          'Primary Driver';
+      String driverName = '';
+      if (widget.controller.isDriver) {
+        driverName = widget.controller.loggedInName ?? activeDriver?.name ?? 'Driver';
+      } else {
+        final assignedToVehicle = widget.controller.drivers.where(
+          (d) => d.assignedVehicle.trim().toUpperCase() == vehicleCode.trim().toUpperCase(),
+        );
+        if (assignedToVehicle.isNotEmpty) {
+          driverName = assignedToVehicle.first.name;
+        } else if (activeDriver != null && !activeDriver.name.toLowerCase().contains('admin')) {
+          driverName = activeDriver.name;
+        } else {
+          driverName = widget.controller.activeDriverName ?? 'Driver';
+        }
+      }
 
       // Find matching active trip or create a new trip record
       final existingTripIdx = widget.controller.trips.indexWhere(

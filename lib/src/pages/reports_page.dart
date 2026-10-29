@@ -106,6 +106,7 @@ class _ReportsPageState extends State<ReportsPage> {
           'Destination (To)',
           'Vehicle',
           'Driver',
+          'Assigned By',
           'Speed / Dist',
           'Diesel Exp',
           'Total Exp',
@@ -151,7 +152,13 @@ class _ReportsPageState extends State<ReportsPage> {
                 cleanLoc(t.origin),
                 cleanLoc(t.destination),
                 t.assignedVehicle.isNotEmpty ? t.assignedVehicle : 'UNASSIGNED',
-                t.assignedDriver.isNotEmpty ? t.assignedDriver : 'UNASSIGNED',
+                // Proper driver name resolution: if trip has admin name stored, lookup vehicle assigned driver
+                (t.assignedDriver.isNotEmpty && !t.assignedDriver.toLowerCase().contains('admin'))
+                    ? t.assignedDriver
+                    : (widget.controller.drivers.where((d) => d.assignedVehicle.trim().toUpperCase() == t.assignedVehicle.trim().toUpperCase()).isNotEmpty
+                        ? widget.controller.drivers.where((d) => d.assignedVehicle.trim().toUpperCase() == t.assignedVehicle.trim().toUpperCase()).first.name
+                        : (t.assignedDriver.isNotEmpty ? t.assignedDriver : 'UNASSIGNED')),
+                'Admin (Saurabh Yadav)', // Assigned By
                 speedInfo,
                 dieselInfo,
                 totalExpInfo,
