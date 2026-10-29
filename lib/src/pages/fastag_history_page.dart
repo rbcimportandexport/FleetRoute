@@ -1,3 +1,4 @@
+import '../widgets/upi_scan_and_pay_dialog.dart';
 import 'package:flutter/material.dart';
 
 import '../controllers/planner_controller.dart';
@@ -552,18 +553,11 @@ class _FastagHistoryPageState extends State<FastagHistoryPage> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: _ActionCard(
-                        icon: Icons.qr_code_2_rounded,
-                        title: 'Scan QR Code',
-                        subtitle: 'Instant NETC VPA',
+                        icon: Icons.qr_code_scanner_rounded,
+                        title: 'Scan Any UPI QR',
+                        subtitle: 'Scan & Pay to Anyone',
                         color: const Color(0xFF0D9488),
-                        onTap: () => showDialog<void>(
-                          context: context,
-                          builder: (_) => FastagRechargeDialog(
-                            vehicle: vehicle,
-                            truckIndex: tIdx >= 0 ? tIdx : 0,
-                            controller: widget.controller,
-                          ),
-                        ),
+                        onTap: () => UpiScanAndPayDialog.show(context),
                       ),
                     ),
                   ],
