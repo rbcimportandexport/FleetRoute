@@ -3516,11 +3516,9 @@ class _MapWorkspaceState extends State<MapWorkspace> {
 
     final coordString = _format(point);
 
-    // If both Pickup and Drop exist, prompt to add intermediate waypoint or adjust
-    if (_effectiveOrigin != null &&
-        _effectiveDestination != null &&
-        !widget.controller.pinMode) {
-      _showMapWaypointActionSheet(point);
+    // Only show waypoint sheet if user explicitly turned on Pin Mode or taps to edit.
+    // If pinMode is false, regular map dragging or tapping should NOT pop up the sheet!
+    if (!widget.controller.pinMode) {
       return;
     }
 
@@ -4280,6 +4278,13 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                     isLocked: _cameraFollowLocked,
                     onRecenter: _recenterNavCamera,
                     onExit: _stopLiveNavigation,
+                    isSatellite: widget.controller.satellite,
+                    onToggleSatellite: () {
+                      final next = widget.controller.mapStyle == MapViewStyle.satellite
+                          ? MapViewStyle.street
+                          : MapViewStyle.satellite;
+                      widget.controller.setMapStyle(next);
+                    },
                   ),
                 ),
 
@@ -4963,6 +4968,8 @@ class _NavigationTopHud extends StatelessWidget {
     required this.isLocked,
     required this.onRecenter,
     required this.onExit,
+    this.isSatellite = false,
+    this.onToggleSatellite,
   });
 
   final NavigationTurnInfo? turnInfo;
@@ -4975,6 +4982,8 @@ class _NavigationTopHud extends StatelessWidget {
   final bool isLocked;
   final VoidCallback onRecenter;
   final VoidCallback onExit;
+  final bool isSatellite;
+  final VoidCallback? onToggleSatellite;
 
   @override
   Widget build(BuildContext context) {
@@ -5123,13 +5132,14 @@ class _NavigationTopHud extends StatelessWidget {
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
                       color: isOverspeeding
-                          ? const Color(0xFFFEE2E2)
-                          : AppColors.blueSoft,
+                          ? const Color(0xFFFEE2E8)
+                          : (speed < 1.0 ? const Color(0xFFF1F5F9) : const Color(0xFFDCFCE7)),
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
                         color: isOverspeeding
                             ? const Color(0xFFEF4444)
-                            : const Color(0xFFD8E1EE),
+                            : (speed < 1.0 ? const Color(0xFFCBD5E1) : const Color(0xFF10B981)),
+                        width: 1.2,
                       ),
                     ),
                     child: Column(
@@ -5140,9 +5150,9 @@ class _NavigationTopHud extends StatelessWidget {
                             color: isOverspeeding
                                 ? const Color(0xFFDC2626)
                                 : speed < 1.0
-                                    ? AppColors.slate
-                                    : AppColors.blue,
-                            fontSize: 17,
+                                    ? AppColors.navy
+                                    : const Color(0xFF047857),
+                            fontSize: 18,
                             fontWeight: FontWeight.w900,
                             height: 1,
                           ),
@@ -5151,20 +5161,45 @@ class _NavigationTopHud extends StatelessWidget {
                           isOverspeeding
                               ? 'OVERSPEED'
                               : speed < 1.0
-                                  ? 'STOPPED'
+                                  ? 'km/h · 0'
                                   : 'km/h',
                           style: TextStyle(
-                            color: isOverspeeding || speed < 1.0
+                            color: isOverspeeding
                                 ? const Color(0xFFEF4444)
-                                : AppColors.slate,
-                            fontSize: 7.5,
+                                : speed < 1.0
+                                    ? AppColors.slate
+                                    : const Color(0xFF047857),
+                            fontSize: 8.5,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  SizedBox(width: compact ? 5 : 10),
+                  SizedBox(width: compact ? 4 : 8),
+
+                  // Satellite Mode Toggle Button
+                  if (onToggleSatellite != null)
+                    IconButton(
+                      onPressed: onToggleSatellite,
+                      tooltip: isSatellite ? 'Normal Map Mode' : 'Satellite (सैटेलाइट) Mode',
+                      style: IconButton.styleFrom(
+                        backgroundColor: isSatellite
+                            ? const Color(0xFF2563EB)
+                            : const Color(0xFFF1F5F9),
+                        foregroundColor: isSatellite ? Colors.white : AppColors.navy,
+                        visualDensity: compact
+                            ? VisualDensity.compact
+                            : VisualDensity.standard,
+                      ),
+                      icon: Icon(
+                        isSatellite
+                            ? Icons.satellite_alt_rounded
+                            : Icons.satellite_alt_outlined,
+                        size: 20,
+                      ),
+                    ),
+                  SizedBox(width: compact ? 4 : 8),
 
                   // Exit Navigation Button
                   IconButton(

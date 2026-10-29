@@ -292,8 +292,12 @@ class _DashboardPageState extends State<DashboardPage>
   }
 
   Widget _buildSimpleWelcome(PlannerController ctrl) {
-    final activeTrips =
-        ctrl.trips.where((trip) => trip.status == 'in_transit').length;
+    final activeTrips = ctrl.trips
+        .where((trip) =>
+            trip.status == 'assigned' ||
+            trip.status == 'in_progress' ||
+            trip.status == 'in_transit')
+        .length;
     return Row(
       children: [
         Container(
@@ -376,7 +380,12 @@ class _DashboardPageState extends State<DashboardPage>
     final openAlerts = ctrl.alerts
         .where((a) => !a.isResolved && a.category != 'compliance')
         .length;
-    final transit = ctrl.trips.where((t) => t.status == 'in_transit').length;
+    final transit = ctrl.trips
+        .where((t) =>
+            t.status == 'assigned' ||
+            t.status == 'in_progress' ||
+            t.status == 'in_transit')
+        .length;
     final stats = [
       (
         'Drivers',

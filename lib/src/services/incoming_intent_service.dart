@@ -169,6 +169,30 @@ class IncomingIntentService {
       r'([-+]?\d{1,2}(?:\.\d{3,}))[,\s]+([-+]?\d{1,3}(?:\.\d{3,}))',
     );
 
+    // Also check protobuf / URL query coordinates e.g. !3d-29.5317556!4d137.4691394 or 3d21.123!4d72.567
+    final protoLatLngPattern = RegExp(
+      r'[!&?]3d([-+]?\d{1,2}(?:\.\d{3,}))[!&?]4d([-+]?\d{1,3}(?:\.\d{3,}))',
+    );
+    final protoMatch = protoLatLngPattern.firstMatch(decoded);
+    if (protoMatch != null) {
+      final lat = double.tryParse(protoMatch.group(1)!);
+      final lng = double.tryParse(protoMatch.group(2)!);
+      if (lat != null &&
+          lng != null &&
+          lat >= -90 &&
+          lat <= 90 &&
+          lng >= -180 &&
+          lng <= 180) {
+        final placeMatch = RegExp(r'/place/([^/@!]+)').firstMatch(decoded);
+        var label = placeMatch?.group(1)?.replaceAll('+', ' ')?.trim();
+        return IncomingLocationData(
+          coordinates: LatLng(lat, lng),
+          addressQuery: (label != null && label.isNotEmpty) ? label : null,
+          rawUri: clean,
+        );
+      }
+    }
+
     final match = latLngPattern.firstMatch(decoded);
     if (match != null) {
       final lat = double.tryParse(match.group(1)!);
