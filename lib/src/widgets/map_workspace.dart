@@ -894,27 +894,48 @@ class _MapWorkspaceState extends State<MapWorkspace> {
             .code
         : '';
 
-    // 1. Mandatory Pre-Trip Customer & Cargo Intake Dialog
-    final hasCustomerDetails = await PreTripCustomerDetailsDialog.show(
-      context,
-      controller: widget.controller,
-      origin: widget.controller.origin,
-      destination: widget.controller.destination,
-    );
-
-    if (!mounted) {
-      _isVerifyingSeatbelt = false;
-      return;
+    // 1. Check if an active Trip already exists with customer & cargo details configured
+    final origKey = widget.controller.origin.trim().toLowerCase();
+    final destKey = widget.controller.destination.trim().toLowerCase();
+    TripRecord? matchingActiveTrip;
+    for (final t in widget.controller.trips) {
+      if (t.status != 'completed' && t.status != 'cancelled') {
+        final tOrig = t.origin.trim().toLowerCase();
+        final tDest = t.destination.trim().toLowerCase();
+        final matchOrigin = tOrig.isNotEmpty && (tOrig.contains(origKey) || origKey.contains(tOrig));
+        final matchDest = tDest.isNotEmpty && (tDest.contains(destKey) || destKey.contains(tDest));
+        if (matchOrigin || matchDest) {
+          if (t.customerName.trim().isNotEmpty && t.cargoDescription.trim().isNotEmpty) {
+            matchingActiveTrip = t;
+            break;
+          }
+        }
+      }
     }
 
-    if (!hasCustomerDetails) {
-      _isVerifyingSeatbelt = false;
-      if (widget.controller.isNavigating) {
-        widget.controller.stopNavigation();
+    // Only ask if details are NOT already configured in an existing active trip!
+    if (matchingActiveTrip == null) {
+      final hasCustomerDetails = await PreTripCustomerDetailsDialog.show(
+        context,
+        controller: widget.controller,
+        origin: widget.controller.origin,
+        destination: widget.controller.destination,
+      );
+
+      if (!mounted) {
+        _isVerifyingSeatbelt = false;
+        return;
       }
-      _showMessage(
-          'Trip Cancelled: Customer aur trip details bharna zaroori hai.');
-      return;
+
+      if (!hasCustomerDetails) {
+        _isVerifyingSeatbelt = false;
+        if (widget.controller.isNavigating) {
+          widget.controller.stopNavigation();
+        }
+        _showMessage(
+            'Trip Cancelled: Customer aur trip details bharna zaroori hai.');
+        return;
+      }
     }
 
     // 2. Mandatory Pre-Trip Driver Seatbelt & Cabin Safety Check
