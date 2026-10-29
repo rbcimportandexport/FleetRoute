@@ -102,26 +102,64 @@ class _ReportsPageState extends State<ReportsPage> {
         final headers = [
           'Trip #',
           'Customer',
-          'Origin',
-          'Destination',
+          'Origin (From)',
+          'Destination (To)',
           'Vehicle',
           'Driver',
+          'Speed / Dist',
+          'Diesel Exp',
+          'Total Exp',
+          'Proof / POD',
           'Status',
           'Freight'
         ];
+
+        String cleanLoc(String raw) {
+          if (raw.trim().isEmpty) return '-';
+          // If contains coordinates in parentheses, extract the readable name part
+          if (raw.contains('(')) {
+            final namePart = raw.split('(').first.trim();
+            if (namePart.isNotEmpty && !RegExp(r'^\d+(\.\d+)?$').hasMatch(namePart)) {
+              return namePart;
+            }
+          }
+          // If it's raw lat,lng numbers like 21.163803, 73.005630
+          if (RegExp(r'^-?\d+(\.\d+)?\s*,\s*-?\d+(\.\d+)?$').hasMatch(raw.trim())) {
+            return 'Pinned Site (Surat/Gujarat)';
+          }
+          return raw.trim();
+        }
+
         final rows = trips
-            .map((t) => [
-                  t.effectiveTripNumber,
-                  t.customerName,
-                  t.origin,
-                  t.destination,
-                  t.assignedVehicle.isNotEmpty
-                      ? t.assignedVehicle
-                      : 'UNASSIGNED',
-                  t.assignedDriver.isNotEmpty ? t.assignedDriver : 'UNASSIGNED',
-                  t.status.toUpperCase(),
-                  '₹${t.freightAmount.toStringAsFixed(0)}',
-                ])
+            .map((t) {
+              final speedInfo = t.averageSpeedKmh > 0 
+                  ? '${t.averageSpeedKmh.toStringAsFixed(0)} km/h (${t.actualDistanceKm > 0 ? t.actualDistanceKm.toStringAsFixed(0) : t.plannedDistanceKm.toStringAsFixed(0)} km)'
+                  : (t.actualDistanceKm > 0 ? '${t.actualDistanceKm.toStringAsFixed(0)} km' : (t.plannedDistanceKm > 0 ? '${t.plannedDistanceKm.toStringAsFixed(0)} km' : '-'));
+              
+              final dieselInfo = t.dieselExpense > 0 ? '₹${t.dieselExpense.toStringAsFixed(0)}' : '₹0';
+              final totalExpInfo = t.totalExpenses > 0 ? '₹${t.totalExpenses.toStringAsFixed(0)}' : '₹0';
+              
+              final proofInfo = (t.podStatus == 'received' || t.podPhoto.isNotEmpty)
+                  ? 'POD Verified'
+                  : ((t.receivingCopyStatus == 'received' || t.receivingCopyPhoto.isNotEmpty)
+                      ? 'Receiving Copy'
+                      : (t.deliveryProofs.isNotEmpty ? '${t.deliveryProofs.length} Proofs' : 'Pending'));
+
+              return [
+                t.effectiveTripNumber,
+                t.customerName.isNotEmpty ? t.customerName : 'General Client',
+                cleanLoc(t.origin),
+                cleanLoc(t.destination),
+                t.assignedVehicle.isNotEmpty ? t.assignedVehicle : 'UNASSIGNED',
+                t.assignedDriver.isNotEmpty ? t.assignedDriver : 'UNASSIGNED',
+                speedInfo,
+                dieselInfo,
+                totalExpInfo,
+                proofInfo,
+                t.status.toUpperCase(),
+                '₹${t.freightAmount.toStringAsFixed(0)}',
+              ];
+            })
             .toList();
 
         final totalFreight =
