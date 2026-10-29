@@ -3141,6 +3141,56 @@ class PlannerController extends ChangeNotifier {
     );
   }
 
+  Future<void> updateFastagBalanceDirect({
+    required String vehicleCode,
+    required double newBalance,
+  }) async {
+    final idx = truckModels
+        .indexWhere((t) => t.code.toUpperCase() == vehicleCode.toUpperCase());
+    if (idx == -1) return;
+    final truck = truckModels[idx];
+    truckModels[idx] = truck.copyWith(fastagBalance: newBalance);
+    notifyListeners();
+    await _saveTruckModels();
+  }
+
+  Future<void> deleteFastagRechargeRecord({
+    required String vehicleCode,
+    required String rechargeId,
+  }) async {
+    final idx = truckModels
+        .indexWhere((t) => t.code.toUpperCase() == vehicleCode.toUpperCase());
+    if (idx == -1) return;
+    final truck = truckModels[idx];
+    final foundIndex = truck.fastagRecharges.indexWhere(
+        (r) => r.id == rechargeId || (r.refNumber.isNotEmpty && r.refNumber == rechargeId));
+    if (foundIndex == -1) return;
+    final rec = truck.fastagRecharges[foundIndex];
+    final updatedList = List<FastagRechargeRecord>.from(truck.fastagRecharges)..removeAt(foundIndex);
+    final updatedBal = (truck.fastagBalance - rec.amount) < 0 ? 0.0 : (truck.fastagBalance - rec.amount);
+    truckModels[idx] = truck.copyWith(
+      fastagBalance: updatedBal,
+      fastagRecharges: updatedList,
+    );
+    notifyListeners();
+    await _saveTruckModels();
+  }
+
+  Future<void> clearAllFastagRecords({
+    required String vehicleCode,
+  }) async {
+    final idx = truckModels
+        .indexWhere((t) => t.code.toUpperCase() == vehicleCode.toUpperCase());
+    if (idx == -1) return;
+    final truck = truckModels[idx];
+    truckModels[idx] = truck.copyWith(
+      fastagBalance: 0.0,
+      fastagRecharges: [],
+    );
+    notifyListeners();
+    await _saveTruckModels();
+  }
+
   Future<void> toggleAutoPay({
     required String vehicleCode,
     bool? isInsuranceAutoPay,

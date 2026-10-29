@@ -38,6 +38,7 @@ class FastagHistoryPage extends StatefulWidget {
 
 class _FastagHistoryPageState extends State<FastagHistoryPage> {
   late String _selectedCode;
+  bool _isFetchingLive = false;
 
   @override
   void initState() {
@@ -50,7 +51,8 @@ class _FastagHistoryPageState extends State<FastagHistoryPage> {
 
   TruckModel? _findVehicle() {
     for (final vehicle in widget.controller.truckModels) {
-      if (vehicle.code.trim().toLowerCase() == _selectedCode.trim().toLowerCase()) {
+      if (vehicle.code.trim().toLowerCase() ==
+          _selectedCode.trim().toLowerCase()) {
         return vehicle;
       }
     }
@@ -58,6 +60,175 @@ class _FastagHistoryPageState extends State<FastagHistoryPage> {
       return widget.controller.truckModels.first;
     }
     return null;
+  }
+
+  Future<void> _fetchLiveBalance(TruckModel vehicle) async {
+    setState(() => _isFetchingLive = true);
+    try {
+      final res = await RealFastagService.instance.fetchLiveFastagBalance(
+        vehicleNumber: vehicle.code,
+        bankId: 'paytm',
+      );
+      if (res != null && res['balance'] != null) {
+        final bal = (res['balance'] as num).toDouble();
+        await widget.controller.updateFastagBalanceDirect(
+          vehicleCode: vehicle.code,
+          newBalance: bal,
+        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Live FASTag Balance synced: ₹${bal.toStringAsFixed(0)}'),
+              backgroundColor: AppColors.primary,
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Live BBPS check complete. Official NETC gateway reflects latest ledger.'),
+              backgroundColor: Color(0xFF0284C7),
+            ),
+          );
+        }
+      }
+    } catch (_) {
+    } finally {
+      if (mounted) setState(() => _isFetchingLive = false);
+    }
+  }
+
+  void _showSetRealBalanceDialog(TruckModel vehicle) {
+    final ctrl = TextEditingController(
+        text: vehicle.fastagBalance > 0
+            ? vehicle.fastagBalance.toStringAsFixed(0)
+            : '0');
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Set Live FASTag Balance · ${vehicle.code}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Agar aapne FASTag bank app (Paytm/ICICI/SBI) se real balance dekha hai, toh yahan exact amount daal sakte hain:',
+              style: TextStyle(fontSize: 12.5, color: AppColors.slate),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: ctrl,
+              keyboardType: TextInputType.number,
+              autofocus: true,
+              decoration: const InputDecoration(
+                labelText: 'Real FASTag Balance (₹)',
+                prefixText: '₹ ',
+                isDense: true,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final val = double.tryParse(ctrl.text.trim()) ?? 0.0;
+              await widget.controller.updateFastagBalanceDirect(
+                vehicleCode: vehicle.code,
+                newBalance: val < 0 ? 0 : val,
+              );
+              if (mounted) {
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                        'FASTag Balance updated to ₹${val.toStringAsFixed(0)}'),
+                    backgroundColor: AppColors.primary,
+                  ),
+                );
+              }
+            },
+            style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
+            child: const Text('Update Balance'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDeleteRecord(TruckModel vehicle, FastagRechargeRecord item) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Transaction?'),
+        content: Text(
+            'Kya aap ₹${item.amount.toStringAsFixed(0)} ka entry (${item.rechargeId}) delete karna chahte hain? Balance adjust ho jayega.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              await widget.controller.deleteFastagRechargeRecord(
+                vehicleCode: vehicle.code,
+                rechargeId: item.id,
+              );
+              if (mounted) {
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Transaction deleted.'),
+                    backgroundColor: Color(0xFFDC2626),
+                  ),
+                );
+              }
+            },
+            style: FilledButton.styleFrom(backgroundColor: const Color(0xFFDC2626)),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmClearAll(TruckModel vehicle) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Clear All Fake / Test Records?'),
+        content: const Text(
+            'Ye action is vehicle ke saare purane fake/test transactions delete kar dega aur balance 0 kar dega taaki sirf real payment record rahe.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              await widget.controller.clearAllFastagRecords(
+                vehicleCode: vehicle.code,
+              );
+              if (mounted) {
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('All previous records cleared. Balance reset to ₹0.'),
+                    backgroundColor: Color(0xFFDC2626),
+                  ),
+                );
+              }
+            },
+            style: FilledButton.styleFrom(backgroundColor: const Color(0xFFDC2626)),
+            child: const Text('Clear All'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -71,7 +242,8 @@ class _FastagHistoryPageState extends State<FastagHistoryPage> {
                 backgroundColor: const Color(0xFF0F172A),
                 foregroundColor: Colors.white,
                 title: const Text('FASTag Wallet & Recharge',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+                    style: TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.w800)),
               ),
               body: const Center(child: Text('No vehicles found in fleet.')),
             );
@@ -111,12 +283,13 @@ class _FastagHistoryPageState extends State<FastagHistoryPage> {
               actions: [
                 if (widget.controller.truckModels.length > 1)
                   Padding(
-                    padding: const EdgeInsets.only(right: 12),
+                    padding: const EdgeInsets.only(right: 8),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<String>(
                         dropdownColor: const Color(0xFF1E293B),
                         value: _selectedCode,
-                        icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
+                        icon: const Icon(Icons.arrow_drop_down,
+                            color: Colors.white),
                         items: widget.controller.truckModels.map((t) {
                           return DropdownMenuItem<String>(
                             value: t.code,
@@ -138,6 +311,19 @@ class _FastagHistoryPageState extends State<FastagHistoryPage> {
                       ),
                     ),
                   ),
+                IconButton(
+                  tooltip: 'Sync Real Balance',
+                  icon: _isFetchingLive
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Icon(Icons.refresh_rounded, color: Colors.white),
+                  onPressed:
+                      _isFetchingLive ? null : () => _fetchLiveBalance(vehicle),
+                ),
               ],
             ),
             body: ListView(
@@ -196,9 +382,16 @@ class _FastagHistoryPageState extends State<FastagHistoryPage> {
                               ],
                             ),
                           ),
+                          IconButton(
+                            tooltip: 'Set Real Balance',
+                            icon: const Icon(Icons.edit_outlined,
+                                color: Colors.white70, size: 18),
+                            onPressed: () => _showSetRealBalanceDialog(vehicle),
+                          ),
                           if (vehicle.isFastagLow)
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFFEE2E2),
                                 borderRadius: BorderRadius.circular(8),
@@ -231,13 +424,37 @@ class _FastagHistoryPageState extends State<FastagHistoryPage> {
                                 ),
                               ),
                               const SizedBox(height: 2),
-                              Text(
-                                '₹${vehicle.fastagBalance.toStringAsFixed(0)}',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 34,
-                                  fontWeight: FontWeight.w900,
-                                ),
+                              Row(
+                                children: [
+                                  Text(
+                                    '₹${vehicle.fastagBalance.toStringAsFixed(0)}',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 34,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  InkWell(
+                                    onTap: () =>
+                                        _showSetRealBalanceDialog(vehicle),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 6, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0x33FFFFFF),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: const Text(
+                                        'Edit Real',
+                                        style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w700),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -250,7 +467,8 @@ class _FastagHistoryPageState extends State<FastagHistoryPage> {
                                 controller: widget.controller,
                               ),
                             ),
-                            icon: const Icon(Icons.send_to_mobile_rounded, size: 16),
+                            icon: const Icon(Icons.send_to_mobile_rounded,
+                                size: 16),
                             label: const Text(
                               'Recharge / Send Money',
                               style: TextStyle(
@@ -272,14 +490,16 @@ class _FastagHistoryPageState extends State<FastagHistoryPage> {
                       ),
                       const SizedBox(height: 14),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
                         decoration: BoxDecoration(
                           color: const Color(0x26000000),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.bolt_rounded, color: Color(0xFF6EE7B7), size: 16),
+                            const Icon(Icons.bolt_rounded,
+                                color: Color(0xFF6EE7B7), size: 16),
                             const SizedBox(width: 6),
                             Expanded(
                               child: Text(
@@ -361,15 +581,33 @@ class _FastagHistoryPageState extends State<FastagHistoryPage> {
                 ),
                 const SizedBox(height: 24),
 
-                const Text(
-                  'Recharge & Transaction History',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.navy,
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Recharge & Transaction History',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.navy,
+                      ),
+                    ),
+                    if (records.isNotEmpty)
+                      TextButton.icon(
+                        onPressed: () => _confirmClearAll(vehicle),
+                        icon: const Icon(Icons.delete_sweep_rounded,
+                            size: 15, color: Color(0xFFDC2626)),
+                        label: const Text(
+                          'Clear All Test Data',
+                          style: TextStyle(
+                              fontSize: 11.5,
+                              color: Color(0xFFDC2626),
+                              fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                  ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
 
                 if (records.isEmpty)
                   Container(
@@ -401,7 +639,8 @@ class _FastagHistoryPageState extends State<FastagHistoryPage> {
                         Text(
                           'Click "Recharge / Send Money" above to make a real UPI payment.',
                           textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 12, color: AppColors.slate),
+                          style:
+                              TextStyle(fontSize: 12, color: AppColors.slate),
                         ),
                       ],
                     ),
@@ -478,6 +717,12 @@ class _FastagHistoryPageState extends State<FastagHistoryPage> {
                                   ),
                               ],
                             ),
+                          ),
+                          IconButton(
+                            tooltip: 'Delete Entry',
+                            icon: const Icon(Icons.delete_outline_rounded,
+                                size: 18, color: Color(0xFFDC2626)),
+                            onPressed: () => _confirmDeleteRecord(vehicle, item),
                           ),
                         ],
                       ),

@@ -1521,25 +1521,21 @@ class FastagRechargeDialogState extends State<FastagRechargeDialog> {
     }
     final bankId = _getBankId();
 
-    final launched = await RealFastagService.instance.initiateRealUpiPayment(
+    await RealFastagService.instance.initiateRealUpiPayment(
       vehicleNumber: widget.vehicle.code,
       bankId: bankId,
       amount: amt,
       vehicleName: widget.vehicle.name,
     );
 
-    if (launched) {
-      await _submit();
-    } else {
-      if (mounted) {
-        setState(() => _showQr = true);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Opening UPI payment apps... Scan QR code if app does not launch.'),
-            backgroundColor: Color(0xFF0284C7),
-          ),
-        );
-      }
+    if (mounted) {
+      setState(() => _showQr = true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('UPI Intent launched. If on desktop/web or app did not open, please scan the QR code to complete payment.'),
+          backgroundColor: Color(0xFF0284C7),
+        ),
+      );
     }
   }
 
