@@ -729,7 +729,7 @@ class PlannerController extends ChangeNotifier {
       if (loadedSeatbeltRecords != null) {
         seatbeltRecords
           ..clear()
-          ..addAll(loadedSeatbeltRecords);
+          ..addAll(loadedSeatbeltRecords.where((r) => !deletedSeatbeltIds.contains(r.id)));
       }
 
       final loadedActivities =
@@ -1271,7 +1271,13 @@ class PlannerController extends ChangeNotifier {
     if (records.isEmpty) return;
     var changed = false;
     for (final remote in records) {
-      if (deletedSeatbeltIds.contains(remote.id)) continue;
+      if (deletedSeatbeltIds.contains(remote.id)) {
+        if (seatbeltRecords.any((r) => r.id == remote.id)) {
+          seatbeltRecords.removeWhere((r) => r.id == remote.id);
+          changed = true;
+        }
+        continue;
+      }
       final idx = seatbeltRecords.indexWhere((r) => r.id == remote.id);
       if (idx < 0) {
         seatbeltRecords.add(remote);
@@ -3850,7 +3856,9 @@ class PlannerController extends ChangeNotifier {
     notifyListeners();
     await _saveSeatbeltRecords();
     await _storage.setString(_deletedSeatbeltIdsKey, jsonEncode(deletedSeatbeltIds.toList()));
-    unawaited(FirebaseBackendService.instance.deleteSeatbeltRecord(id));
+    try {
+      await FirebaseBackendService.instance.deleteSeatbeltRecord(id);
+    } catch (_) {}
   }
 
   Future<void> clearSeatbeltRecords() async {
