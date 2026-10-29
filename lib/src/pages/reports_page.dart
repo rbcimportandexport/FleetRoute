@@ -977,7 +977,8 @@ class _ReportsPageState extends State<ReportsPage> {
               label: 'Live GPS vehicles',
               value:
                   '${controller.truckModels.where((v) => v.hasValidGpsFix).length}/${controller.truckModels.length}',
-              helper: 'Valid tracker fixes only',
+              helper: 'Valid tracker fixes only · Tap to view',
+              onTap: () => _showLiveFleetGpsDialog(context),
             ),
           ],
         ),
@@ -1013,51 +1014,205 @@ class _ReportsPageState extends State<ReportsPage> {
     );
   }
 
+  void _showLiveFleetGpsDialog(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) => AnimatedBuilder(
+        animation: widget.controller,
+        builder: (context, _) {
+          final vehicles = widget.controller.truckModels;
+          final online = vehicles.where((v) => v.hasValidGpsFix).length;
+          return SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.local_shipping_rounded,
+                          color: AppColors.primary, size: 20),
+                      const SizedBox(width: 8),
+                      const Expanded(
+                        child: Text(
+                          'Fleet Live GPS Status',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.navy,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFECFDF5),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFA7F3D0)),
+                        ),
+                        child: Text(
+                          '$online Online / ${vehicles.length - online} Offline',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF047857),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                Flexible(
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: vehicles.length,
+                    separatorBuilder: (_, __) => const Divider(height: 1),
+                    itemBuilder: (_, index) {
+                      final vehicle = vehicles[index];
+                      final isOnline = vehicle.hasValidGpsFix;
+                      final drivers = widget.controller.drivers
+                          .where((d) =>
+                              d.assignedVehicle.trim().toUpperCase() ==
+                              vehicle.code.trim().toUpperCase())
+                          .map((d) => d.name)
+                          .join(' / ');
+                      return ListTile(
+                        leading: Container(
+                          padding: const EdgeInsets.all(7),
+                          decoration: BoxDecoration(
+                            color: isOnline
+                                ? const Color(0xFFECFDF5)
+                                : const Color(0xFFFEF2F2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            isOnline
+                                ? Icons.gps_fixed_rounded
+                                : Icons.gps_off_rounded,
+                            size: 16,
+                            color: isOnline
+                                ? const Color(0xFF059669)
+                                : const Color(0xFFDC2626),
+                          ),
+                        ),
+                        title: Text(
+                          vehicle.code,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 13.5,
+                            color: AppColors.navy,
+                          ),
+                        ),
+                        subtitle: Text(
+                          drivers.isNotEmpty
+                              ? 'Driver: $drivers'
+                              : (vehicle.assignedDriver.isNotEmpty
+                                  ? 'Driver: ${vehicle.assignedDriver}'
+                                  : 'Vehicle ${vehicle.name}'),
+                          style: const TextStyle(fontSize: 11.5, color: AppColors.slate),
+                        ),
+                        trailing: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              isOnline ? 'ONLINE' : 'OFFLINE',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w900,
+                                color: isOnline
+                                    ? const Color(0xFF059669)
+                                    : const Color(0xFFDC2626),
+                              ),
+                            ),
+                            if (isOnline && vehicle.currentSpeed > 0)
+                              Text(
+                                '${vehicle.currentSpeed.toStringAsFixed(0)} km/h',
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  color: Color(0xFF059669),
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   Widget _analyticsMetric({
     required double width,
     required IconData icon,
     required String label,
     required String value,
     required String helper,
+    VoidCallback? onTap,
   }) {
     return Container(
       width: width,
-      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.border),
       ),
-      child: Row(
-        children: [
-          AppIconBadge(icon: icon, size: 19, padding: 8),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
               children: [
-                Text(label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        fontSize: 10.5,
-                        color: AppColors.slate,
-                        fontWeight: FontWeight.w700)),
-                const SizedBox(height: 3),
-                Text(value,
-                    style: const TextStyle(
-                        fontSize: 18,
-                        color: AppColors.navy,
-                        fontWeight: FontWeight.w900)),
-                Text(helper,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style:
-                        const TextStyle(fontSize: 9.5, color: AppColors.muted)),
+                AppIconBadge(icon: icon, size: 19, padding: 8),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 10.5,
+                              color: AppColors.slate,
+                              fontWeight: FontWeight.w700)),
+                      const SizedBox(height: 3),
+                      Text(value,
+                          style: const TextStyle(
+                              fontSize: 18,
+                              color: AppColors.navy,
+                              fontWeight: FontWeight.w900)),
+                      Text(helper,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style:
+                              const TextStyle(fontSize: 9.5, color: AppColors.muted)),
+                    ],
+                  ),
+                ),
+                if (onTap != null)
+                  const Icon(Icons.arrow_forward_ios_rounded,
+                      size: 13, color: AppColors.slate),
               ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
