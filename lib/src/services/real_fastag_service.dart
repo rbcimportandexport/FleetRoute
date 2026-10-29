@@ -23,22 +23,16 @@ class RealFastagService {
 
   static const List<FastagBankIssuer> supportedIssuers = [
     FastagBankIssuer(
+      id: 'paytm',
+      name: 'Paytm Payments Bank / HDFC FASTag',
+      bbpsBillerId: 'HDFC00000FST',
+      upiHandle: 'paytm',
+    ),
+    FastagBankIssuer(
       id: 'icici',
       name: 'ICICI Bank FASTag',
       bbpsBillerId: 'ICIC00000FST',
-      upiHandle: 'netc', // e.g. netc.GJ19Y2720@icici
-    ),
-    FastagBankIssuer(
-      id: 'idfc',
-      name: 'IDFC FIRST Bank FASTag',
-      bbpsBillerId: 'IDFC00000FST',
-      upiHandle: 'idfcbank',
-    ),
-    FastagBankIssuer(
-      id: 'axis',
-      name: 'Axis Bank FASTag',
-      bbpsBillerId: 'UTIB00000FST',
-      upiHandle: 'axisbank',
+      upiHandle: 'icici',
     ),
     FastagBankIssuer(
       id: 'sbi',
@@ -47,32 +41,58 @@ class RealFastagService {
       upiHandle: 'sbi',
     ),
     FastagBankIssuer(
+      id: 'axis',
+      name: 'Axis Bank FASTag',
+      bbpsBillerId: 'UTIB00000FST',
+      upiHandle: 'axisbank',
+    ),
+    FastagBankIssuer(
+      id: 'idfc',
+      name: 'IDFC FIRST Bank FASTag',
+      bbpsBillerId: 'IDFC00000FST',
+      upiHandle: 'idfcbank',
+    ),
+    FastagBankIssuer(
       id: 'kotak',
       name: 'Kotak Mahindra Bank FASTag',
       bbpsBillerId: 'KKBK00000FST',
       upiHandle: 'kotak',
     ),
-    FastagBankIssuer(
-      id: 'paytm',
-      name: 'Paytm / HDFC FASTag',
-      bbpsBillerId: 'HDFC00000FST',
-      upiHandle: 'hdfcbank',
-    ),
   ];
 
   /// Standard NETC NPCI VPA format for direct FASTag UPI payment:
   /// netc.<VehicleNumber>@<BankHandle>
-  /// Example: netc.GJ19Y2720@icici or netc.GJ19Y2720@axisbank
+  /// Example: netc.GJ19Y2720@paytm or netc.GJ19Y2720@icici
   String buildNetcUpiVpa({
     required String vehicleNumber,
     required String bankId,
   }) {
-    final cleanVehicle = vehicleNumber.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toUpperCase();
+    final cleanVehicle =
+        vehicleNumber.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toUpperCase();
     final issuer = supportedIssuers.firstWhere(
       (i) => i.id == bankId,
       orElse: () => supportedIssuers.first,
     );
     return 'netc.$cleanVehicle@${issuer.upiHandle}';
+  }
+
+  /// Builds the real standard NPCI UPI Intent URI string
+  String buildUpiPaymentUriString({
+    required String vehicleNumber,
+    required String bankId,
+    required double amount,
+    String? payeeName,
+  }) {
+    final vpa = buildNetcUpiVpa(vehicleNumber: vehicleNumber, bankId: bankId);
+    final cleanVehicle =
+        vehicleNumber.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toUpperCase();
+    final amtStr = amount.toStringAsFixed(2);
+    final pn = payeeName?.isNotEmpty == true
+        ? payeeName!
+        : 'NETC FASTag $cleanVehicle';
+    final note = 'FASTag Recharge for $cleanVehicle';
+
+    return 'upi://pay?pa=$vpa&pn=${Uri.encodeComponent(pn)}&am=$amtStr&cu=INR&tn=${Uri.encodeComponent(note)}';
   }
 
   /// Launches real UPI payment apps (GPay, PhonePe, Paytm, BHIM, Cred)
@@ -83,26 +103,36 @@ class RealFastagService {
     required double amount,
     required String vehicleName,
   }) async {
-    final vpa = buildNetcUpiVpa(vehicleNumber: vehicleNumber, bankId: bankId);
-    final cleanVehicle = vehicleNumber.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toUpperCase();
-    final amtStr = amount.toStringAsFixed(2);
-    final note = 'FASTag Recharge for $cleanVehicle';
-
-    // Standard NPCI UPI Deep Link specification
-    final upiUrl = 'upi://pay?pa=$vpa&pn=NETC%20FASTag%20$cleanVehicle&am=$amtStr&cu=INR&tn=${Uri.encodeComponent(note)}';
+    final cleanVehicle =
+        vehicleNumber.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toUpperCase();
+    final upiUrl = buildUpiPaymentUriString(
+      vehicleNumber: vehicleNumber,
+      bankId: bankId,
+      amount: amount,
+      payeeName: 'NETC FASTag $cleanVehicle',
+    );
     final uri = Uri.parse(upiUrl);
 
-    if (await canLaunchUrl(uri)) {
-      return await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
-      // Fallback web intent / GPay intent
-      final webFallback = 'https://paytm.com/fastag-recharge?vehicle=$cleanVehicle';
-      final webUri = Uri.parse(webFallback);
+    try {
+      if (await canLaunchUrl(uri)) {
+        return await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
+    } catch (e) {
+      debugPrint('[RealFastagService] Error launching UPI: $e');
+    }
+
+    // Fallback: Paytm / NETC web recharge portal
+    final webFallback =
+        'https://paytm.com/fastag-recharge?vehicle=$cleanVehicle';
+    final webUri = Uri.parse(webFallback);
+    try {
       if (await canLaunchUrl(webUri)) {
         return await launchUrl(webUri, mode: LaunchMode.externalApplication);
       }
-      return false;
+    } catch (e) {
+      debugPrint('[RealFastagService] Error launching web fallback: $e');
     }
+    return false;
   }
 
   /// Fetches real-time FASTag balance and recent toll plaza transaction logs
@@ -111,10 +141,11 @@ class RealFastagService {
     required String vehicleNumber,
     required String bankId,
   }) async {
-    final cleanVehicle = vehicleNumber.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toUpperCase();
+    final cleanVehicle =
+        vehicleNumber.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toUpperCase();
     try {
-      // Endpoint connects to NETC NPCI gateway / BBPS bill fetch
-      final uri = Uri.parse('https://api.transportone.in/v1/fastag/fetch-balance');
+      final uri =
+          Uri.parse('https://api.transportone.in/v1/fastag/fetch-balance');
       final res = await http.post(
         uri,
         headers: {'Content-Type': 'application/json'},
@@ -133,4 +164,3 @@ class RealFastagService {
     return null;
   }
 }
-

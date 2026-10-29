@@ -29,6 +29,7 @@ dependencies:
   pointer_interceptor: ^0.10.1+3
   package_info_plus: ^10.2.2
   ota_update: ^7.1.0
+  qr_flutter: ^4.1.0
 
 dev_dependencies:
   flutter_test:

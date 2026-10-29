@@ -1,3 +1,4 @@
+import 'package:qr_flutter/qr_flutter.dart';
 import '../services/real_fastag_service.dart';
 import 'dart:convert';
 
@@ -755,7 +756,7 @@ class _RecordCard extends StatelessWidget {
                           ? null
                           : () => showDialog<void>(
                                 context: context,
-                                builder: (_) => _FastagRechargeDialog(
+                                builder: (_) => FastagRechargeDialog(
                                   vehicle: vehicle,
                                   truckIndex: truckIndex,
                                   controller: controller,
@@ -1458,8 +1459,8 @@ class _RecordCard extends StatelessWidget {
   }
 }
 
-class _FastagRechargeDialog extends StatefulWidget {
-  const _FastagRechargeDialog({
+class FastagRechargeDialog extends StatefulWidget {
+  const FastagRechargeDialog({
     required this.vehicle,
     required this.truckIndex,
     required this.controller,
@@ -1470,14 +1471,15 @@ class _FastagRechargeDialog extends StatefulWidget {
   final PlannerController controller;
 
   @override
-  State<_FastagRechargeDialog> createState() => _FastagRechargeDialogState();
+  State<FastagRechargeDialog> createState() => FastagRechargeDialogState();
 }
 
-class _FastagRechargeDialogState extends State<_FastagRechargeDialog> {
+class FastagRechargeDialogState extends State<FastagRechargeDialog> {
   final _amountCtrl = TextEditingController(text: '1000');
   final _refCtrl = TextEditingController();
   final _notesCtrl = TextEditingController();
   String _provider = 'Paytm Payments Bank';
+  bool _showQr = false;
 
   @override
   void dispose() {
@@ -1485,6 +1487,25 @@ class _FastagRechargeDialogState extends State<_FastagRechargeDialog> {
     _refCtrl.dispose();
     _notesCtrl.dispose();
     super.dispose();
+  }
+
+  String _getBankId() {
+    if (_provider.contains('IDFC')) return 'idfc';
+    if (_provider.contains('Axis')) return 'axis';
+    if (_provider.contains('SBI')) return 'sbi';
+    if (_provider.contains('Kotak')) return 'kotak';
+    if (_provider.contains('ICICI')) return 'icici';
+    return 'paytm';
+  }
+
+  String _getUpiUri() {
+    final amt = double.tryParse(_amountCtrl.text.trim()) ?? 1000.0;
+    return RealFastagService.instance.buildUpiPaymentUriString(
+      vehicleNumber: widget.vehicle.code,
+      bankId: _getBankId(),
+      amount: amt > 0 ? amt : 1000.0,
+      payeeName: 'NETC FASTag ${widget.vehicle.code}',
+    );
   }
 
   Future<void> _payRealUpi() async {
@@ -1498,11 +1519,7 @@ class _FastagRechargeDialogState extends State<_FastagRechargeDialog> {
       );
       return;
     }
-    String bankId = 'icici';
-    if (_provider.contains('IDFC')) bankId = 'idfc';
-    if (_provider.contains('Axis')) bankId = 'axis';
-    if (_provider.contains('SBI')) bankId = 'sbi';
-    if (_provider.contains('Paytm') || _provider.contains('HDFC')) bankId = 'paytm';
+    final bankId = _getBankId();
 
     final launched = await RealFastagService.instance.initiateRealUpiPayment(
       vehicleNumber: widget.vehicle.code,
@@ -1515,10 +1532,11 @@ class _FastagRechargeDialogState extends State<_FastagRechargeDialog> {
       await _submit();
     } else {
       if (mounted) {
+        setState(() => _showQr = true);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Could not open UPI payment app. Please verify payment apps on device.'),
-            backgroundColor: Color(0xFFDC2626),
+            content: Text('Opening UPI payment apps... Scan QR code if app does not launch.'),
+            backgroundColor: Color(0xFF0284C7),
           ),
         );
       }
@@ -1562,6 +1580,12 @@ class _FastagRechargeDialogState extends State<_FastagRechargeDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final vpa = RealFastagService.instance.buildNetcUpiVpa(
+      vehicleNumber: widget.vehicle.code,
+      bankId: _getBankId(),
+    );
+    final upiUri = _getUpiUri();
+
     return AlertDialog(
       title: Text('FASTag Recharge · ${widget.vehicle.name}'),
       content: SingleChildScrollView(
@@ -1569,6 +1593,31 @@ class _FastagRechargeDialogState extends State<_FastagRechargeDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEFF6FF),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFBFDBFE)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.verified_outlined, color: Color(0xFF2563EB), size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'NPCI NETC VPA: $vpa',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF1E40AF),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
             Text(
               'Current Balance: ₹${widget.vehicle.fastagBalance.toStringAsFixed(0)}',
               style: const TextStyle(
@@ -1578,6 +1627,7 @@ class _FastagRechargeDialogState extends State<_FastagRechargeDialog> {
             TextField(
               controller: _amountCtrl,
               keyboardType: TextInputType.number,
+              onChanged: (_) => setState(() {}),
               decoration: const InputDecoration(
                 labelText: 'Recharge Amount (₹)',
                 isDense: true,
@@ -1591,7 +1641,7 @@ class _FastagRechargeDialogState extends State<_FastagRechargeDialog> {
               items: const [
                 DropdownMenuItem(
                     value: 'Paytm Payments Bank',
-                    child: Text('Paytm Payments Bank')),
+                    child: Text('Paytm Payments Bank / HDFC')),
                 DropdownMenuItem(
                     value: 'ICICI Bank FASTag',
                     child: Text('ICICI Bank FASTag')),
@@ -1601,6 +1651,8 @@ class _FastagRechargeDialogState extends State<_FastagRechargeDialog> {
                     value: 'Axis Bank FASTag', child: Text('Axis Bank FASTag')),
                 DropdownMenuItem(
                     value: 'IDFC FIRST Bank', child: Text('IDFC FIRST Bank')),
+                DropdownMenuItem(
+                    value: 'Kotak Bank FASTag', child: Text('Kotak Mahindra Bank')),
                 DropdownMenuItem(
                     value: 'Other Issuer', child: Text('Other Issuer')),
               ],
@@ -1623,6 +1675,48 @@ class _FastagRechargeDialogState extends State<_FastagRechargeDialog> {
                 isDense: true,
               ),
             ),
+            const SizedBox(height: 14),
+            Center(
+              child: TextButton.icon(
+                onPressed: () => setState(() => _showQr = !_showQr),
+                icon: Icon(_showQr ? Icons.visibility_off_outlined : Icons.qr_code_2_rounded),
+                label: Text(_showQr ? 'Hide UPI QR Code' : 'Show Real UPI QR Code'),
+              ),
+            ),
+            if (_showQr) ...[
+              const SizedBox(height: 8),
+              Center(
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                    boxShadow: const [
+                      BoxShadow(color: Color(0x0F000000), blurRadius: 8),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      QrImageView(
+                        data: upiUri,
+                        version: QrVersions.auto,
+                        size: 160.0,
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Scan with GPay / PhonePe / Paytm',
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -1634,10 +1728,11 @@ class _FastagRechargeDialogState extends State<_FastagRechargeDialog> {
           onPressed: _submit,
           child: const Text('Save Manual Entry'),
         ),
-        FilledButton(
+        FilledButton.icon(
           onPressed: _payRealUpi,
+          icon: const Icon(Icons.bolt_rounded, size: 16),
           style: FilledButton.styleFrom(backgroundColor: const Color(0xFF10B981)),
-          child: const Text('Pay via UPI / FASTag'),
+          label: const Text('Pay via UPI / FASTag'),
         ),
       ],
     );
