@@ -173,20 +173,11 @@ class ReverseGeocodingService {
       }
     }
 
-    // 3. Fast city match from RouteTrafficService
-    final fastCityCoord = RouteTrafficService.parseLocation(clean);
-    if (fastCityCoord != null) {
-      return GeocodedPlace(
-        coordinates: fastCityCoord,
-        displayName: clean,
-        shortName: clean.split(',').first.trim(),
-      );
-    }
-
-    // 4. Try Google Geocoding API first for highest accuracy in India
+    // 3. Try Google Geocoding API first for highest real-time accuracy across India
     try {
       final googleUri = Uri.https('maps.googleapis.com', '/maps/api/geocode/json', {
         'address': clean,
+        'bounds': '20.0,72.0|24.5,74.8',
         'components': 'country:IN',
         'key': _googleMapsApiKey,
       });
@@ -212,6 +203,16 @@ class ReverseGeocodingService {
         }
       }
     } catch (_) {}
+
+    // 4. Predefined city match fallback from RouteTrafficService
+    final fastCityCoord = RouteTrafficService.parseLocation(clean);
+    if (fastCityCoord != null) {
+      return GeocodedPlace(
+        coordinates: fastCityCoord,
+        displayName: clean,
+        shortName: clean.split(',').first.trim(),
+      );
+    }
 
     // 5. Online Nominatim geocoding for addresses, markets, towns, landmarks
     try {
@@ -269,6 +270,7 @@ class ReverseGeocodingService {
     try {
       final googleUri = Uri.https('maps.googleapis.com', '/maps/api/geocode/json', {
         'address': clean,
+        'bounds': '20.0,72.0|24.5,74.8',
         'components': 'country:IN',
         'key': _googleMapsApiKey,
       });
