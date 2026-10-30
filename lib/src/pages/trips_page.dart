@@ -1301,9 +1301,10 @@ class _TripsPageState extends State<TripsPage> {
                 // Add all newly selected products into _customCargoItems
                 for (final sel in items) {
                   final totalWeightTon = (sel.quantity * sel.weightKg) / 1000.0;
+                  final totalKg = (sel.quantity * sel.weightKg).round();
                   _customCargoItems.add(
                     CargoItem(
-                      id: 'CI--',
+                      id: 'CI-' + DateTime.now().millisecondsSinceEpoch.toString() + '-' + sel.product.code,
                       productId: sel.product.id,
                       brand: sel.product.brand,
                       category: sel.product.category,
@@ -1311,7 +1312,7 @@ class _TripsPageState extends State<TripsPage> {
                       productName: sel.product.displayName,
                       loadedQuantity: totalWeightTon,
                       unit: 'Ton',
-                      notes: ' Pcs ( KG)',
+                      notes: sel.quantity.toString() + ' Pcs (' + totalKg.toString() + ' KG)',
                     ),
                   );
                 }
@@ -1323,7 +1324,7 @@ class _TripsPageState extends State<TripsPage> {
                 }
                 cargoWeightController.text = totalTon > 0 ? totalTon.toStringAsFixed(2) : '';
                 cargoDescController.text = _customCargoItems
-                    .map((e) => ' ')
+                    .map((e) => e.productName + ' (' + e.notes + ')')
                     .join(', ');
               });
             }
@@ -1682,6 +1683,41 @@ class _TripSetupPanelState extends State<_TripSetupPanel> {
   final _quickItemQtyCtrl = TextEditingController(text: '10');
   final _quickItemWeightCtrl = TextEditingController(text: '50');
   final String _quickItemUnit = 'KG'; // 'KG' or 'Ton'
+
+  @override
+  void initState() {
+    super.initState();
+    _syncQuickFieldsFromCatalog();
+  }
+
+  @override
+  void didUpdateWidget(covariant _TripSetupPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.selectedCatalogProduct != oldWidget.selectedCatalogProduct ||
+        widget.customCargoItems.length != oldWidget.customCargoItems.length) {
+      _syncQuickFieldsFromCatalog();
+    }
+  }
+
+  void _syncQuickFieldsFromCatalog() {
+    final catalogItems = widget.customCargoItems.where(
+      (c) => c.productId.isNotEmpty && c.productId != 'custom-product' && c.productId != 'custom-item',
+    ).toList();
+
+    if (catalogItems.isNotEmpty) {
+      final latest = catalogItems.last;
+      _quickItemNameCtrl.text = latest.productName;
+      final match = RegExp(r'(\d+)\s*Pcs').firstMatch(latest.notes);
+      if (match != null) {
+        _quickItemQtyCtrl.text = match.group(1)!;
+      }
+      _quickItemWeightCtrl.text = '50';
+    } else if (widget.selectedCatalogProduct != null) {
+      _quickItemNameCtrl.text = widget.selectedCatalogProduct!.displayName;
+      _quickItemQtyCtrl.text = '10';
+      _quickItemWeightCtrl.text = '50';
+    }
+  }
 
   @override
   void dispose() {
