@@ -1422,11 +1422,15 @@ class PlannerController extends ChangeNotifier {
 
     try {
       Position position;
+      final lastPos = await Geolocator.getLastKnownPosition();
+      if (lastPos != null) {
+        unawaited(publish(lastPos));
+      }
       try {
         position = await Geolocator.getCurrentPosition(
           locationSettings: const LocationSettings(
             accuracy: LocationAccuracy.high,
-            timeLimit: Duration(seconds: 25),
+            timeLimit: Duration(seconds: 4),
           ),
         );
       } catch (highAccuracyError) {
@@ -1434,7 +1438,7 @@ class PlannerController extends ChangeNotifier {
         position = await Geolocator.getCurrentPosition(
           locationSettings: const LocationSettings(
             accuracy: LocationAccuracy.medium,
-            timeLimit: Duration(seconds: 30),
+            timeLimit: Duration(seconds: 5),
           ),
         );
       }
@@ -1448,7 +1452,7 @@ class PlannerController extends ChangeNotifier {
     _foregroundLocationSubscription = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
         accuracy: LocationAccuracy.high,
-        distanceFilter: 15,
+        distanceFilter: 5,
       ),
     ).listen((position) {
       unawaited(publish(position).catchError((Object error) {
