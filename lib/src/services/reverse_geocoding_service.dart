@@ -26,6 +26,9 @@ class GeocodedPlace {
 class ReverseGeocodingService {
   ReverseGeocodingService._();
 
+  static const String _googleMapsApiKey =
+      'AIzaSyArJB3w8s8l66nuhGLbLy6LvZi5EgqXscQ';
+
   static final Map<String, String> _labelCache = {};
 
   static Future<String?> addressFor(LatLng point) async {
@@ -33,6 +36,28 @@ class ReverseGeocodingService {
     if (_labelCache.containsKey(key)) {
       return _labelCache[key];
     }
+
+    // 1. Try Google Geocoding API first for high accuracy in India
+    try {
+      final googleUri = Uri.https('maps.googleapis.com', '/maps/api/geocode/json', {
+        'latlng': '${point.latitude},${point.longitude}',
+        'key': _googleMapsApiKey,
+      });
+      final gResponse = await http.get(googleUri).timeout(const Duration(seconds: 4));
+      if (gResponse.statusCode == 200) {
+        final gData = jsonDecode(gResponse.body);
+        if (gData is Map && gData['status'] == 'OK' && gData['results'] is List && (gData['results'] as List).isNotEmpty) {
+          final first = (gData['results'] as List).first;
+          final name = first['formatted_address']?.toString().trim();
+          if (name != null && name.isNotEmpty) {
+            _labelCache[key] = name;
+            return name;
+          }
+        }
+      }
+    } catch (_) {}
+
+    // 2. Fallback to OpenStreetMap Nominatim
     try {
       final uri = Uri.https('nominatim.openstreetmap.org', '/reverse', {
         'format': 'jsonv2',
@@ -44,7 +69,7 @@ class ReverseGeocodingService {
       final response = await http.get(uri, headers: const {
         'User-Agent': 'TransportOne/1.2 (support@rbcsalonfurniture.com)',
         'Accept-Language': 'en-IN,en;q=0.9,hi;q=0.8',
-      }).timeout(const Duration(seconds: 2));
+      }).timeout(const Duration(seconds: 3));
       if (response.statusCode != 200) return null;
       final json = jsonDecode(response.body);
       if (json is! Map) return null;
@@ -158,7 +183,37 @@ class ReverseGeocodingService {
       );
     }
 
-    // 4. Online Nominatim geocoding for addresses, markets, towns, landmarks
+    // 4. Try Google Geocoding API first for highest accuracy in India
+    try {
+      final googleUri = Uri.https('maps.googleapis.com', '/maps/api/geocode/json', {
+        'address': clean,
+        'components': 'country:IN',
+        'key': _googleMapsApiKey,
+      });
+      final gResponse = await http.get(googleUri).timeout(const Duration(seconds: 5));
+      if (gResponse.statusCode == 200) {
+        final gData = jsonDecode(gResponse.body);
+        if (gData is Map && gData['status'] == 'OK' && gData['results'] is List && (gData['results'] as List).isNotEmpty) {
+          final first = (gData['results'] as List).first;
+          final loc = first['geometry']?['location'];
+          if (loc is Map) {
+            final lat = double.tryParse(loc['lat']?.toString() ?? '');
+            final lng = double.tryParse(loc['lng']?.toString() ?? '');
+            if (lat != null && lng != null) {
+              final formatted = first['formatted_address']?.toString() ?? clean;
+              final short = formatted.split(',').first.trim();
+              return GeocodedPlace(
+                coordinates: LatLng(lat, lng),
+                displayName: formatted,
+                shortName: short,
+              );
+            }
+          }
+        }
+      }
+    } catch (_) {}
+
+    // 5. Online Nominatim geocoding for addresses, markets, towns, landmarks
     try {
       final uri = Uri.https('nominatim.openstreetmap.org', '/search', {
         'format': 'jsonv2',
@@ -210,25 +265,70 @@ class ReverseGeocodingService {
 
     final results = <GeocodedPlace>[];
 
-    // Check predefined cities & local Gujarat towns first with correct state names
+    // 1. Try Google Geocoding API first (Official, high accuracy across all Indian cities/villages/societies)
+    try {
+      final googleUri = Uri.https('maps.googleapis.com', '/maps/api/geocode/json', {
+        'address': clean,
+        'components': 'country:IN',
+        'key': _googleMapsApiKey,
+      });
+      final gResponse = await http.get(googleUri).timeout(const Duration(seconds: 4));
+      if (gResponse.statusCode == 200) {
+        final gData = jsonDecode(gResponse.body);
+        if (gData is Map && gData['status'] == 'OK' && gData['results'] is List) {
+          for (final item in gData['results'] as List) {
+            if (item is Map) {
+              final loc = item['geometry']?['location'];
+              if (loc is Map) {
+                final lat = double.tryParse(loc['lat']?.toString() ?? '');
+                final lng = double.tryParse(loc['lng']?.toString() ?? '');
+                if (lat != null && lng != null) {
+                  final formatted = item['formatted_address']?.toString() ?? clean;
+                  final short = formatted.split(',').first.trim();
+                  results.add(
+                    GeocodedPlace(
+                      coordinates: LatLng(lat, lng),
+                      displayName: formatted,
+                      shortName: short,
+                    ),
+                  );
+                  if (results.length >= limit) return results;
+                }
+              }
+            }
+          }
+        }
+      }
+    } catch (_) {}
+
+    // Check predefined cities & local Gujarat towns
     for (final entry in RouteTrafficService.cityCoordinates.entries) {
       if (entry.key.toLowerCase().contains(clean.toLowerCase())) {
         final stateName = RouteTrafficService.cityStates[entry.key.toLowerCase()] ?? 'India';
         final stateSuffix = stateName == 'India' ? 'India' : '$stateName, India';
-        results.add(
-          GeocodedPlace(
-            coordinates: entry.value,
-            displayName:
-                '${entry.key[0].toUpperCase()}${entry.key.substring(1)}, $stateSuffix',
-            shortName:
-                '${entry.key[0].toUpperCase()}${entry.key.substring(1)}',
-          ),
-        );
+        final exists = results.any((r) =>
+            (r.coordinates.latitude - entry.value.latitude).abs() < 0.05 &&
+            (r.coordinates.longitude - entry.value.longitude).abs() < 0.05);
+        if (!exists) {
+          results.add(
+            GeocodedPlace(
+              coordinates: entry.value,
+              displayName:
+                  '${entry.key[0].toUpperCase()}${entry.key.substring(1)}, $stateSuffix',
+              shortName:
+                  '${entry.key[0].toUpperCase()}${entry.key.substring(1)}',
+            ),
+          );
+        }
         if (results.length >= limit) return results;
       }
     }
 
-    // 1. Try Open-Meteo Geocoding API (Fast, Free, 100% CORS-Enabled on Web & Mobile)
+    if (results.isNotEmpty) {
+      return results;
+    }
+
+    // 2. Try Open-Meteo Geocoding API (Fast, Free fallback)
     try {
       final openMeteoUri = Uri.https('geocoding-api.open-meteo.com', '/v1/search', {
         'name': clean,
