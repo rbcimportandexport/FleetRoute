@@ -36,8 +36,22 @@ class TripsPage extends StatefulWidget {
   State<TripsPage> createState() => _TripsPageState();
 }
 
+class SelectedCatalogItem {
+  SelectedCatalogItem({
+    required this.product,
+    this.quantity = 1,
+    this.weightKg = 50.0,
+  });
+
+  final CatalogProduct product;
+  int quantity;
+  double weightKg;
+}
+
 class _ProductCatalogPage extends StatefulWidget {
-  const _ProductCatalogPage();
+  const _ProductCatalogPage({this.initialSelected = const []});
+
+  final List<SelectedCatalogItem> initialSelected;
 
   @override
   State<_ProductCatalogPage> createState() => _ProductCatalogPageState();
@@ -51,6 +65,8 @@ class _ProductCatalogPageState extends State<_ProductCatalogPage> {
   String _category = 'ALL';
   String _query = '';
 
+  final Map<String, SelectedCatalogItem> _selectedMap = {};
+
   static const _categories = <String>[
     'ALL',
     'BED',
@@ -63,13 +79,64 @@ class _ProductCatalogPageState extends State<_ProductCatalogPage> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    for (final item in widget.initialSelected) {
+      _selectedMap[item.product.id] = SelectedCatalogItem(
+        product: item.product,
+        quantity: item.quantity,
+        weightKg: item.weightKg,
+      );
+    }
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
   }
 
+  void _toggleProduct(CatalogProduct product) {
+    setState(() {
+      if (_selectedMap.containsKey(product.id)) {
+        _selectedMap.remove(product.id);
+      } else {
+        _selectedMap[product.id] = SelectedCatalogItem(
+          product: product,
+          quantity: 1,
+          weightKg: 50.0,
+        );
+      }
+    });
+  }
+
+  void _updateQuantity(String productId, int delta) {
+    setState(() {
+      if (_selectedMap.containsKey(productId)) {
+        final current = _selectedMap[productId]!;
+        final newQty = current.quantity + delta;
+        if (newQty <= 0) {
+          _selectedMap.remove(productId);
+        } else {
+          current.quantity = newQty;
+        }
+      }
+    });
+  }
+
+  int get _totalUnitsCount {
+    int count = 0;
+    for (final item in _selectedMap.values) {
+      count += item.quantity;
+    }
+    return count;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final selectedCount = _selectedMap.length;
+    final totalUnits = _totalUnitsCount;
+
     return Scaffold(
       backgroundColor: AppColors.canvas,
       appBar: AppBar(
@@ -77,7 +144,84 @@ class _ProductCatalogPageState extends State<_ProductCatalogPage> {
           'RBC / RAMA Product Catalogue',
           style: TextStyle(fontWeight: FontWeight.w800),
         ),
+        actions: [
+          if (selectedCount > 0)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: TextButton.icon(
+                onPressed: () {
+                  Navigator.of(context).pop(_selectedMap.values.toList());
+                },
+                icon: const Icon(Icons.check_circle_rounded, color: Colors.green),
+                label: Text(
+                  'Done ($selectedCount items)',
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
+            ),
+        ],
       ),
+      bottomNavigationBar: selectedCount > 0
+          ? Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 8,
+                    offset: const Offset(0, -2),
+                  ),
+                ],
+              ),
+              child: SafeArea(
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '$selectedCount Product(s) Selected',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 14,
+                              color: AppColors.navy,
+                            ),
+                          ),
+                          Text(
+                            'Total $totalUnits units to add into trip cargo',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.slate,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.of(context).pop(_selectedMap.values.toList());
+                      },
+                      icon: const Icon(Icons.done_all_rounded, size: 18),
+                      label: Text(
+                        'Add Selected ($selectedCount)',
+                        style: const TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          : null,
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -90,9 +234,18 @@ class _ProductCatalogPageState extends State<_ProductCatalogPage> {
                     controller: _searchController,
                     onChanged: (value) =>
                         setState(() => _query = value.trim().toLowerCase()),
-                    decoration: const InputDecoration(
-                      prefixIcon: Icon(Icons.search_rounded),
-                      hintText: 'Product code ya category search karein',
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.search_rounded),
+                      suffixIcon: _query.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear_rounded, size: 18),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() => _query = '');
+                              },
+                            )
+                          : null,
+                      hintText: 'Product code, name ya category search karein',
                       isDense: true,
                     ),
                   ),
@@ -139,7 +292,7 @@ class _ProductCatalogPageState extends State<_ProductCatalogPage> {
                                   ? product.category.startsWith('SHAMPOO')
                                   : product.category == _category);
                           final text =
-                              '${product.brand} ${product.category} ${product.code} ${product.name}'
+                              '   '
                                   .toLowerCase();
                           return brandMatch &&
                               categoryMatch &&
@@ -151,68 +304,187 @@ class _ProductCatalogPageState extends State<_ProductCatalogPage> {
                         }
                         return GridView.builder(
                           clipBehavior: Clip.hardEdge,
-                          padding: const EdgeInsets.only(top: 2, bottom: 16),
+                          padding: const EdgeInsets.only(top: 2, bottom: 20),
                           itemCount: filtered.length,
                           gridDelegate:
                               const SliverGridDelegateWithMaxCrossAxisExtent(
                             maxCrossAxisExtent: 190,
-                            mainAxisExtent: 218,
+                            mainAxisExtent: 254,
                             crossAxisSpacing: 10,
                             mainAxisSpacing: 10,
                           ),
                           itemBuilder: (context, index) {
                             final product = filtered[index];
+                            final isSelected = _selectedMap.containsKey(product.id);
+                            final selectedItem = _selectedMap[product.id];
+                            final qty = selectedItem?.quantity ?? 0;
+
                             return InkWell(
-                              onTap: () => Navigator.pop(context, product),
+                              onTap: () => _toggleProduct(product),
                               borderRadius: BorderRadius.circular(12),
-                              child: Ink(
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 180),
                                 decoration: BoxDecoration(
                                   color: Colors.white,
                                   borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: AppColors.border),
+                                  border: Border.all(
+                                    color: isSelected
+                                        ? AppColors.primary
+                                        : AppColors.border,
+                                    width: isSelected ? 2 : 1,
+                                  ),
+                                  boxShadow: isSelected
+                                      ? [
+                                          BoxShadow(
+                                            color: AppColors.primary.withValues(alpha: 0.12),
+                                            blurRadius: 6,
+                                            offset: const Offset(0, 2),
+                                          )
+                                        ]
+                                      : null,
                                 ),
                                 child: Column(
                                   crossAxisAlignment:
                                       CrossAxisAlignment.stretch,
                                   children: [
                                     Expanded(
-                                      child: ClipRRect(
-                                        borderRadius:
-                                            const BorderRadius.vertical(
-                                                top: Radius.circular(11)),
-                                        child: Image.asset(
-                                          product.photoAsset,
-                                          fit: BoxFit.contain,
-                                          errorBuilder: (_, __, ___) =>
-                                              const Center(
-                                            child: Icon(
-                                                Icons.broken_image_outlined,
-                                                color: AppColors.slate,
-                                                size: 34),
+                                      child: Stack(
+                                        fit: StackFit.expand,
+                                        children: [
+                                          ClipRRect(
+                                            borderRadius:
+                                                const BorderRadius.vertical(
+                                                    top: Radius.circular(10)),
+                                            child: Image.asset(
+                                              product.photoAsset,
+                                              fit: BoxFit.contain,
+                                              errorBuilder: (_, __, ___) =>
+                                                  const Center(
+                                                child: Icon(
+                                                    Icons.broken_image_outlined,
+                                                    color: AppColors.slate,
+                                                    size: 34),
+                                              ),
+                                            ),
                                           ),
-                                        ),
+                                          Positioned(
+                                            top: 6,
+                                            right: 6,
+                                            child: Container(
+                                              padding: const EdgeInsets.all(4),
+                                              decoration: BoxDecoration(
+                                                color: isSelected
+                                                    ? AppColors.primary
+                                                    : Colors.white.withValues(alpha: 0.9),
+                                                shape: BoxShape.circle,
+                                                border: Border.all(
+                                                  color: isSelected
+                                                      ? Colors.white
+                                                      : AppColors.border,
+                                                  width: 1.5,
+                                                ),
+                                              ),
+                                              child: Icon(
+                                                isSelected
+                                                    ? Icons.check_rounded
+                                                    : Icons.add_rounded,
+                                                size: 16,
+                                                color: isSelected
+                                                    ? Colors.white
+                                                    : AppColors.slate,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                     Padding(
-                                      padding: const EdgeInsets.all(8),
+                                      padding: const EdgeInsets.fromLTRB(8, 6, 8, 4),
                                       child: Column(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
-                                          Text(product.displayName,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: const TextStyle(
-                                                  fontWeight: FontWeight.w800)),
-                                          Text(product.category,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: const TextStyle(
-                                                  fontSize: 11,
-                                                  color: AppColors.slate)),
+                                          Text(
+                                            product.displayName,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w800,
+                                              fontSize: 12.5,
+                                              color: isSelected
+                                                  ? AppColors.primary
+                                                  : AppColors.navy,
+                                            ),
+                                          ),
+                                          Text(
+                                            product.category,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                              color: AppColors.slate,
+                                            ),
+                                          ),
                                         ],
                                       ),
                                     ),
+                                    if (isSelected)
+                                      Container(
+                                        margin: const EdgeInsets.fromLTRB(6, 0, 6, 6),
+                                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFEFF6FF),
+                                          borderRadius: BorderRadius.circular(6),
+                                          border: Border.all(color: const Color(0xFFBFDBFE)),
+                                        ),
+                                        child: Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            InkWell(
+                                              onTap: () => _updateQuantity(product.id, -1),
+                                              borderRadius: BorderRadius.circular(4),
+                                              child: const Padding(
+                                                padding: EdgeInsets.all(2),
+                                                child: Icon(Icons.remove_circle_outline, size: 18, color: AppColors.primary),
+                                              ),
+                                            ),
+                                            Text(
+                                              'Qty: $qty',
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w800,
+                                                color: AppColors.navy,
+                                              ),
+                                            ),
+                                            InkWell(
+                                              onTap: () => _updateQuantity(product.id, 1),
+                                              borderRadius: BorderRadius.circular(4),
+                                              child: const Padding(
+                                                padding: EdgeInsets.all(2),
+                                                child: Icon(Icons.add_circle, size: 18, color: AppColors.primary),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      )
+                                    else
+                                      Container(
+                                        margin: const EdgeInsets.fromLTRB(6, 0, 6, 6),
+                                        padding: const EdgeInsets.symmetric(vertical: 4),
+                                        alignment: Alignment.center,
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFF8FAFC),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: const Text(
+                                          'Tap to Select',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: AppColors.slate,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
                                   ],
                                 ),
                               ),
@@ -231,6 +503,7 @@ class _ProductCatalogPageState extends State<_ProductCatalogPage> {
     );
   }
 }
+
 
 class _TripsPageState extends State<TripsPage> {
   final referenceController = TextEditingController();
@@ -987,15 +1260,71 @@ class _TripsPageState extends State<TripsPage> {
           cargoWeightController: cargoWeightController,
           selectedCatalogProduct: selectedCatalogProduct,
           onChooseProduct: () async {
-            final product = await Navigator.of(context).push<CatalogProduct>(
+            // Prepopulate already selected catalog items from _customCargoItems
+            final initialList = <SelectedCatalogItem>[];
+            for (final ci in _customCargoItems) {
+              if (ci.productId != 'custom-product' && ci.productId != 'custom-item' && ci.productId.isNotEmpty) {
+                final qty = ci.loadedQuantity > 0 ? (ci.unit == 'Ton' ? (ci.loadedQuantity * 1000 / 50.0).round() : ci.loadedQuantity.round()) : 1;
+                initialList.add(
+                  SelectedCatalogItem(
+                    product: CatalogProduct(
+                      id: ci.productId,
+                      brand: ci.brand,
+                      category: ci.category,
+                      code: ci.productName.replaceFirst(ci.brand, '').trim(),
+                      name: ci.productName,
+                      photoAsset: ci.photoAsset,
+                      originalPath: '',
+                    ),
+                    quantity: qty > 0 ? qty : 1,
+                    weightKg: 50.0,
+                  ),
+                );
+              }
+            }
+
+            final items = await Navigator.of(context).push<List<SelectedCatalogItem>>(
               MaterialPageRoute(
-                builder: (_) => const _ProductCatalogPage(),
+                builder: (_) => _ProductCatalogPage(initialSelected: initialList),
               ),
             );
-            if (product != null && mounted) {
+            if (items != null && mounted) {
               setState(() {
-                selectedCatalogProduct = product;
-                cargoDescController.text = product.displayName;
+                if (items.isNotEmpty) {
+                  selectedCatalogProduct = items.first.product;
+                } else {
+                  selectedCatalogProduct = null;
+                }
+                // Remove previously added catalog items from _customCargoItems to avoid duplicates
+                _customCargoItems.removeWhere((ci) => ci.productId != 'custom-product' && ci.productId != 'custom-item' && ci.productId.isNotEmpty);
+                
+                // Add all newly selected products into _customCargoItems
+                for (final sel in items) {
+                  final totalWeightTon = (sel.quantity * sel.weightKg) / 1000.0;
+                  _customCargoItems.add(
+                    CargoItem(
+                      id: 'CI--',
+                      productId: sel.product.id,
+                      brand: sel.product.brand,
+                      category: sel.product.category,
+                      photoAsset: sel.product.photoAsset,
+                      productName: sel.product.displayName,
+                      loadedQuantity: totalWeightTon,
+                      unit: 'Ton',
+                      notes: ' Pcs ( KG)',
+                    ),
+                  );
+                }
+
+                // Recompute total weight and description
+                double totalTon = 0;
+                for (final ci in _customCargoItems) {
+                  totalTon += ci.unit == 'KG' ? ci.loadedQuantity / 1000.0 : ci.loadedQuantity;
+                }
+                cargoWeightController.text = totalTon > 0 ? totalTon.toStringAsFixed(2) : '';
+                cargoDescController.text = _customCargoItems
+                    .map((e) => ' ')
+                    .join(', ');
               });
             }
           },
@@ -1352,7 +1681,7 @@ class _TripSetupPanelState extends State<_TripSetupPanel> {
   final _quickItemNameCtrl = TextEditingController(text: 'Chairs');
   final _quickItemQtyCtrl = TextEditingController(text: '10');
   final _quickItemWeightCtrl = TextEditingController(text: '50');
-  String _quickItemUnit = 'KG'; // 'KG' or 'Ton'
+  final String _quickItemUnit = 'KG'; // 'KG' or 'Ton'
 
   @override
   void dispose() {
@@ -1442,15 +1771,20 @@ class _TripSetupPanelState extends State<_TripSetupPanel> {
           const SizedBox(height: 10),
           OutlinedButton.icon(
             onPressed: widget.onChooseProduct,
-            icon: const Icon(Icons.inventory_2_outlined),
+            icon: const Icon(Icons.add_shopping_cart_rounded, size: 20),
             label: Text(
-              widget.selectedCatalogProduct == null
-                  ? 'Choose RBC / RAMA Product with Photo'
-                  : '${widget.selectedCatalogProduct!.brand} · ${widget.selectedCatalogProduct!.category} · ${widget.selectedCatalogProduct!.code}',
+              widget.customCargoItems.any((c) => c.productId.isNotEmpty && c.productId != 'custom-product' && c.productId != 'custom-item')
+                  ? 'Select / Change Products (' + widget.customCargoItems.where((c) => c.productId.isNotEmpty && c.productId != 'custom-product' && c.productId != 'custom-item').length.toString() + ' selected)'
+                  : 'Choose RBC / RAMA Products with Photos (Multi-Select)',
+              style: const TextStyle(fontWeight: FontWeight.w700),
               overflow: TextOverflow.ellipsis,
             ),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
           ),
-          if (widget.selectedCatalogProduct != null) ...[
+          if (widget.customCargoItems.any((c) => c.productId.isNotEmpty && c.productId != 'custom-product' && c.productId != 'custom-item')) ...[
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.all(8),
@@ -1459,52 +1793,116 @@ class _TripSetupPanelState extends State<_TripSetupPanel> {
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: AppColors.border),
               ),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  InkWell(
-                    onTap: () =>
-                        _showSelectedProduct(context, widget.selectedCatalogProduct!),
-                    borderRadius: BorderRadius.circular(8),
-                    child: Stack(
-                      alignment: Alignment.bottomRight,
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.asset(
-                            widget.selectedCatalogProduct!.photoAsset,
-                            width: 72,
-                            height: 72,
-                            fit: BoxFit.contain,
-                          ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Selected Products (' + widget.customCargoItems.where((c) => c.productId.isNotEmpty && c.productId != 'custom-product' && c.productId != 'custom-item').length.toString() + '):',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.navy,
                         ),
-                        Container(
-                          padding: const EdgeInsets.all(3),
-                          decoration: const BoxDecoration(
-                            color: Colors.black54,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.zoom_in_rounded,
-                              color: Colors.white, size: 16),
+                      ),
+                      TextButton.icon(
+                        style: TextButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                          padding: const EdgeInsets.symmetric(horizontal: 6),
                         ),
-                      ],
-                    ),
+                        onPressed: widget.onChooseProduct,
+                        icon: const Icon(Icons.edit_rounded, size: 14),
+                        label: const Text('Add More / Edit', style: TextStyle(fontSize: 11)),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  const SizedBox(height: 4),
+                  SizedBox(
+                    height: 84,
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
                       children: [
-                        Text(
-                          widget.selectedCatalogProduct!.displayName,
-                          style: const TextStyle(fontWeight: FontWeight.w800),
-                        ),
-                        Text(
-                          widget.selectedCatalogProduct!.category,
-                          style: const TextStyle(
-                            color: AppColors.slate,
-                            fontSize: 12,
+                        for (final item in widget.customCargoItems.where((c) => c.productId.isNotEmpty && c.productId != 'custom-product' && c.productId != 'custom-item')) ...[
+                          Container(
+                            width: 190,
+                            margin: const EdgeInsets.only(right: 8),
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: const Color(0xFFE2E8F0)),
+                            ),
+                            child: Row(
+                              children: [
+                                if (item.photoAsset.isNotEmpty)
+                                  InkWell(
+                                    onTap: () => _showSelectedProduct(
+                                      context,
+                                      CatalogProduct(
+                                        id: item.productId,
+                                        brand: item.brand,
+                                        category: item.category,
+                                        code: item.productName.replaceFirst(item.brand, '').trim(),
+                                        name: item.productName,
+                                        photoAsset: item.photoAsset,
+                                        originalPath: '',
+                                      ),
+                                    ),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(6),
+                                      child: Image.asset(
+                                        item.photoAsset,
+                                        width: 48,
+                                        height: 48,
+                                        fit: BoxFit.contain,
+                                        errorBuilder: (_, __, ___) => const Icon(Icons.broken_image_outlined, size: 28, color: Colors.grey),
+                                      ),
+                                    ),
+                                  )
+                                else
+                                  Container(
+                                    width: 48,
+                                    height: 48,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF1F5F9),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: const Icon(Icons.inventory_2_outlined, size: 24, color: AppColors.slate),
+                                  ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        item.productName,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800),
+                                      ),
+                                      if (item.category.isNotEmpty)
+                                        Text(
+                                          item.category,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(fontSize: 10, color: AppColors.slate),
+                                        ),
+                                      Text(
+                                        item.notes.isNotEmpty ? item.notes : (item.loadedQuantity.toStringAsFixed(1) + ' ' + item.unit),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: AppColors.primary),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
+                        ],
                       ],
                     ),
                   ),
