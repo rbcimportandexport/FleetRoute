@@ -350,9 +350,8 @@ class _TripsPageState extends State<TripsPage> {
       _routeError = null;
       showValidation = false;
     });
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && origin == null) _useCurrentLocation();
-    });
+    // Do NOT automatically set user's current GPS location as Pickup.
+    // Let user explicitly choose Pickup and Drop independently.
   }
 
   void _cancelCreatingTrip() {

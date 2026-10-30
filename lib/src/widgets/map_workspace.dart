@@ -646,11 +646,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
   }
 
   bool _isVehicleOnline(TruckModel vehicle) =>
-      widget.controller.isVehicleDriverOnDuty(vehicle.code) ||
-      (vehicle.hasCoordinates &&
-          vehicle.hasValidGpsFix &&
-          !vehicle.isDemoTelemetry &&
-          !vehicle.isGpsStale);
+      widget.controller.isVehicleDriverOnDuty(vehicle.code);
 
   String _fleetLastUpdate(TruckModel vehicle) {
     final updated = vehicle.lastGpsTime;
@@ -1941,9 +1937,8 @@ class _MapWorkspaceState extends State<MapWorkspace> {
           truck.hasValidGpsFix &&
           !truck.isDemoTelemetry;
 
-      // DO NOT show fake/dummy location markers for vehicles that are NOT on duty
-      // and do not have an active GPS hardware/mobile fix.
-      if (!hasRealGps && !isOnDuty) {
+      // ONLY show marker if the driver is strictly ON DUTY (has turned duty ON).
+      if (!isOnDuty) {
         continue;
       }
 
