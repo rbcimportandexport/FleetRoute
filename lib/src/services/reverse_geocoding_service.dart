@@ -177,7 +177,6 @@ class ReverseGeocodingService {
     try {
       final googleUri = Uri.https('maps.googleapis.com', '/maps/api/geocode/json', {
         'address': clean,
-        'bounds': '20.0,72.0|24.5,74.8',
         'components': 'country:IN',
         'key': _googleMapsApiKey,
       });
@@ -270,7 +269,6 @@ class ReverseGeocodingService {
     try {
       final googleUri = Uri.https('maps.googleapis.com', '/maps/api/geocode/json', {
         'address': clean,
-        'bounds': '20.0,72.0|24.5,74.8',
         'components': 'country:IN',
         'key': _googleMapsApiKey,
       });
@@ -303,7 +301,52 @@ class ReverseGeocodingService {
       }
     } catch (_) {}
 
-    // Check predefined cities & local Gujarat towns
+    // 2. Fallback to OpenStreetMap Nominatim (Superb for ports, landmarks, industrial areas)
+    try {
+      final uri = Uri.https('nominatim.openstreetmap.org', '/search', {
+        'format': 'jsonv2',
+        'q': clean,
+        'limit': '$limit',
+        'countrycodes': 'in',
+        'addressdetails': '1',
+      });
+      final response = await http.get(uri, headers: const {
+        'User-Agent': 'TransportOne/1.2 (support@rbcsalonfurniture.com)',
+        'Accept-Language': 'en-IN,en;q=0.9,hi;q=0.8',
+      }).timeout(const Duration(seconds: 4));
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body);
+        if (json is List) {
+          for (final item in json) {
+            if (item is Map) {
+              final lat = double.tryParse(item['lat']?.toString() ?? '');
+              final lon = double.tryParse(item['lon']?.toString() ?? '');
+              if (lat != null && lon != null) {
+                final displayName = item['display_name']?.toString() ?? clean;
+                final shortName = item['name']?.toString() ??
+                    displayName.split(',').first.trim();
+                final exists = results.any((r) =>
+                    (r.coordinates.latitude - lat).abs() < 0.01 &&
+                    (r.coordinates.longitude - lon).abs() < 0.01);
+                if (!exists) {
+                  results.add(
+                    GeocodedPlace(
+                      coordinates: LatLng(lat, lon),
+                      displayName: displayName,
+                      shortName: shortName,
+                    ),
+                  );
+                }
+                if (results.length >= limit) return results;
+              }
+            }
+          }
+        }
+      }
+    } catch (_) {}
+
+    // 3. Check predefined cities & local transport hubs
     for (final entry in RouteTrafficService.cityCoordinates.entries) {
       if (entry.key.toLowerCase().contains(clean.toLowerCase())) {
         final stateName = RouteTrafficService.cityStates[entry.key.toLowerCase()] ?? 'India';
@@ -330,7 +373,7 @@ class ReverseGeocodingService {
       return results;
     }
 
-    // 2. Try Open-Meteo Geocoding API (Fast, Free fallback)
+    // 4. Try Open-Meteo Geocoding API (Fast, Free fallback)
     try {
       final openMeteoUri = Uri.https('geocoding-api.open-meteo.com', '/v1/search', {
         'name': clean,
