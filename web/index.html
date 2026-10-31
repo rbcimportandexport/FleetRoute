@@ -22,19 +22,36 @@
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
     }
-/* Suppress Google Maps warning banner and gray dialog box */
+/* Suppress Google Maps warning banner, billing popup, and development watermark */
     .gm-err-container,
     .gm-err-content,
     .gm-err-message,
     .gm-err-autocomplete,
     .dismissButton,
-    button[class*="dismissButton"],
-    div:has(> .dismissButton),
-    div:has(> table .dismissButton) {
+    button[class*="dismissButton"] {
       display: none !important;
       visibility: hidden !important;
       opacity: 0 !important;
       pointer-events: none !important;
+    }
+
+    /* Remove gray dimming / dark filter from Google Maps tiles */
+    .gm-style div[style*="background-color: rgba(0, 0, 0, 0.5)"],
+    .gm-style div[style*="background-color:rgba(0, 0, 0, 0.5)"],
+    .gm-style div[style*="background-color: rgba(0,0,0,0.5)"],
+    .gm-style div[style*="rgba(0, 0, 0, 0.5)"],
+    .gm-style div[style*="z-index: 100"],
+    .gm-style div[style*="z-index:100"] {
+      display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+
+    /* Keep tiles bright and unfiltered */
+    .gm-style img {
+      filter: none !important;
+      -webkit-filter: none !important;
     }
   </style>
   <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyArJB3w8s8l66nuhGLbLy6LvZi5EgqXscQ&libraries=places"></script>
@@ -76,17 +93,16 @@
       }
     };
 
-        // Suppress Google Maps development / billing error modal completely
+        // Suppress Google Maps development / billing error modal and watermarks completely
     setInterval(function() {
       try {
-        // 1. Target buttons with class dismissButton or text OK
+        // 1. Remove dialog buttons and container cards
         var btns = document.querySelectorAll('.dismissButton, button');
         for (var i = 0; i < btns.length; i++) {
           var b = btns[i];
           if (b.classList.contains('dismissButton') || (b.innerText && b.innerText.trim() === 'OK')) {
-            // Find container box created by Google Maps (styled with white background and padding)
             var cur = b;
-            for (var depth = 0; depth < 5 && cur && cur.parentElement && cur.parentElement !== document.body; depth++) {
+            for (var d = 0; d < 5 && cur && cur.parentElement && cur.parentElement !== document.body; d++) {
               if (cur.style && (cur.style.backgroundColor === 'white' || cur.style.padding === '15px 25px')) {
                 cur.remove();
                 break;
@@ -96,18 +112,33 @@
           }
         }
 
-        // 2. Scan elements containing "can't load Google Maps correctly"
+        // 2. Remove "This page can't load Google Maps correctly"
         var spans = document.getElementsByTagName('span');
         for (var j = 0; j < spans.length; j++) {
           var sp = spans[j];
-          if (sp.innerText && sp.innerText.indexOf("can't load Google Maps") !== -1) {
+          var txt = sp.innerText || '';
+          if (txt.indexOf("can't load Google Maps") !== -1) {
             var box = sp;
-            for (var d = 0; d < 6 && box && box.parentElement && box.parentElement !== document.body; d++) {
+            for (var d2 = 0; d2 < 6 && box && box.parentElement && box.parentElement !== document.body; d2++) {
               if (box.style && (box.style.backgroundColor === 'white' || box.style.padding === '15px 25px')) {
                 box.remove();
                 break;
               }
               box = box.parentElement;
+            }
+          } else if (txt.indexOf('For development purposes only') !== -1) {
+            // Remove the watermark and its parent dark overlay container
+            var darkOverlay = sp.closest('div[style*="rgba(0, 0, 0, 0.5)"]') || sp.parentElement;
+            while (darkOverlay && darkOverlay.parentElement && darkOverlay.parentElement.className !== 'gm-style') {
+              if (darkOverlay.style && (darkOverlay.style.zIndex === '100' || darkOverlay.style.backgroundColor.indexOf('rgba(0, 0, 0') !== -1)) {
+                break;
+              }
+              darkOverlay = darkOverlay.parentElement;
+            }
+            if (darkOverlay && darkOverlay.parentElement) {
+              darkOverlay.remove();
+            } else if (sp.parentElement) {
+              sp.parentElement.remove();
             }
           }
         }
@@ -117,8 +148,15 @@
         for (var k = 0; k < errs.length; k++) {
           errs[k].remove();
         }
+
+        // 4. Remove dark overlays covering the tiles
+        var darkDivs = document.querySelectorAll('.gm-style div[style*="rgba(0, 0, 0, 0.5)"], .gm-style div[style*="rgba(0,0,0,0.5)"]');
+        for (var m = 0; m < darkDivs.length; m++) {
+          darkDivs[m].remove();
+        }
       } catch (_) {}
-    }, 100);
+    }, 50);
+
     // Intercept Google Maps constructor so gestureHandling is greedy by default.
     // Also isolate touch/wheel events on the map element so scrolling/dragging inside the map
     // never bubbles up or drags the outer browser page.
