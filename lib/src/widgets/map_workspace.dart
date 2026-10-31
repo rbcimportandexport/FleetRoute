@@ -592,7 +592,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
   }
 
   void _fitFleet() {
-    const depotJolva = LatLng(21.2035, 73.0151);
+    const depotJolva = LatLng(21.1648, 73.0028);
     final truckPoints = <LatLng>[];
     for (final truck in widget.controller.truckModels) {
       if (truck.hasCoordinates) {
@@ -817,7 +817,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
           widget.controller.selectTruck(vIdx);
         }
 
-        const depotJolva = LatLng(21.2035, 73.0151);
+        const depotJolva = LatLng(21.1648, 73.0028);
         final lat = vehicle.latitude ??
             (_pinnedOrigin?.latitude ?? depotJolva.latitude);
         final lng = vehicle.longitude ??
@@ -3915,7 +3915,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
     final isOnDuty = widget.controller.isVehicleDriverOnDuty(truck.code);
     final isOnline = _isVehicleOnline(truck);
     final speed = truck.currentSpeed.toStringAsFixed(0);
-    const depotJolva = LatLng(21.2035, 73.0151);
+    const depotJolva = LatLng(21.1648, 73.0028);
     final lat = truck.latitude ?? (_pinnedOrigin?.latitude ?? depotJolva.latitude);
     final lng = truck.longitude ?? (_pinnedOrigin?.longitude ?? depotJolva.longitude);
     final vehiclePoint = LatLng(lat, lng);
