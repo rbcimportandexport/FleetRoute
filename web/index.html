@@ -22,6 +22,16 @@
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
     }
+    /* Suppress Google Maps warning banner and gray dialog box */
+    .gm-err-container,
+    .gm-err-content,
+    .gm-err-message,
+    .gm-err-autocomplete {
+      display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
   </style>
   <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyArJB3w8s8l66nuhGLbLy6LvZi5EgqXscQ&libraries=places"></script>
   <script>
@@ -61,6 +71,16 @@
         }
       }
     };
+
+    // Suppress Google Maps development / billing error modal
+    setInterval(function() {
+      try {
+        var errs = document.querySelectorAll('.gm-err-container, .gm-err-content, [class*="gm-err"]');
+        for (var i = 0; i < errs.length; i++) {
+          errs[i].remove();
+        }
+      } catch (_) {}
+    }, 200);
 
     // Intercept Google Maps constructor so gestureHandling is greedy by default.
     // Also isolate touch/wheel events on the map element so scrolling/dragging inside the map
