@@ -4275,47 +4275,105 @@ class _MapWorkspaceState extends State<MapWorkspace> {
           return Stack(
             children: [
               Positioned.fill(
-                child: gm.GoogleMap(
-                  key: _mapViewKey,
-                  initialCameraPosition: gm.CameraPosition(
-                    target: _googlePoint(
-                        _effectiveOrigin ?? _userLocation ?? _india),
-                    zoom: initialZoom,
-                  ),
-                  mapType: widget.controller.satellite
-                      ? gm.MapType.hybrid
-                      : gm.MapType.normal,
-                  trafficEnabled: _trafficEnabled,
-                  myLocationEnabled: _userLocation != null,
-                  myLocationButtonEnabled: false,
-                  zoomControlsEnabled: false,
-                  compassEnabled: false,
-                  mapToolbarEnabled: false,
-                  gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
-                    Factory<EagerGestureRecognizer>(
-                      () => EagerGestureRecognizer(),
-                    ),
-                  },
-                  markers: _googleMarkers,
-                  polylines: _googlePolylines,
-                  onMapCreated: (controller) {
-                    _googleMapController = controller;
-                    final target = _effectiveOrigin ?? _userLocation;
-                    if (target != null) {
-                      controller.animateCamera(gm.CameraUpdate.newLatLngZoom(
-                          _googlePoint(target), 16));
-                    }
-                  },
-                  onTap: (point) =>
-                      _handleMapTap(LatLng(point.latitude, point.longitude)),
-                  onCameraMove: (position) {
-                    _lastGoogleCameraPosition = position;
-                    _zoom = position.zoom;
-                    if (_isNavigating && _cameraFollowLocked) {
-                      setState(() => _cameraFollowLocked = false);
-                    }
-                  },
-                ),
+                child: kIsWeb
+                    ? FlutterMap(
+                        key: _mapViewKey,
+                        mapController: _mapController,
+                        options: MapOptions(
+                          initialCenter:
+                              _effectiveOrigin ?? _userLocation ?? _india,
+                          initialZoom: initialZoom,
+                          minZoom: 2.5,
+                          maxZoom: 19.0,
+                          onTap: (tapPosition, point) => _handleMapTap(point),
+                          onPositionChanged: (camera, hasGesture) {
+                            _zoom = camera.zoom;
+                            if (_isNavigating && _cameraFollowLocked && hasGesture) {
+                              setState(() => _cameraFollowLocked = false);
+                            }
+                          },
+                        ),
+                        children: [
+                          TileLayer(
+                            key: ValueKey(
+                                '${widget.controller.mapStyle}_$_tileLayerRevision'),
+                            urlTemplate: MapTileService.getTileUrl(
+                              satellite: widget.controller.satellite,
+                              streetlight: widget.controller.isStreetlight,
+                              traffic: false,
+                            ),
+                            subdomains: MapTileService.getSubdomains(
+                              streetlight: widget.controller.isStreetlight,
+                            ),
+                            fallbackUrl: MapTileService.fallbackTileUrl,
+                            maxNativeZoom: 19,
+                            userAgentPackageName: MapTileService.userAgent,
+                            maxZoom: 19,
+                            errorTileCallback: (tile, error, stackTrace) =>
+                                _handleMapTileError(),
+                          ),
+                          if (widget.controller.satellite) ...[
+                            TileLayer(
+                              key: const ValueKey('sat_roads'),
+                              urlTemplate: MapTileService.satelliteRoadsTileUrl,
+                              maxNativeZoom: 19,
+                              userAgentPackageName: MapTileService.userAgent,
+                              maxZoom: 19,
+                            ),
+                            TileLayer(
+                              key: const ValueKey('sat_labels'),
+                              urlTemplate: MapTileService.satelliteLabelsTileUrl,
+                              maxNativeZoom: 19,
+                              userAgentPackageName: MapTileService.userAgent,
+                              maxZoom: 19,
+                            ),
+                          ],
+                          PolylineLayer(polylines: _polylines),
+                          CircleLayer(circles: _circles),
+                          MarkerLayer(markers: _markers),
+                        ],
+                      )
+                    : gm.GoogleMap(
+                        key: _mapViewKey,
+                        initialCameraPosition: gm.CameraPosition(
+                          target: _googlePoint(
+                              _effectiveOrigin ?? _userLocation ?? _india),
+                          zoom: initialZoom,
+                        ),
+                        mapType: widget.controller.satellite
+                            ? gm.MapType.hybrid
+                            : gm.MapType.normal,
+                        trafficEnabled: _trafficEnabled,
+                        myLocationEnabled: _userLocation != null,
+                        myLocationButtonEnabled: false,
+                        zoomControlsEnabled: false,
+                        compassEnabled: false,
+                        mapToolbarEnabled: false,
+                        gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
+                          Factory<EagerGestureRecognizer>(
+                            () => EagerGestureRecognizer(),
+                          ),
+                        },
+                        markers: _googleMarkers,
+                        polylines: _googlePolylines,
+                        onMapCreated: (controller) {
+                          _googleMapController = controller;
+                          final target = _effectiveOrigin ?? _userLocation;
+                          if (target != null) {
+                            controller.animateCamera(gm.CameraUpdate.newLatLngZoom(
+                                _googlePoint(target), 16));
+                          }
+                        },
+                        onTap: (point) =>
+                            _handleMapTap(LatLng(point.latitude, point.longitude)),
+                        onCameraMove: (position) {
+                          _lastGoogleCameraPosition = position;
+                          _zoom = position.zoom;
+                          if (_isNavigating && _cameraFollowLocked) {
+                            setState(() => _cameraFollowLocked = false);
+                          }
+                        },
+                      ),
               ),
 
               if (_mapTilesFailed)

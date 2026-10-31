@@ -78,8 +78,11 @@ class _UpiScanAndPayDialogState extends State<UpiScanAndPayDialog> {
   String _buildPaymentUri() {
     final pa = _upiIdCtrl.text.trim();
     final amt = double.tryParse(_amountCtrl.text.trim()) ?? 0.0;
-    final pn = _nameCtrl.text.trim().isNotEmpty ? _nameCtrl.text.trim() : 'Payee';
-    final tn = _noteCtrl.text.trim().isNotEmpty ? _noteCtrl.text.trim() : 'Payment via FleetRoute';
+    final pn =
+        _nameCtrl.text.trim().isNotEmpty ? _nameCtrl.text.trim() : 'Payee';
+    final tn = _noteCtrl.text.trim().isNotEmpty
+        ? _noteCtrl.text.trim()
+        : 'Payment via FleetRoute';
     final amtStr = amt > 0 ? amt.toStringAsFixed(2) : '';
 
     var query = 'pa=$pa&pn=${Uri.encodeComponent(pn)}&cu=INR';
@@ -114,10 +117,14 @@ class _UpiScanAndPayDialogState extends State<UpiScanAndPayDialog> {
       return;
     }
 
-    final pn = _nameCtrl.text.trim().isNotEmpty ? _nameCtrl.text.trim() : 'Payee';
-    final tn = _noteCtrl.text.trim().isNotEmpty ? _noteCtrl.text.trim() : 'Payment via FleetRoute';
+    final pn =
+        _nameCtrl.text.trim().isNotEmpty ? _nameCtrl.text.trim() : 'Payee';
+    final tn = _noteCtrl.text.trim().isNotEmpty
+        ? _noteCtrl.text.trim()
+        : 'Payment via FleetRoute';
     final amtStr = amt.toStringAsFixed(2);
-    final params = 'pa=$pa&pn=${Uri.encodeComponent(pn)}&am=$amtStr&cu=INR&tn=${Uri.encodeComponent(tn)}';
+    final params =
+        'pa=$pa&pn=${Uri.encodeComponent(pn)}&am=$amtStr&cu=INR&tn=${Uri.encodeComponent(tn)}';
 
     Uri? targetUri;
     switch (appScheme.toLowerCase()) {
@@ -161,7 +168,8 @@ class _UpiScanAndPayDialogState extends State<UpiScanAndPayDialog> {
       setState(() => _showQrCode = true);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('$appScheme open nahi hua. Aap niche diye gaye QR code ko kisi bhi UPI app se scan kar sakte hain.'),
+          content: Text(
+              '$appScheme open nahi hua. Aap niche diye gaye QR code ko kisi bhi UPI app se scan kar sakte hain.'),
           backgroundColor: const Color(0xFF0284C7),
         ),
       );
@@ -206,7 +214,8 @@ class _UpiScanAndPayDialogState extends State<UpiScanAndPayDialog> {
         setState(() => _showQrCode = true);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('UPI intent directly launch nahi hua. Niche QR code generate ho gaya hai, kisi bhi app se scan karke pay karein.'),
+            content: Text(
+                'UPI intent directly launch nahi hua. Niche QR code generate ho gaya hai, kisi bhi app se scan karke pay karein.'),
             backgroundColor: Color(0xFF0284C7),
           ),
         );
@@ -271,7 +280,8 @@ class _UpiScanAndPayDialogState extends State<UpiScanAndPayDialog> {
                       color: const Color(0xFFDCFCE7),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(Icons.qr_code_scanner_rounded, color: AppColors.primary, size: 22),
+                    child: const Icon(Icons.qr_code_scanner_rounded,
+                        color: AppColors.primary, size: 22),
                   ),
                   const SizedBox(width: 10),
                   const Expanded(
@@ -288,7 +298,8 @@ class _UpiScanAndPayDialogState extends State<UpiScanAndPayDialog> {
                         ),
                         Text(
                           'Scan any Shop / Toll / Person QR code',
-                          style: TextStyle(fontSize: 11, color: AppColors.slate),
+                          style:
+                              TextStyle(fontSize: 11, color: AppColors.slate),
                         ),
                       ],
                     ),
@@ -317,7 +328,8 @@ class _UpiScanAndPayDialogState extends State<UpiScanAndPayDialog> {
                           width: 180,
                           height: 180,
                           decoration: BoxDecoration(
-                            border: Border.all(color: Colors.greenAccent, width: 2.5),
+                            border: Border.all(
+                                color: Colors.greenAccent, width: 2.5),
                             borderRadius: BorderRadius.circular(14),
                           ),
                         ),
@@ -457,8 +469,14 @@ class _UpiScanAndPayDialogState extends State<UpiScanAndPayDialog> {
                 Center(
                   child: TextButton.icon(
                     onPressed: () => setState(() => _showQrCode = !_showQrCode),
-                    icon: Icon(_showQrCode ? Icons.qr_code_rounded : Icons.qr_code_scanner_rounded, size: 18),
-                    label: Text(_showQrCode ? 'Hide QR Code' : 'Show Instant Payment QR Code'),
+                    icon: Icon(
+                        _showQrCode
+                            ? Icons.qr_code_rounded
+                            : Icons.qr_code_scanner_rounded,
+                        size: 18),
+                    label: Text(_showQrCode
+                        ? 'Hide QR Code'
+                        : 'Show Instant Payment QR Code'),
                   ),
                 ),
                 if (_showQrCode) ...[
@@ -511,7 +529,8 @@ class _UpiScanAndPayDialogState extends State<UpiScanAndPayDialog> {
                   style: FilledButton.styleFrom(
                     backgroundColor: const Color(0xFF16A34A),
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                   ),
                   label: const Text(
                     'Proceed to Real UPI App',
