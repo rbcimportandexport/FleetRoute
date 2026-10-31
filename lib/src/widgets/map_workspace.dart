@@ -593,7 +593,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
   }
 
   void _fitFleet() {
-    const depotJolva = LatLng(21.1648, 73.0028);
+    const factoryRbc = LatLng(21.17065, 73.00425);
     final truckPoints = <LatLng>[];
     for (final truck in widget.controller.truckModels) {
       if (truck.hasCoordinates) {
@@ -606,7 +606,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
       } else if (_pinnedOrigin != null) {
         truckPoints.add(_pinnedOrigin!);
       } else {
-        truckPoints.add(depotJolva);
+        truckPoints.add(factoryRbc);
       }
     }
     if (truckPoints.isEmpty) return;
@@ -861,11 +861,11 @@ class _MapWorkspaceState extends State<MapWorkspace> {
           widget.controller.selectTruck(vIdx);
         }
 
-        const depotJolva = LatLng(21.1648, 73.0028);
+        const factoryRbc = LatLng(21.17065, 73.00425);
         final lat = vehicle.latitude ??
-            (_pinnedOrigin?.latitude ?? depotJolva.latitude);
+            (_pinnedOrigin?.latitude ?? factoryRbc.latitude);
         final lng = vehicle.longitude ??
-            (_pinnedOrigin?.longitude ?? depotJolva.longitude);
+            (_pinnedOrigin?.longitude ?? factoryRbc.longitude);
         final point = LatLng(lat, lng);
 
         try {
@@ -4007,9 +4007,9 @@ class _MapWorkspaceState extends State<MapWorkspace> {
     final isOnDuty = widget.controller.isVehicleDriverOnDuty(truck.code);
     final isOnline = _isVehicleOnline(truck);
     final speed = truck.currentSpeed.toStringAsFixed(0);
-    const depotJolva = LatLng(21.1648, 73.0028);
-    final lat = truck.latitude ?? (_pinnedOrigin?.latitude ?? depotJolva.latitude);
-    final lng = truck.longitude ?? (_pinnedOrigin?.longitude ?? depotJolva.longitude);
+    const factoryRbc = LatLng(21.17065, 73.00425);
+    final lat = truck.latitude ?? (_pinnedOrigin?.latitude ?? factoryRbc.latitude);
+    final lng = truck.longitude ?? (_pinnedOrigin?.longitude ?? factoryRbc.longitude);
     final vehiclePoint = LatLng(lat, lng);
 
     showModalBottomSheet<void>(

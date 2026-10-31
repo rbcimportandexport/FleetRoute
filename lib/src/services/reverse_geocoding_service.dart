@@ -31,7 +31,22 @@ class ReverseGeocodingService {
 
   static final Map<String, String> _labelCache = {};
 
+  /// Checks if point is within the RBC Salon Furniture factory compound in Jolwa/Palsana
+  static bool _isRbcFactoryLocation(LatLng point) {
+    const factoryLat = 21.17065;
+    const factoryLng = 73.00425;
+    final dLat = (point.latitude - factoryLat).abs();
+    final dLng = (point.longitude - factoryLng).abs();
+    // Within ~350m bounding box of RBC Salon Furniture Factory
+    return dLat < 0.0035 && dLng < 0.0035;
+  }
+
   static Future<String?> addressFor(LatLng point) async {
+    // 0. Exact Landmark Override for User's Factory & Depot
+    if (_isRbcFactoryLocation(point)) {
+      return 'RBC SALON FURNITURE, Aradhna Industrial Estate, Jolwa';
+    }
+
     final key = '${point.latitude.toStringAsFixed(5)},${point.longitude.toStringAsFixed(5)}';
     if (_labelCache.containsKey(key)) {
       return _labelCache[key];
@@ -264,6 +279,22 @@ class ReverseGeocodingService {
     }
 
     final results = <GeocodedPlace>[];
+
+    // 0. Priority match for RBC Salon Furniture Factory & Depot
+    final lowerClean = clean.toLowerCase();
+    if (lowerClean.contains('rbc') ||
+        lowerClean.contains('salon furniture') ||
+        lowerClean.contains('factory') ||
+        lowerClean.contains('depot') ||
+        lowerClean.contains('rama')) {
+      results.add(
+        const GeocodedPlace(
+          coordinates: LatLng(21.17065, 73.00425),
+          displayName: 'RBC SALON FURNITURE, Aradhna Industrial Estate, Jolwa, Palsana, Surat',
+          shortName: 'RBC SALON FURNITURE',
+        ),
+      );
+    }
 
     // 1. Try Google Geocoding API first (Official, high accuracy across all Indian cities/villages/societies)
     try {
