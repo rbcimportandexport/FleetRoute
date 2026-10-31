@@ -22,11 +22,15 @@
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
     }
-    /* Suppress Google Maps warning banner and gray dialog box */
+/* Suppress Google Maps warning banner and gray dialog box */
     .gm-err-container,
     .gm-err-content,
     .gm-err-message,
-    .gm-err-autocomplete {
+    .gm-err-autocomplete,
+    .dismissButton,
+    button[class*="dismissButton"],
+    div:has(> .dismissButton),
+    div:has(> table .dismissButton) {
       display: none !important;
       visibility: hidden !important;
       opacity: 0 !important;
@@ -72,16 +76,49 @@
       }
     };
 
-    // Suppress Google Maps development / billing error modal
+        // Suppress Google Maps development / billing error modal completely
     setInterval(function() {
       try {
+        // 1. Target buttons with class dismissButton or text OK
+        var btns = document.querySelectorAll('.dismissButton, button');
+        for (var i = 0; i < btns.length; i++) {
+          var b = btns[i];
+          if (b.classList.contains('dismissButton') || (b.innerText && b.innerText.trim() === 'OK')) {
+            // Find container box created by Google Maps (styled with white background and padding)
+            var cur = b;
+            for (var depth = 0; depth < 5 && cur && cur.parentElement && cur.parentElement !== document.body; depth++) {
+              if (cur.style && (cur.style.backgroundColor === 'white' || cur.style.padding === '15px 25px')) {
+                cur.remove();
+                break;
+              }
+              cur = cur.parentElement;
+            }
+          }
+        }
+
+        // 2. Scan elements containing "can't load Google Maps correctly"
+        var spans = document.getElementsByTagName('span');
+        for (var j = 0; j < spans.length; j++) {
+          var sp = spans[j];
+          if (sp.innerText && sp.innerText.indexOf("can't load Google Maps") !== -1) {
+            var box = sp;
+            for (var d = 0; d < 6 && box && box.parentElement && box.parentElement !== document.body; d++) {
+              if (box.style && (box.style.backgroundColor === 'white' || box.style.padding === '15px 25px')) {
+                box.remove();
+                break;
+              }
+              box = box.parentElement;
+            }
+          }
+        }
+
+        // 3. Remove .gm-err-*
         var errs = document.querySelectorAll('.gm-err-container, .gm-err-content, [class*="gm-err"]');
-        for (var i = 0; i < errs.length; i++) {
-          errs[i].remove();
+        for (var k = 0; k < errs.length; k++) {
+          errs[k].remove();
         }
       } catch (_) {}
-    }, 200);
-
+    }, 100);
     // Intercept Google Maps constructor so gestureHandling is greedy by default.
     // Also isolate touch/wheel events on the map element so scrolling/dragging inside the map
     // never bubbles up or drags the outer browser page.
