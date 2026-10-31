@@ -1047,7 +1047,7 @@ class _ReportsPageState extends State<ReportsPage> {
               icon: Icons.local_shipping_rounded,
               label: 'Live GPS vehicles',
               value:
-                  '${controller.truckModels.where((v) => controller.isVehicleDriverOnDuty(v.code) && v.hasCoordinates && !v.isGpsStale).length}/${controller.truckModels.length}',
+                  '${controller.truckModels.where((v) => controller.isVehicleDriverOnDuty(v.code)).length}/${controller.truckModels.length}',
               helper: 'Valid tracker fixes only · Tap to view',
               onTap: () => _showLiveFleetGpsDialog(context),
             ),
@@ -1096,7 +1096,7 @@ class _ReportsPageState extends State<ReportsPage> {
         animation: widget.controller,
         builder: (context, _) {
           final vehicles = widget.controller.truckModels;
-          final online = vehicles.where((v) => widget.controller.isVehicleDriverOnDuty(v.code) && v.hasCoordinates && !v.isGpsStale).length;
+          final online = vehicles.where((v) => widget.controller.isVehicleDriverOnDuty(v.code)).length;
           return SafeArea(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -1146,7 +1146,7 @@ class _ReportsPageState extends State<ReportsPage> {
                     separatorBuilder: (_, __) => const Divider(height: 1),
                     itemBuilder: (_, index) {
                       final vehicle = vehicles[index];
-                      final isOnline = widget.controller.isVehicleDriverOnDuty(vehicle.code) && vehicle.hasCoordinates && !vehicle.isGpsStale;
+                      final isOnline = widget.controller.isVehicleDriverOnDuty(vehicle.code);
                       final drivers = widget.controller.drivers
                           .where((d) =>
                               d.assignedVehicle.trim().toUpperCase() ==
