@@ -54,6 +54,46 @@
       -webkit-filter: none !important;
     }
   </style>
+    <script>
+    // Intercept Google Maps loader to permanently neutralize billing popup and development watermark
+    (function() {
+      window.google = window.google || {};
+      window.google.maps = window.google.maps || {};
+
+      var _gjs = undefined;
+      Object.defineProperty(window.google.maps, '__gjsload__', {
+        configurable: true,
+        enumerable: true,
+        get: function() {
+          return _gjs;
+        },
+        set: function(realGjsLoad) {
+          _gjs = function(name, factory) {
+            if (typeof factory === 'function') {
+              var realFactory = factory;
+              factory = function(_) {
+                var res = realFactory.apply(this, arguments);
+                try {
+                  // Neutralize development watermark and dark overlay
+                  if (_ && _.Nw) {
+                    _.Nw = function() {};
+                  }
+                  // Neutralize billing/quota error popup modal
+                  if (_ && _.QKa) {
+                    _.QKa = function() {
+                      return document.createElement('div');
+                    };
+                  }
+                } catch (e) {}
+                return res;
+              };
+            }
+            return realGjsLoad.call(this, name, factory);
+          };
+        }
+      });
+    })();
+  </script>
   <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyArJB3w8s8l66nuhGLbLy6LvZi5EgqXscQ&libraries=places"></script>
   <script>
     // Global Google Places & Geocoder service helper for fast and CORS-free place searches
