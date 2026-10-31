@@ -199,19 +199,24 @@ class _PreTripCustomerDetailsDialogState
       }
 
       // 2. Link or create active trip record so customer and cargo details persist
-      final truckIdx = widget.controller.truckIndex ?? 0;
-      final vehicleCode = widget.controller.truckModels.isNotEmpty
-          ? widget
-              .controller
-              .truckModels[
-                  truckIdx.clamp(0, widget.controller.truckModels.length - 1)]
-              .code
-          : '';
-
       final activeDriver = widget.controller.selectedDriver;
+      String vehicleCode = '';
+      if (widget.controller.isDriver && activeDriver != null && activeDriver.assignedVehicle.isNotEmpty) {
+        vehicleCode = activeDriver.assignedVehicle.trim().toUpperCase();
+      } else {
+        final truckIdx = widget.controller.truckIndex ?? 0;
+        if (widget.controller.truckModels.isNotEmpty) {
+          vehicleCode = widget.controller.truckModels[
+              truckIdx.clamp(0, widget.controller.truckModels.length - 1)].code;
+        }
+      }
+      if (vehicleCode.isEmpty && widget.controller.truckModels.isNotEmpty) {
+        vehicleCode = widget.controller.truckModels.first.code;
+      }
+
       String driverName = '';
       if (widget.controller.isDriver) {
-        driverName = widget.controller.loggedInName ?? activeDriver?.name ?? 'Driver';
+        driverName = widget.controller.loggedInName ?? activeDriver?.name ?? 'Sandeep';
       } else {
         final assignedToVehicle = widget.controller.drivers.where(
           (d) => d.assignedVehicle.trim().toUpperCase() == vehicleCode.trim().toUpperCase(),
@@ -221,7 +226,7 @@ class _PreTripCustomerDetailsDialogState
         } else if (activeDriver != null && !activeDriver.name.toLowerCase().contains('admin')) {
           driverName = activeDriver.name;
         } else {
-          driverName = widget.controller.activeDriverName ?? 'Driver';
+          driverName = widget.controller.activeDriverName ?? 'Sandeep';
         }
       }
 

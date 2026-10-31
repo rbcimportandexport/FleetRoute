@@ -1422,7 +1422,7 @@ class PlannerController extends ChangeNotifier {
 
     try {
       Position position;
-      final lastPos = await Geolocator.getLastKnownPosition();
+      final lastPos = kIsWeb ? null : await Geolocator.getLastKnownPosition();
       if (lastPos != null) {
         unawaited(publish(lastPos));
       }
@@ -2117,6 +2117,33 @@ class PlannerController extends ChangeNotifier {
     notifyListeners();
     await _saveTrips();
     unawaited(FirebaseBackendService.instance.syncTripRecord(record: trip));
+
+    // Instant Notification to Assigned Driver
+    final vehicle = trip.assignedVehicle.isNotEmpty
+        ? trip.assignedVehicle
+        : (currentDriver?.assignedVehicle ?? 'Fleet Vehicle');
+    final driver = trip.assignedDriver.isNotEmpty
+        ? trip.assignedDriver
+        : (currentDriver?.name ?? 'Assigned Driver');
+    SafetyNotificationService.notifyDriverNewTrip(
+      driverName: driver,
+      vehicleNumber: vehicle,
+      origin: trip.origin,
+      destination: trip.destination,
+      cargoSummary: trip.cargoDescription,
+    );
+
+    // Create immediate Operations Alert so it appears in Alerts & Driver Hub
+    final alert = OperationsAlert(
+      title: 'New Trip Assigned: ' + trip.origin + ' -> ' + trip.destination,
+      details: 'Vehicle: ' + vehicle + ' | Driver: ' + driver + ' | Cargo: ' + trip.cargoDescription + ' (' + trip.customerName + ')',
+      severity: 'info',
+      createdAt: DateTime.now().toIso8601String(),
+      category: 'dispatch',
+      vehicleNumber: vehicle,
+    );
+    unawaited(addAlert(alert));
+
     await logActivity(
       title: 'Trip Created',
       details: 'Trip ${trip.reference}: ${trip.origin} -> ${trip.destination}',
@@ -2480,6 +2507,27 @@ class PlannerController extends ChangeNotifier {
     notifyListeners();
     await _saveTrips();
     await FirebaseBackendService.instance.syncTripRecord(record: newTrip);
+
+    // Instant Notification to Assigned Driver
+    SafetyNotificationService.notifyDriverNewTrip(
+      driverName: newTrip.assignedDriver,
+      vehicleNumber: newTrip.assignedVehicle,
+      origin: newTrip.origin,
+      destination: newTrip.destination,
+      cargoSummary: newTrip.cargoDescription,
+    );
+
+    // Create immediate Operations Alert so it appears in Alerts & Driver Hub
+    final alert = OperationsAlert(
+      title: 'New Trip Assigned: ' + newTrip.origin + ' -> ' + newTrip.destination,
+      details: 'Vehicle: ' + newTrip.assignedVehicle + ' | Driver: ' + newTrip.assignedDriver + ' | Cargo: ' + newTrip.cargoDescription + ' (' + newTrip.customerName + ')',
+      severity: 'info',
+      createdAt: DateTime.now().toIso8601String(),
+      category: 'dispatch',
+      vehicleNumber: newTrip.assignedVehicle,
+    );
+    unawaited(addAlert(alert));
+
     await logActivity(
       title: 'Trip Created',
       details:

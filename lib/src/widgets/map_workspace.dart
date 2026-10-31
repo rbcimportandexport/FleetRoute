@@ -170,7 +170,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
       // Fallback: if GPS read is null, try last known position
       if (currentGps == null) {
         try {
-          final lastKnown = await Geolocator.getLastKnownPosition();
+          final lastKnown = kIsWeb ? null : await Geolocator.getLastKnownPosition();
           if (lastKnown != null) {
             currentGps = LatLng(lastKnown.latitude, lastKnown.longitude);
           }

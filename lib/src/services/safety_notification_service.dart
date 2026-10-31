@@ -15,6 +15,21 @@ class SafetyNotificationService {
     );
   }
 
+  /// Instantly alerts driver about newly assigned trip or route dispatch
+  static void notifyDriverNewTrip({
+    required String driverName,
+    required String vehicleNumber,
+    required String origin,
+    required String destination,
+    required String cargoSummary,
+  }) {
+    platform_impl.triggerExternalSafetyNotification(
+      title: '🚨 New Trip Assigned: $origin ➔ $destination',
+      body: 'Driver: $driverName | Vehicle: $vehicleNumber\nCargo: $cargoSummary\nKripya trip details check karein aur start karein.',
+      isRejected: false,
+    );
+  }
+
   static void requestPermission() {
     platform_impl.requestExternalNotificationPermission();
   }

@@ -23,6 +23,19 @@ class CatalogProduct {
 
   String get displayName => '$brand $code';
 
+  /// Returns typical real-world weight in KG based on salon furniture category
+  double get approximateWeightKg {
+    final cat = category.toUpperCase();
+    if (cat.contains('BED')) return 45.0; // Facial / Massage Bed
+    if (cat.contains('SHAMPOO')) return 40.0; // Shampoo Station / Chair
+    if (cat.contains('CHAIR')) return 28.0; // Styling / Barber Chair
+    if (cat.contains('MANI') || cat.contains('PEDI')) return 35.0; // Mani Pedi Station
+    if (cat.contains('MASSAGER')) return 60.0; // Full Body Massager
+    if (cat.contains('TROLLEY')) return 12.0; // Salon Trolley
+    if (cat.contains('STOOL')) return 8.0; // Cutting / Operator Stool
+    return 30.0; // Default reasonable weight
+  }
+
   factory CatalogProduct.fromJson(Map<String, dynamic> json) => CatalogProduct(
         id: json['id']?.toString() ?? '',
         brand: json['brand']?.toString() ?? '',

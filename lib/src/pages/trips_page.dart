@@ -41,8 +41,8 @@ class SelectedCatalogItem {
   SelectedCatalogItem({
     required this.product,
     this.quantity = 1,
-    this.weightKg = 50.0,
-  });
+    double? weightKg,
+  }) : weightKg = weightKg ?? product.approximateWeightKg;
 
   final CatalogProduct product;
   int quantity;
@@ -105,7 +105,7 @@ class _ProductCatalogPageState extends State<_ProductCatalogPage> {
         _selectedMap[product.id] = SelectedCatalogItem(
           product: product,
           quantity: 1,
-          weightKg: 50.0,
+          weightKg: product.approximateWeightKg,
         );
       }
     });
@@ -740,7 +740,7 @@ class _TripsPageState extends State<TripsPage> {
           ),
         );
       } catch (_) {
-        position = await Geolocator.getLastKnownPosition();
+        position = kIsWeb ? null : await Geolocator.getLastKnownPosition();
       }
       if (position == null) {
         throw Exception(
@@ -1287,7 +1287,7 @@ class _TripsPageState extends State<TripsPage> {
                       originalPath: '',
                     ),
                     quantity: qty > 0 ? qty : 1,
-                    weightKg: 50.0,
+                    weightKg: ci.category.isNotEmpty ? ci.loadedQuantity > 0 && ci.unit == 'KG' ? ci.loadedQuantity : null : null,
                   ),
                 );
               }
@@ -1322,7 +1322,7 @@ class _TripsPageState extends State<TripsPage> {
                       productName: sel.product.displayName,
                       loadedQuantity: totalWeightTon,
                       unit: 'Ton',
-                      notes: sel.quantity.toString() + ' Pcs (' + totalKg.toString() + ' KG)',
+                      notes: '${sel.product.category.isNotEmpty ? sel.product.category : "Item"} · ${sel.quantity} Pcs (${totalKg} KG)',
                     ),
                   );
                 }
