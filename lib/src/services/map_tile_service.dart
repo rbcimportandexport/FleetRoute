@@ -8,7 +8,9 @@ class MapTileService {
   static const List<String> cartoSubdomains = ['a', 'b', 'c', 'd'];
 
   // Authentic Google Maps standard light mode street map (mt0-mt3)
-  static const String cartoVoyagerTileUrl = roadTileUrl;
+  // Official Carto Voyager tile URL
+  static const String cartoVoyagerTileUrl =
+      'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png';
   static const String roadTileUrl =
       'https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}';
 

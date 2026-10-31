@@ -63,7 +63,7 @@ class _PreTripCustomerDetailsDialogState
   late final TextEditingController _instructionsController;
 
   CustomerRecord? _selectedCustomer;
-  CatalogProduct? _selectedCatalogProduct;
+  final List<CatalogProduct> _selectedCatalogProducts = [];
   bool _isSaving = false;
   String _weightUnit = 'Ton'; // 'Ton' or 'KG'
   final List<String> _cargoPhotoBase64List = [];
@@ -249,25 +249,36 @@ class _PreTripCustomerDetailsDialogState
         assignedVehicle: vehicleCode,
         assignedDriver: driverName,
         cargoDescription: cargoDesc,
-        cargoItems: [
-          CargoItem(
-            id: 'CI-1',
-            productId: _selectedCatalogProduct?.id ?? 'custom-product',
-            brand: _selectedCatalogProduct?.brand ?? '',
-            category: _selectedCatalogProduct?.category ?? '',
-            productName: cargoDesc,
-            photoAsset: primaryPhoto.isNotEmpty
-                ? primaryPhoto
-                : (_selectedCatalogProduct?.photoAsset ?? ''),
-            loadedQuantity: weightInTon,
-            unit: _weightUnit,
-            notes: _cargoPhotoBase64List.length > 1
-                ? '${_cargoPhotoBase64List.length} cargo photos attached'
-                : (_selectedCatalogProduct != null
-                    ? '${_selectedCatalogProduct!.brand} ${_selectedCatalogProduct!.code}'
-                    : ''),
-          ),
-        ],
+        cargoItems: _selectedCatalogProducts.isNotEmpty
+            ? [
+                for (int i = 0; i < _selectedCatalogProducts.length; i++)
+                  CargoItem(
+                    id: 'CI-${i + 1}',
+                    productId: _selectedCatalogProducts[i].id,
+                    brand: _selectedCatalogProducts[i].brand,
+                    category: _selectedCatalogProducts[i].category,
+                    productName: _selectedCatalogProducts[i].displayName,
+                    photoAsset: _selectedCatalogProducts[i].photoAsset,
+                    loadedQuantity: i == 0 ? weightInTon : 0,
+                    unit: _weightUnit,
+                    notes: '${_selectedCatalogProducts[i].brand} ${_selectedCatalogProducts[i].code}',
+                  ),
+              ]
+            : [
+                CargoItem(
+                  id: 'CI-1',
+                  productId: 'custom-product',
+                  brand: '',
+                  category: '',
+                  productName: cargoDesc,
+                  photoAsset: primaryPhoto,
+                  loadedQuantity: weightInTon,
+                  unit: _weightUnit,
+                  notes: _cargoPhotoBase64List.length > 1
+                      ? '${_cargoPhotoBase64List.length} cargo photos attached'
+                      : '',
+                ),
+              ],
         driverInstructions: instructions,
         origin: widget.origin,
         destination: widget.destination,
@@ -558,22 +569,30 @@ class _PreTripCustomerDetailsDialogState
                       ),
                       const SizedBox(height: 14),
 
-                      // Choose RBC / RAMA Product with Photo button
+                      // Choose RBC / RAMA Products with Photos (Supports Multiple Selection)
                       OutlinedButton.icon(
                         onPressed: () async {
-                          final product = await ProductCatalogPickerPage.show(context);
-                          if (product != null && mounted) {
+                          final selected = await ProductCatalogPickerPage.show(
+                            context,
+                            initialSelected: _selectedCatalogProducts,
+                          );
+                          if (selected != null && mounted) {
                             setState(() {
-                              _selectedCatalogProduct = product;
-                              _cargoDescController.text = product.displayName;
+                              _selectedCatalogProducts.clear();
+                              _selectedCatalogProducts.addAll(selected);
+                              if (_selectedCatalogProducts.isNotEmpty) {
+                                _cargoDescController.text = _selectedCatalogProducts
+                                    .map((p) => p.displayName)
+                                    .join(', ');
+                              }
                             });
                           }
                         },
                         icon: const Icon(Icons.inventory_2_outlined, color: Color(0xFF10B981)),
                         label: Text(
-                          _selectedCatalogProduct == null
-                              ? 'Choose RBC / RAMA Product with Photo'
-                              : '${_selectedCatalogProduct!.brand} · ${_selectedCatalogProduct!.category} · ${_selectedCatalogProduct!.code}',
+                          _selectedCatalogProducts.isEmpty
+                              ? 'Choose RBC / RAMA Products with Photo (+Multiple)'
+                              : '+ Add More Products (${_selectedCatalogProducts.length} Selected)',
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             fontWeight: FontWeight.w700,
@@ -588,64 +607,75 @@ class _PreTripCustomerDetailsDialogState
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                         ),
                       ),
-                      if (_selectedCatalogProduct != null) ...[
+                      if (_selectedCatalogProducts.isNotEmpty) ...[
                         const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF0FDF4),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: const Color(0xFFA7F3D0)),
-                          ),
-                          child: Row(
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Image.asset(
-                                  _selectedCatalogProduct!.photoAsset,
-                                  width: 60,
-                                  height: 60,
-                                  fit: BoxFit.contain,
-                                  errorBuilder: (_, __, ___) => const Icon(
-                                      Icons.broken_image_outlined,
-                                      size: 36,
-                                      color: Colors.grey),
+                        Column(
+                          children: [
+                            for (int i = 0; i < _selectedCatalogProducts.length; i++)
+                              Container(
+                                margin: const EdgeInsets.only(bottom: 6),
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF0FDF4),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: const Color(0xFFA7F3D0)),
                                 ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                child: Row(
                                   children: [
-                                    Text(
-                                      _selectedCatalogProduct!.displayName,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w800,
-                                        fontSize: 12.5,
-                                        color: Color(0xFF065F46),
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Image.asset(
+                                        _selectedCatalogProducts[i].photoAsset,
+                                        width: 52,
+                                        height: 52,
+                                        fit: BoxFit.contain,
+                                        errorBuilder: (_, __, ___) => const Icon(
+                                            Icons.broken_image_outlined,
+                                            size: 32,
+                                            color: Colors.grey),
                                       ),
                                     ),
-                                    Text(
-                                      '${_selectedCatalogProduct!.category} · ${_selectedCatalogProduct!.name}',
-                                      style: const TextStyle(
-                                        color: Color(0xFF047857),
-                                        fontSize: 11,
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            _selectedCatalogProducts[i].displayName,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w800,
+                                              fontSize: 12.5,
+                                              color: Color(0xFF065F46),
+                                            ),
+                                          ),
+                                          Text(
+                                            '${_selectedCatalogProducts[i].brand} · ${_selectedCatalogProducts[i].category} · ${_selectedCatalogProducts[i].name}',
+                                            style: const TextStyle(
+                                              color: Color(0xFF047857),
+                                              fontSize: 11,
+                                            ),
+                                          ),
+                                        ],
                                       ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.close, size: 18, color: Colors.grey),
+                                      tooltip: 'Remove product',
+                                      onPressed: () {
+                                        setState(() {
+                                          _selectedCatalogProducts.removeAt(i);
+                                          if (_selectedCatalogProducts.isNotEmpty) {
+                                            _cargoDescController.text = _selectedCatalogProducts
+                                                .map((p) => p.displayName)
+                                                .join(', ');
+                                          }
+                                        });
+                                      },
                                     ),
                                   ],
                                 ),
                               ),
-                              IconButton(
-                                icon: const Icon(Icons.close, size: 18, color: Colors.grey),
-                                tooltip: 'Clear selected product',
-                                onPressed: () {
-                                  setState(() {
-                                    _selectedCatalogProduct = null;
-                                  });
-                                },
-                              ),
-                            ],
-                          ),
+                          ],
                         ),
                       ],
                       const SizedBox(height: 14),
