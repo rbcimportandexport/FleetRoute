@@ -1559,65 +1559,89 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
-                    padding: const EdgeInsets.only(
-                        left: 6, right: 3, top: 2, bottom: 2),
+                    margin: const EdgeInsets.only(bottom: 2),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF10B981),
-                      borderRadius: BorderRadius.circular(6),
-                      boxShadow: [
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: const Color(0xFF10B981), width: 1.5),
+                      boxShadow: const [
                         BoxShadow(
-                          color: _draggingPin == 'origin'
-                              ? const Color(0x6610B981)
-                              : const Color(0x33000000),
-                          blurRadius: _draggingPin == 'origin' ? 8 : 4,
-                          spreadRadius: _draggingPin == 'origin' ? 2 : 0,
+                          color: Color(0x2E000000),
+                          blurRadius: 8,
+                          offset: Offset(0, 2),
                         ),
                       ],
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        Container(
+                          width: 7,
+                          height: 7,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF10B981),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 5),
                         Flexible(
                           child: Text(
                             _draggingPin == 'origin'
                                 ? 'Move Pickup'
-                                : 'Pickup · ${_shortLocationName(widget.controller.origin)}',
+                                : _shortLocationName(widget.controller.origin),
                             style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
+                              color: Color(0xFF0F172A),
+                              fontSize: 11,
                               fontWeight: FontWeight.w800,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 5),
                         GestureDetector(
                           behavior: HitTestBehavior.opaque,
                           onTap: _removePickupPin,
                           child: Container(
-                            width: 16,
-                            height: 16,
+                            width: 15,
+                            height: 15,
                             decoration: const BoxDecoration(
-                              color: Color(0xFFDC2626),
+                              color: Color(0xFFF1F5F9),
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(
                               Icons.close_rounded,
-                              size: 11,
-                              color: Colors.white,
+                              size: 10,
+                              color: Color(0xFF64748B),
                             ),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  Icon(
-                    Icons.location_on,
-                    color: _draggingPin == 'origin'
-                        ? const Color(0xFF059669)
-                        : const Color(0xFF10B981),
-                    size: 36,
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2.5),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x4010B981),
+                          blurRadius: 8,
+                          offset: Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: const Center(
+                      child: Icon(
+                        Icons.my_location_rounded,
+                        color: Colors.white,
+                        size: 16,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -1753,65 +1777,89 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
-                    padding: const EdgeInsets.only(
-                        left: 6, right: 3, top: 2, bottom: 2),
+                    margin: const EdgeInsets.only(bottom: 2),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFEF4444),
-                      borderRadius: BorderRadius.circular(6),
-                      boxShadow: [
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: const Color(0xFFEF4444), width: 1.5),
+                      boxShadow: const [
                         BoxShadow(
-                          color: _draggingPin == 'destination'
-                              ? const Color(0x66EF4444)
-                              : const Color(0x33000000),
-                          blurRadius: _draggingPin == 'destination' ? 8 : 4,
-                          spreadRadius: _draggingPin == 'destination' ? 2 : 0,
+                          color: Color(0x2E000000),
+                          blurRadius: 8,
+                          offset: Offset(0, 2),
                         ),
                       ],
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        Container(
+                          width: 7,
+                          height: 7,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFEF4444),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 5),
                         Flexible(
                           child: Text(
                             _draggingPin == 'destination'
                                 ? 'Move Drop'
-                                : 'Drop · ${_shortLocationName(widget.controller.destination)}',
+                                : _shortLocationName(widget.controller.destination),
                             style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
+                              color: Color(0xFF0F172A),
+                              fontSize: 11,
                               fontWeight: FontWeight.w800,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 5),
                         GestureDetector(
                           behavior: HitTestBehavior.opaque,
                           onTap: _removeDropPin,
                           child: Container(
-                            width: 16,
-                            height: 16,
+                            width: 15,
+                            height: 15,
                             decoration: const BoxDecoration(
-                              color: Color(0xFF991B1B),
+                              color: Color(0xFFF1F5F9),
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(
                               Icons.close_rounded,
-                              size: 11,
-                              color: Colors.white,
+                              size: 10,
+                              color: Color(0xFF64748B),
                             ),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  Icon(
-                    Icons.location_on,
-                    color: _draggingPin == 'destination'
-                        ? const Color(0xFFDC2626)
-                        : const Color(0xFFEF4444),
-                    size: 36,
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEF4444),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2.5),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x40EF4444),
+                          blurRadius: 8,
+                          offset: Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: const Center(
+                      child: Icon(
+                        Icons.flag_rounded,
+                        color: Colors.white,
+                        size: 16,
+                      ),
+                    ),
                   ),
                 ],
               ),
