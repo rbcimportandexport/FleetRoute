@@ -648,19 +648,9 @@ class _TripsPageState extends State<TripsPage> {
   void _centerMapOn(LatLng point, {double zoom = 16}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      if (kIsWeb) {
-        try {
-          _flutterMapController.move(point, zoom);
-        } catch (_) {}
-      }
-      if (_mapReady) {
-        _tripGoogleMapController?.animateCamera(
-          gm.CameraUpdate.newLatLngZoom(
-            gm.LatLng(point.latitude, point.longitude),
-            zoom,
-          ),
-        );
-      }
+      try {
+        _flutterMapController.move(point, zoom);
+      } catch (_) {}
     });
   }
 
@@ -1028,8 +1018,7 @@ class _TripsPageState extends State<TripsPage> {
           child: Stack(
             children: [
               Positioned.fill(
-                child: kIsWeb
-                    ? fm.FlutterMap(
+                child: fm.FlutterMap(
                         mapController: _flutterMapController,
                         options: fm.MapOptions(
                           initialCenter:
@@ -1120,81 +1109,6 @@ class _TripsPageState extends State<TripsPage> {
                           ),
                         ],
                       )
-                    : gm.GoogleMap(
-                        key: ValueKey(mapStyle),
-                        initialCameraPosition: gm.CameraPosition(
-                          target: gm.LatLng(
-                            (origin ?? const LatLng(21.1702, 72.8311)).latitude,
-                            (origin ?? const LatLng(21.1702, 72.8311)).longitude,
-                          ),
-                          zoom: origin == null ? 11 : 15,
-                        ),
-                        mapType:
-                            satellite ? gm.MapType.hybrid : gm.MapType.normal,
-                        mapToolbarEnabled: false,
-                        myLocationButtonEnabled: false,
-                        zoomControlsEnabled: false,
-                        compassEnabled: true,
-                        gestureRecognizers: <Factory<
-                            OneSequenceGestureRecognizer>>{
-                          Factory<EagerGestureRecognizer>(
-                            () => EagerGestureRecognizer(),
-                          ),
-                        },
-                        onMapCreated: (controller) {
-                          _tripGoogleMapController = controller;
-                          _mapReady = true;
-                          if (origin != null) _centerMapOn(origin!);
-                        },
-                        onTap: (point) =>
-                            _pin(LatLng(point.latitude, point.longitude)),
-                        onLongPress: (point) =>
-                            _pin(LatLng(point.latitude, point.longitude)),
-                        polylines: {
-                          if (origin != null && destination != null)
-                            gm.Polyline(
-                              polylineId:
-                                  const gm.PolylineId('planned-trip-route'),
-                              points: (_routePoints.isNotEmpty
-                                      ? _routePoints
-                                      : [origin!, ...stops, destination!])
-                                  .map((point) => gm.LatLng(
-                                      point.latitude, point.longitude))
-                                  .toList(growable: false),
-                              color: AppColors.blue,
-                              width: 5,
-                            ),
-                        },
-                        markers: {
-                          if (origin != null)
-                            gm.Marker(
-                              markerId: const gm.MarkerId('pickup'),
-                              position: gm.LatLng(
-                                  origin!.latitude, origin!.longitude),
-                              infoWindow: const gm.InfoWindow(title: 'Pickup'),
-                              icon: gm.BitmapDescriptor.defaultMarkerWithHue(
-                                  gm.BitmapDescriptor.hueGreen),
-                            ),
-                          for (int i = 0; i < stops.length; i++)
-                            gm.Marker(
-                              markerId: gm.MarkerId('stop-$i'),
-                              position: gm.LatLng(
-                                  stops[i].latitude, stops[i].longitude),
-                              infoWindow: gm.InfoWindow(title: 'Stop ${i + 1}'),
-                              icon: gm.BitmapDescriptor.defaultMarkerWithHue(
-                                  gm.BitmapDescriptor.hueOrange),
-                            ),
-                          if (destination != null)
-                            gm.Marker(
-                              markerId: const gm.MarkerId('drop'),
-                              position: gm.LatLng(destination!.latitude,
-                                  destination!.longitude),
-                              infoWindow: const gm.InfoWindow(title: 'Drop'),
-                              icon: gm.BitmapDescriptor.defaultMarkerWithHue(
-                                  gm.BitmapDescriptor.hueRed),
-                            ),
-                        },
-                      ),
               ),
               // Top Controls: Street/Satellite toggle + Search / Paste Location Button
               Positioned(

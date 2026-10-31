@@ -9,8 +9,7 @@ class MapTileService {
 
   // Public labelled street tiles that do not require a separate Carto key.
   // ArcGIS uses {z}/{y}/{x}, unlike the OSM {z}/{x}/{y} ordering.
-  static const String roadTileUrl =
-      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}';
+  static const String roadTileUrl = cartoVoyagerTileUrl;
 
   // Traffic needs a licensed provider/backend. Until configured, keep the
   // stable base map instead of requesting invalid composite tiles.
@@ -97,9 +96,7 @@ class MapTileService {
   }
 
   static List<String> getSubdomains({bool streetlight = false}) {
-    if (streetlight) {
-      return cartoSubdomains;
-    }
-    return const [];
+    // Both Carto Voyager (default light mode) and Dark All (streetlight) use carto subdomains
+    return cartoSubdomains;
   }
 }
