@@ -1037,6 +1037,9 @@ class _TripsPageState extends State<TripsPage> {
                               streetlight: false,
                               traffic: false,
                             ),
+                            subdomains: MapTileService.getSubdomains(
+                              streetlight: false,
+                            ),
                             fallbackUrl: MapTileService.fallbackTileUrl,
                             maxNativeZoom: 19,
                             userAgentPackageName: MapTileService.userAgent,

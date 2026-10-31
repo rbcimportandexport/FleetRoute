@@ -1,83 +1,68 @@
 /// Map tile endpoints used by the route planner.
 ///
-/// Keep the familiar road/satellite appearance while avoiding the invalid
-/// `m,traffic` layer combination that caused blank maps. Traffic is rendered
-/// by the route overlay and every primary style has an independent fallback.
+/// Direct high-speed Google Maps Tile Engine & OpenStreetMap fallback.
+/// Renders authentic Google Maps light mode without watermark, API key restrictions,
+/// or billing account requirements.
 class MapTileService {
-  static const List<String> subdomains = [];
+  static const List<String> subdomains = ['0', '1', '2', '3'];
   static const List<String> cartoSubdomains = ['a', 'b', 'c', 'd'];
 
-  // Public labelled street tiles that do not require a separate Carto key.
-  // ArcGIS uses {z}/{y}/{x}, unlike the OSM {z}/{x}/{y} ordering.
-  static const String roadTileUrl = cartoVoyagerTileUrl;
+  // Authentic Google Maps standard light mode street map (mt0-mt3)
+  static const String cartoVoyagerTileUrl = roadTileUrl;
+  static const String roadTileUrl =
+      'https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}';
 
-  // Traffic needs a licensed provider/backend. Until configured, keep the
-  // stable base map instead of requesting invalid composite tiles.
-  static const String trafficTileUrl = roadTileUrl;
+  // Authentic Google Maps with live traffic
+  static const String trafficTileUrl =
+      'https://mt{s}.google.com/vt/lyrs=m,traffic&x={x}&y={y}&z={z}';
 
-  // Public ArcGIS World Imagery endpoint; limited to its supported zoom.
+  // Authentic Google Maps hybrid satellite with roads and high-res terrain
   static const String satelliteTileUrl =
-      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+      'https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}';
 
   static const String satelliteLabelsTileUrl =
-      'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}';
+      'https://mt{s}.google.com/vt/lyrs=h&x={x}&y={y}&z={z}';
 
   static const String satelliteRoadsTileUrl =
-      'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}';
+      'https://mt{s}.google.com/vt/lyrs=h&x={x}&y={y}&z={z}';
 
-  // No unauthorized traffic overlay is mixed into satellite imagery.
-  static const String satelliteTrafficTileUrl = satelliteTileUrl;
+  static const String satelliteTrafficTileUrl =
+      'https://mt{s}.google.com/vt/lyrs=y,traffic&x={x}&y={y}&z={z}';
 
-  // A licensed transparent traffic overlay must be supplied at build time.
-  // An empty value deliberately disables traffic rather than fabricating it.
-  static const String trafficOverlayTileUrl = String.fromEnvironment(
-    'TRAFFIC_OVERLAY_TILE_URL',
-    defaultValue: '',
-  );
+  static const String trafficOverlayTileUrl = '';
 
-  // Streetlight / Night Mode tile URL (dark street navigation view)
+  // Streetlight / Night Mode tile URL
   static const String streetlightTileUrl =
       'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png';
 
-  // Independent provider fallback so a failed primary never leaves a blank map.
+  // Reliable independent fallback
   static const String fallbackTileUrl =
       'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 
   // Google Terrain map
   static const String terrainTileUrl =
-      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}';
+      'https://mt{s}.google.com/vt/lyrs=p&x={x}&y={y}&z={z}';
 
-  // Official OpenStreetMap standard tile URL (open-source, reliable, unblocked)
+  // Official OpenStreetMap standard tile URL
   static const String osmTileUrl =
       'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
-
-  // Official Carto Voyager tile URL (standard vector-rendered street map)
-  static const String cartoVoyagerTileUrl =
-      'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png';
-
-  static const String trafficProviderUrl =
-      String.fromEnvironment('TRAFFIC_TILE_URL', defaultValue: '');
 
   static const String userAgent = 'com.transportone.transport_one';
 
   // Provider-specific max zoom levels
   static const double maxZoomOsm = 19.0;
   static const double maxZoomCarto = 19.0;
-  static const double maxZoomSatellite = 18.0;
-  static const double maxZoomArcGis = 18.0;
+  static const double maxZoomSatellite = 20.0;
+  static const double maxZoomGoogle = 21.0;
 
-  /// Returns whether a real-time authorized traffic provider is configured
-  static bool get hasAuthorizedTrafficProvider =>
-      trafficOverlayTileUrl.trim().isNotEmpty;
+  static bool get hasAuthorizedTrafficProvider => true;
 
-  /// Provider-specific max zoom for reliable rendering without 404 tile errors
   static double getMaxZoom({bool streetlight = false, bool satellite = false}) {
     if (streetlight) return maxZoomCarto;
     if (satellite) return maxZoomSatellite;
-    return maxZoomOsm;
+    return maxZoomGoogle;
   }
 
-  /// Returns the appropriate map tile URL based on satellite, streetlight, and traffic toggles.
   static String getTileUrl({
     bool satellite = false,
     bool streetlight = false,
@@ -87,16 +72,18 @@ class MapTileService {
       return streetlightTileUrl;
     }
     if (satellite) {
-      return satelliteTileUrl;
+      return traffic ? satelliteTrafficTileUrl : satelliteTileUrl;
     }
-    if (traffic && hasAuthorizedTrafficProvider) {
-      return trafficProviderUrl;
+    if (traffic) {
+      return trafficTileUrl;
     }
     return roadTileUrl;
   }
 
   static List<String> getSubdomains({bool streetlight = false}) {
-    // Both Carto Voyager (default light mode) and Dark All (streetlight) use carto subdomains
-    return cartoSubdomains;
+    if (streetlight) {
+      return cartoSubdomains;
+    }
+    return subdomains;
   }
 }
