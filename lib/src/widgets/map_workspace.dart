@@ -21,6 +21,7 @@ import '../services/route_traffic_service.dart';
 import '../services/safety_notification_service.dart';
 import '../theme/app_theme.dart';
 import 'pre_trip_customer_details_dialog.dart';
+import 'location_search_dialog.dart';
 import 'seatbelt_verification_dialog.dart';
 
 class MapWorkspace extends StatefulWidget {
@@ -657,6 +658,49 @@ class _MapWorkspaceState extends State<MapWorkspace> {
     final hour = local.hour.toString().padLeft(2, '0');
     final minute = local.minute.toString().padLeft(2, '0');
     return 'Last location: $day/$month/${local.year} $hour:$minute';
+  }
+
+  Future<void> _openLocationSearch({String? targetMode}) async {
+    final mode = targetMode ?? _activePinMode;
+    final title = mode == 'drop'
+        ? 'Search Drop / Destination'
+        : (mode == 'stop'
+            ? 'Search Via Stop Location'
+            : 'Search Pickup Location');
+
+    final result = await LocationSearchDialog.show(
+      context,
+      title: title,
+      hint: 'Address, society, area ya Google Maps link paste karein',
+    );
+
+    if (result != null && mounted) {
+      final point = result.coordinates;
+      final label = result.shortName.isNotEmpty ? result.shortName : result.displayName;
+
+      if (mode == 'drop') {
+        setState(() {
+          _pinnedDestination = point;
+          _activePinMode = 'drop';
+        });
+        widget.controller.setDestination(label);
+      } else if (mode == 'stop') {
+        widget.controller.addStop(label);
+        setState(() {});
+      } else {
+        setState(() {
+          _pinnedOrigin = point;
+          _activePinMode = 'drop';
+        });
+        widget.controller.setOrigin(label);
+      }
+
+      try {
+        _mapController.move(point, 16.0);
+      } catch (_) {}
+
+      _showMessage('Location set: $label');
+    }
   }
 
   void _resetMapCompass() {
@@ -4663,6 +4707,15 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                           _ZoomControls(onZoom: _zoomBy),
                           const SizedBox(height: 9),
                         ],
+                        FloatingActionButton.small(
+                          heroTag: 'map-search-fab',
+                          onPressed: () => _openLocationSearch(),
+                          backgroundColor: Colors.white,
+                          foregroundColor: const Color(0xFF10B981),
+                          tooltip: 'Search place / paste map link',
+                          child: const Icon(Icons.search_rounded, size: 22),
+                        ),
+                        const SizedBox(height: 12),
                         _LocationButton(
                           locating: _locating,
                           onPressed: _showCurrentLocation,
@@ -6511,6 +6564,39 @@ class _CompactMapBar extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Direct Search Button (Quick search anywhere)
+          InkWell(
+            onTap: () => onSetLocation(),
+            borderRadius: BorderRadius.circular(7),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFFECFDF5),
+                borderRadius: BorderRadius.circular(7),
+                border: Border.all(color: const Color(0xFF10B981), width: 1),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.search_rounded,
+                    size: 14,
+                    color: Color(0xFF10B981),
+                  ),
+                  SizedBox(width: 3),
+                  Text(
+                    'Search',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF047857),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
           // Set Location (Pickup & Drop search / picker)
           InkWell(
             onTap: onSetLocation,
