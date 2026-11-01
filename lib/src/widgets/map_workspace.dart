@@ -68,6 +68,8 @@ class _MapWorkspaceState extends State<MapWorkspace> {
   bool _mapTilesFailed = false;
   bool _tileErrorUpdateScheduled = false;
   List<LatLng> _routePoints = [];
+  List<LatLng> _approachPoints = [];
+  double _approachDistanceKm = 0;
   double _routeDistanceKm = 0;
   String? _lastRouteKey;
   int _routeRequestId = 0;
@@ -360,6 +362,18 @@ class _MapWorkspaceState extends State<MapWorkspace> {
     super.dispose();
   }
 
+    LatLng? get _liveVehiclePosition {
+    final truck = _selectedLiveTruck;
+    if (truck != null && truck.hasCoordinates && truck.latitude != null && truck.longitude != null) {
+      return LatLng(truck.latitude!, truck.longitude!);
+    }
+    if (_userLocation != null) return _userLocation;
+    if (_lastGpsPosition != null) {
+      return LatLng(_lastGpsPosition!.latitude, _lastGpsPosition!.longitude);
+    }
+    return null;
+  }
+
   LatLng? get _effectiveOrigin {
     // While dragging, render the live pin preview instead of the old value in
     // the text field. The controller is updated only after the drag ends.
@@ -495,6 +509,8 @@ class _MapWorkspaceState extends State<MapWorkspace> {
         _routeRequestId++;
         setState(() {
           _routePoints = [];
+          _approachPoints = [];
+          _approachDistanceKm = 0;
           _routeDistanceKm = 0;
           _lastRouteKey = null;
           _loadingRoute = false;
@@ -556,8 +572,43 @@ class _MapWorkspaceState extends State<MapWorkspace> {
           : null,
     );
 
+    // Also fetch approach route from user/vehicle location to pickup point
+    List<LatLng> approachPts = [];
+    double approachDist = 0.0;
+    final vehiclePos = _liveVehiclePosition;
+    if (vehiclePos != null) {
+      final distToOrigin = Geolocator.distanceBetween(
+        vehiclePos.latitude,
+        vehiclePos.longitude,
+        origin.latitude,
+        origin.longitude,
+      );
+      // If vehicle is > 100 meters away from pickup, connect vehicle to pickup!
+      if (distToOrigin > 100) {
+        try {
+          final approachRes = await RouteTrafficService.fetchRoute(
+            origin: vehiclePos,
+            destination: origin,
+            stops: const [],
+          );
+          if (approachRes.points.isNotEmpty) {
+            approachPts = approachRes.points;
+            approachDist = approachRes.distanceKm;
+          } else {
+            approachPts = [vehiclePos, origin];
+            approachDist = distToOrigin / 1000.0;
+          }
+        } catch (_) {
+          approachPts = [vehiclePos, origin];
+          approachDist = distToOrigin / 1000.0;
+        }
+      }
+    }
+
     setState(() {
       _routePoints = visiblePoints;
+      _approachPoints = approachPts;
+      _approachDistanceKm = approachDist;
       _routeDistanceKm = visibleDistanceKm;
       _isFallbackRoute = isFallback;
       _loadingRoute = false;
@@ -627,13 +678,16 @@ class _MapWorkspaceState extends State<MapWorkspace> {
   }
 
   void _fitRoute() {
-    final points = _routePoints.isNotEmpty
-        ? _routePoints
-        : [
-            if (_effectiveOrigin != null) _effectiveOrigin!,
-            ..._effectiveStops,
-            if (_effectiveDestination != null) _effectiveDestination!,
-          ];
+    final points = <LatLng>[
+      if (_approachPoints.isNotEmpty) ..._approachPoints
+      else if (_liveVehiclePosition != null) _liveVehiclePosition!,
+      if (_routePoints.isNotEmpty) ..._routePoints
+      else ...[
+        if (_effectiveOrigin != null) _effectiveOrigin!,
+        ..._effectiveStops,
+        if (_effectiveDestination != null) _effectiveDestination!,
+      ],
+    ];
     if (points.length < 2) return;
 
     try {
@@ -2283,6 +2337,26 @@ class _MapWorkspaceState extends State<MapWorkspace> {
           ),
         );
       }
+    }
+
+    // Approach polyline: From current vehicle location to Pickup point
+    if (_approachPoints.length >= 2) {
+      polylines.add(
+        Polyline(
+          points: _approachPoints,
+          color: widget.controller.isStreetlight
+              ? const Color(0xFF020617)
+              : const Color(0xFF1E293B),
+          strokeWidth: 8,
+        ),
+      );
+      polylines.add(
+        Polyline(
+          points: _approachPoints,
+          color: const Color(0xFF0284C7), // Blue approach route from truck to pickup
+          strokeWidth: 5.5,
+        ),
+      );
     }
 
     if (_routePoints.length < 2) return polylines;
