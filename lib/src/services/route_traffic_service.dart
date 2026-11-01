@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
@@ -601,7 +602,11 @@ class RouteTrafficService {
               '$coordsParam?overview=$overview&geometries=geojson&steps=false',
             );
 
-      final headers = <String, String>{'User-Agent': 'TransportOne/1.1'};
+      // Browsers forbid JavaScript from setting the User-Agent header. Sending
+      // it from Flutter Web causes fetch() to fail before OSRM is contacted.
+      final headers = <String, String>{
+        if (!kIsWeb) 'User-Agent': 'TransportOne/1.1',
+      };
       if (routingProxyUrl.isNotEmpty) {
         final idToken = await FirebaseAuthService.instance.idToken();
         if (idToken == null || idToken.isEmpty) return null;
