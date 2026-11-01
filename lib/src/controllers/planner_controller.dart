@@ -1268,6 +1268,8 @@ class PlannerController extends ChangeNotifier {
       await checkDriverScheduledNotifications();
     }());
     // Listen to real-time trips synchronization across all devices (phones, laptops, tabs)
+    // Ensure Firebase Auth session exists so Firestore sync stream connects across PC and phone APK
+    unawaited(FirebaseBackendService.instance.ensureAuthSession());
     _tripsSubscription = FirebaseBackendService.instance
         .watchTrips()
         .listen(_applyRemoteTrips, onError: (Object error) {

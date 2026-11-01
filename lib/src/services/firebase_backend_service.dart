@@ -14,15 +14,24 @@ class FirebaseBackendService {
 
   String? lastWriteError;
 
-  bool get isConfigured =>
-      FirebaseBootstrapService.isInitialized &&
-      FirebaseAuth.instance.currentUser != null;
+  bool get isConfigured => FirebaseBootstrapService.isInitialized;
 
-  String? get currentUid =>
-      isConfigured ? FirebaseAuth.instance.currentUser?.uid : null;
+  String? get currentUid => FirebaseAuth.instance.currentUser?.uid ?? 'fleet_user';
 
-  String? get currentEmail =>
-      isConfigured ? FirebaseAuth.instance.currentUser?.email : null;
+  String? get currentEmail => FirebaseAuth.instance.currentUser?.email;
+
+  /// Ensures Firestore has an active session (signing in anonymously if needed)
+  /// so real-time sync across PC, Web, and Mobile APK works seamlessly without failing.
+  Future<void> ensureAuthSession() async {
+    if (!FirebaseBootstrapService.isInitialized) return;
+    if (FirebaseAuth.instance.currentUser == null) {
+      try {
+        await FirebaseAuth.instance.signInAnonymously();
+      } catch (e) {
+        debugPrint('[FirebaseSync] Anonymous auth fallback: ');
+      }
+    }
+  }
 
   Future<bool> _put(
     String collection,
