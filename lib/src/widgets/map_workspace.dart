@@ -572,51 +572,12 @@ class _MapWorkspaceState extends State<MapWorkspace> {
           : null,
     );
 
-    // Also fetch approach route from user/vehicle location to pickup point
-    List<LatLng> approachPts = [];
-    double approachDist = 0.0;
-    final vehiclePos = _liveVehiclePosition;
-    if (vehiclePos != null) {
-      final distToOrigin = Geolocator.distanceBetween(
-        vehiclePos.latitude,
-        vehiclePos.longitude,
-        origin.latitude,
-        origin.longitude,
-      );
-      // If vehicle is > 100 meters away from pickup, connect vehicle to pickup!
-      if (distToOrigin > 100) {
-        try {
-          final approachRes = await RouteTrafficService.fetchRoute(
-            origin: vehiclePos,
-            destination: origin,
-            stops: const [],
-          );
-          if (approachRes.points.isNotEmpty) {
-            approachPts = approachRes.points;
-            approachDist = approachRes.distanceKm;
-          } else {
-            approachPts = [vehiclePos, origin];
-            approachDist = distToOrigin / 1000.0;
-          }
-        } catch (_) {
-          approachPts = [vehiclePos, origin];
-          approachDist = distToOrigin / 1000.0;
-        }
-      }
-    }
-
-    final unifiedRoutePoints = <LatLng>[
-      if (approachPts.length >= 2) ...approachPts,
-      if (approachPts.length >= 2) ...visiblePoints.skip(1)
-      else ...visiblePoints,
-    ];
-    final unifiedDistanceKm = approachDist + visibleDistanceKm;
-
+    // Only use genuine road routes. Never use straight-line air cuts across houses and fields!
     setState(() {
-      _routePoints = unifiedRoutePoints;
-      _approachPoints = approachPts;
-      _approachDistanceKm = approachDist;
-      _routeDistanceKm = unifiedDistanceKm > 0 ? unifiedDistanceKm : visibleDistanceKm;
+      _routePoints = visiblePoints;
+      _approachPoints = const [];
+      _approachDistanceKm = 0.0;
+      _routeDistanceKm = visibleDistanceKm;
       _isFallbackRoute = isFallback;
       _loadingRoute = false;
     });
