@@ -586,14 +586,9 @@ class RouteTrafficService {
         return _routeCache[cacheKey];
       }
 
-      // A cross-country full geometry can contain tens of thousands of points
-      // and stall mobile rendering. OSRM simplified geometry still follows the
-      // road while drawing immediately. Keep full detail for local routes.
-      var routeDistanceKm = 0.0;
-      for (var i = 0; i < waypoints.length - 1; i++) {
-        routeDistanceKm += straightDistanceKm(waypoints[i], waypoints[i + 1]);
-      }
-      final overview = routeDistanceKm >= 300 ? 'simplified' : 'full';
+      // Always request full road geometry so the polyline perfectly follows actual highways and city roads
+      // without cutting straight across fields, rivers, or buildings!
+      const overview = 'full';
 
       final uri = routingProxyUrl.isNotEmpty
           ? Uri.parse('$routingProxyUrl?coords=$coordsParam')
@@ -631,8 +626,17 @@ class RouteTrafficService {
       final geometry = rawRoute['geometry'] as Map<String, dynamic>;
       if (geometry['coordinates'] is! List) return null;
 
+      final rawCoords = geometry['coordinates'] as List;
+      final totalRaw = rawCoords.length;
+      final step = totalRaw > 3000 ? (totalRaw / 2000).ceil() : 1;
+      
       final points = <LatLng>[];
-      for (final coordinate in geometry['coordinates'] as List) {
+      for (var i = 0; i < totalRaw; i++) {
+        // Keep start, end, and sampled road curve points
+        if (i != 0 && i != totalRaw - 1 && step > 1 && (i % step != 0)) {
+          continue;
+        }
+        final coordinate = rawCoords[i];
         if (coordinate is List &&
             coordinate.length >= 2 &&
             coordinate[0] is num &&
