@@ -1667,7 +1667,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
             ),
           ),
         ),
-      if (origin != null && (!_isNavigating || _navIndex == 0))
+      if (origin != null)
         Marker(
           point: origin,
           width: 170,

@@ -145174,9 +145174,7 @@ if(a.k1&&a.k3!=null){r=a.k3
 r.toString
 s.push(new A.km(a0,r,A.aTl(B.al,a.k4*3.141592653589793/180,A.z(a0,B.a5p,B.r,a0,a0,new A.C(B.bq,a0,A.a9(B.x,B.A,3),a0,B.bb5,a0,B.c5),a0,a0,a0,a0,a0,a0,a0)),52,52,a0))}r=a.w
 if(r!=null&&!a.k1)s.push(new A.km(a0,r,A.z(a0,B.CD,B.r,a0,a0,new A.C(B.dg,a0,A.a9(B.x,B.A,2.5),a0,B.bbj,a0,B.c5),a0,a0,a0,a0,a0,a0,a0),32,32,a0))
-if(a1!=null)r=!a.k1||a.k2===0
-else r=!1
-if(r){r=a.k1
+if(a1!=null){r=a.k1
 q=a.z==="origin"
 p=q?1.25:1
 o=A.j(20)
