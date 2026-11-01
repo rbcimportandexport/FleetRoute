@@ -605,11 +605,18 @@ class _MapWorkspaceState extends State<MapWorkspace> {
       }
     }
 
+    final unifiedRoutePoints = <LatLng>[
+      if (approachPts.length >= 2) ...approachPts,
+      if (approachPts.length >= 2) ...visiblePoints.skip(1)
+      else ...visiblePoints,
+    ];
+    final unifiedDistanceKm = approachDist + visibleDistanceKm;
+
     setState(() {
-      _routePoints = visiblePoints;
+      _routePoints = unifiedRoutePoints;
       _approachPoints = approachPts;
       _approachDistanceKm = approachDist;
-      _routeDistanceKm = visibleDistanceKm;
+      _routeDistanceKm = unifiedDistanceKm > 0 ? unifiedDistanceKm : visibleDistanceKm;
       _isFallbackRoute = isFallback;
       _loadingRoute = false;
     });
