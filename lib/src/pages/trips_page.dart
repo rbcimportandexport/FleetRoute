@@ -3141,7 +3141,8 @@ class _TripCard extends StatelessWidget {
                           ),
                         ),
                         if (trip.reference.isNotEmpty &&
-                            trip.reference != trip.effectiveTripNumber)
+                            trip.reference != trip.effectiveTripNumber &&
+                            !trip.reference.startsWith('DRIVER-ROUTE-'))
                           Text(
                             '(${trip.reference})',
                             style: const TextStyle(
@@ -3211,14 +3212,20 @@ class _TripCard extends StatelessWidget {
                   ],
                 ),
               ),
-              IconButton(
-                onPressed: onDelete,
-                tooltip: 'Delete trip',
-                icon: const Icon(Icons.delete_outline_rounded,
-                    size: 18, color: AppColors.muted),
-                visualDensity: VisualDensity.compact,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(width: 4),
+                  IconButton(
+                    onPressed: onDelete,
+                    tooltip: 'Delete trip',
+                    icon: const Icon(Icons.delete_outline_rounded,
+                        size: 18, color: AppColors.muted),
+                    visualDensity: VisualDensity.compact,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                  ),
+                ],
               ),
             ],
           ),

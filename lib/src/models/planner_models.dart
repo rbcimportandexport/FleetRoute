@@ -905,8 +905,18 @@ class TripRecord {
     return end.difference(start);
   }
 
-  String get effectiveTripNumber =>
-      tripNumber.isNotEmpty ? tripNumber : reference;
+  String get effectiveTripNumber {
+    final raw = tripNumber.isNotEmpty ? tripNumber : reference;
+    if (raw.startsWith('DRIVER-ROUTE-')) {
+      final parts = raw.split('-');
+      // DRIVER-ROUTE-GJ19Y2720-sandeep@... -> GJ19Y2720 (Live Route)
+      if (parts.length >= 3) {
+        return 'LIVE-';
+      }
+      return 'LIVE-ROUTE';
+    }
+    return raw;
+  }
 
   double get totalExpenses =>
       dieselExpense +
