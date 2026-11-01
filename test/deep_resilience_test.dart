@@ -109,6 +109,13 @@ void main() {
           RouteTrafficService.parseLocation('Ring Road, Surat, Gujarat');
       expect(address, isNotNull);
       expect(address!.latitude, closeTo(21.1702, 0.01));
+
+      final kochi = RouteTrafficService.parseLocation('Kochi');
+      final lanka = RouteTrafficService.parseLocation('Lanka');
+      expect(kochi, isNotNull);
+      expect(lanka, isNotNull);
+      expect(kochi!.latitude, closeTo(9.9679, 0.01));
+      expect(lanka!.latitude, closeTo(25.9133, 0.01));
     });
 
     test('multi-stop routing stitches road legs when unified request fails',

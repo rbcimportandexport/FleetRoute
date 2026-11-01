@@ -231,6 +231,9 @@ class RouteTrafficService {
     'ranchi': 'Jharkhand',
     'howrah': 'West Bengal',
     'coimbatore': 'Tamil Nadu',
+    'kochi': 'Kerala',
+    'cochin': 'Kerala',
+    'lanka': 'Assam',
     'jabalpur': 'Madhya Pradesh',
     'gwalior': 'Madhya Pradesh',
     'vijayawada': 'Andhra Pradesh',
@@ -268,6 +271,7 @@ class RouteTrafficService {
   };
 
   static const Map<String, LatLng> _cityCoordinates = {
+    'delhi': LatLng(28.6139, 77.2090),
     'new delhi': LatLng(28.6139, 77.2090),
     'mumbai': LatLng(19.0760, 72.8777),
     'bombay': LatLng(19.0760, 72.8777),
@@ -305,6 +309,9 @@ class RouteTrafficService {
     'ranchi': LatLng(23.3441, 85.3096),
     'howrah': LatLng(22.5958, 88.2636),
     'coimbatore': LatLng(11.0168, 76.9558),
+    'kochi': LatLng(9.9679032, 76.2444378),
+    'cochin': LatLng(9.9679032, 76.2444378),
+    'lanka': LatLng(25.9133105, 93.0256679),
     'jabalpur': LatLng(23.1815, 79.9864),
     'gwalior': LatLng(26.2183, 78.1828),
     'vijayawada': LatLng(16.5062, 80.6480),

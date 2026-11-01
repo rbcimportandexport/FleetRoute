@@ -222,12 +222,33 @@ class _FleetWorkspaceState extends State<FleetWorkspace> {
         ),
       WorkspaceSection.fastag => FastagHistoryPage(
           controller: controller,
-          vehicleCode: controller.truckModels.isNotEmpty ? controller.truckModels.first.code : '',
+          vehicleCode: controller.truckModels.isNotEmpty
+              ? controller.truckModels.first.code
+              : '',
         ),
     };
   }
 
   void _select(WorkspaceSection value) {
+    if (value == WorkspaceSection.planner && controller.isDriver) {
+      final activeTrip = controller.activeTripForCurrentDriver;
+      if (activeTrip != null) {
+        // Load synchronously so the newly-created map sees this trip on its
+        // first frame, then enrich text-only places with exact coordinates.
+        controller.setRoute(
+          newOrigin: activeTrip.origin,
+          newDestination: activeTrip.destination,
+          newStops: activeTrip.stops,
+        );
+        unawaited(
+          controller.resolveAndSetRoute(
+            origin: activeTrip.origin,
+            destination: activeTrip.destination,
+            stops: activeTrip.stops,
+          ),
+        );
+      }
+    }
     if (value != WorkspaceSection.planner) {
       controller.setPinMode(false);
     }

@@ -376,6 +376,33 @@ class PlannerController extends ChangeNotifier {
   bool get canShowRoute =>
       origin.trim().isNotEmpty && destination.trim().isNotEmpty;
 
+  /// Returns the non-completed trip assigned to the signed-in driver or their
+  /// vehicle. Driver navigation uses this as the single source of truth so the
+  /// Trip & Route tab cannot open with an unrelated stale map position.
+  TripRecord? get activeTripForCurrentDriver {
+    final driver = currentDriver;
+    if (driver == null) return trips.isEmpty ? null : trips.first;
+    final driverName = driver.name.trim().toLowerCase();
+    final vehicle =
+        driver.assignedVehicle.replaceAll(RegExp(r'[\s\-]'), '').toUpperCase();
+    for (final trip in trips) {
+      final status = trip.status.trim().toLowerCase();
+      if (status == 'delivered' ||
+          status == 'completed' ||
+          status == 'cancelled') {
+        continue;
+      }
+      final tripVehicle =
+          trip.assignedVehicle.replaceAll(RegExp(r'[\s\-]'), '').toUpperCase();
+      final tripDriver = trip.assignedDriver.trim().toLowerCase();
+      if ((vehicle.isNotEmpty && tripVehicle == vehicle) ||
+          (driverName.isNotEmpty && tripDriver == driverName)) {
+        return trip;
+      }
+    }
+    return trips.isEmpty ? null : trips.first;
+  }
+
   void startNavigation() {
     if (!canShowRoute) return;
     isNavigating = true;
