@@ -889,6 +889,7 @@ class PlannerController extends ChangeNotifier {
       notifyListeners();
       // Ensure fleet IMEI mapping is synced to Protrack service
       _syncGpsImeiMappings();
+      unawaited(syncAllDataFromCloud());
       if (isLoggedIn) {
         // Auto-trigger live GPS sync only after Firebase has restored an
         // authenticated session. Otherwise the proxy must reject the request.
@@ -1384,6 +1385,53 @@ class PlannerController extends ChangeNotifier {
       ..addAll(records);
     attendanceRecords.sort((a, b) => b.startTime.compareTo(a.startTime));
     notifyListeners();
+  }
+
+    /// Actively pulls latest data from Firestore so Phone APK immediately shows
+  /// all trips, seatbelt photos, attendance, and alerts created on Web/PC.
+  Future<void> syncAllDataFromCloud() async {
+    try {
+      await FirebaseBackendService.instance.ensureAuthSession();
+      
+      // 1. Fetch remote trips
+      final remoteTrips = await FirebaseBackendService.instance.fetchCollection('trips');
+      if (remoteTrips.isNotEmpty) {
+        final parsedTrips = remoteTrips.map((doc) => TripRecord.fromJson({
+          'reference': doc['id'] ?? doc['reference'] ?? '',
+          ...doc,
+        })).toList();
+        _applyRemoteTrips(parsedTrips);
+      }
+
+      // 2. Fetch remote seatbelt records
+      final remoteSeatbelts = await FirebaseBackendService.instance.fetchCollection('seatbelt_records');
+      if (remoteSeatbelts.isNotEmpty) {
+        final parsedSeatbelts = remoteSeatbelts.map((doc) {
+          final data = Map<String, dynamic>.from(doc);
+          return SeatbeltRecord.fromJson(data);
+        }).toList();
+        _applyRemoteSeatbelts(parsedSeatbelts);
+      }
+
+      // 3. Fetch remote attendance
+      final remoteAtt = await FirebaseBackendService.instance.fetchCollection('attendance');
+      if (remoteAtt.isNotEmpty) {
+        final parsedAtt = remoteAtt.map((doc) => AttendanceRecord.fromJson(doc)).toList();
+        _applyRemoteAttendance(parsedAtt);
+      }
+
+      // 4. Fetch remote operations alerts
+      final remoteAlerts = await FirebaseBackendService.instance.fetchCollection('operations_alerts');
+      if (remoteAlerts.isNotEmpty) {
+        final parsedAlerts = remoteAlerts.map((doc) => OperationsAlert.fromJson(doc)).toList();
+        alerts
+          ..clear()
+          ..addAll(parsedAlerts);
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('[CloudSync] syncAllDataFromCloud failed: ');
+    }
   }
 
   void _applyRemoteTrips(List<TripRecord> remoteTrips) {
