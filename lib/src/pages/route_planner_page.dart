@@ -24,22 +24,14 @@ class _RoutePlannerPageState extends State<RoutePlannerPage> {
 
   Future<void> _loadAssignedTrip() async {
     if (!mounted || !widget.controller.isDriver) return;
-    final trip = widget.controller.activeTripForCurrentDriver;
+    final trip = widget.controller.selectedRouteTrip ??
+        widget.controller.activeTripForCurrentDriver;
     if (trip == null) return;
     setState(() {
       _loadingAssignedTrip = true;
       _tripLoadError = null;
     });
-    widget.controller.setRoute(
-      newOrigin: trip.origin,
-      newDestination: trip.destination,
-      newStops: trip.stops,
-    );
-    final loaded = await widget.controller.resolveAndSetRoute(
-      origin: trip.origin,
-      destination: trip.destination,
-      stops: trip.stops,
-    );
+    final loaded = await widget.controller.loadTripIntoRoute(trip);
     if (!mounted) return;
     setState(() {
       _loadingAssignedTrip = false;

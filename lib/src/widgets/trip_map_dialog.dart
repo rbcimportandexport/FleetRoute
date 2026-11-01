@@ -107,9 +107,40 @@ class _TripMapDialogState extends State<TripMapDialog> {
         stops: _stops,
       );
       if (mounted) {
-        setState(() => _routePoints = res.points);
+        setState(() {
+          _routePoints = res.points.isNotEmpty
+              ? res.points
+              : [_pickup!, ..._stops, _destination!];
+        });
+        _fitSelectedTrip();
       }
     } catch (_) {}
+  }
+
+  void _fitSelectedTrip() {
+    final points = _routePoints.isNotEmpty
+        ? _routePoints
+        : [
+            if (_pickup != null) _pickup!,
+            ..._stops,
+            if (_destination != null) _destination!,
+          ];
+    if (points.length < 2) return;
+    void fit() {
+      if (!mounted) return;
+      try {
+        _mapController.fitCamera(
+          CameraFit.bounds(
+            bounds: LatLngBounds.fromPoints(points),
+            padding: const EdgeInsets.all(48),
+          ),
+        );
+      } catch (_) {}
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => fit());
+    Future<void>.delayed(const Duration(milliseconds: 400), fit);
+    Future<void>.delayed(const Duration(milliseconds: 1100), fit);
   }
 
   Future<void> _useCurrentLocation() async {

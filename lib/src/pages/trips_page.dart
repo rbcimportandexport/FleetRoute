@@ -1605,11 +1605,8 @@ class _TripsPageState extends State<TripsPage> {
             controller: widget.controller,
             onOpen: () => _openRoute(entry.$2),
             onOpenInPlanner: () async {
-              final loaded = await widget.controller.resolveAndSetRoute(
-                origin: entry.$2.origin,
-                destination: entry.$2.destination,
-                stops: entry.$2.stops,
-              );
+              final loaded =
+                  await widget.controller.loadTripIntoRoute(entry.$2);
               if (!mounted) return;
               if (!loaded) {
                 ScaffoldMessenger.of(context).showSnackBar(

@@ -1,7 +1,7 @@
 name: transport_one
 description: A responsive fleet route planner for India.
 publish_to: "none"
-version: 1.5.2+40
+version: 1.5.3+41
 
 environment:
   sdk: ">=3.3.0 <4.0.0"

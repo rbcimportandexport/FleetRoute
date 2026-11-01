@@ -1490,6 +1490,7 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                           origin: trip.origin.trim(),
                           destination: trip.destination.trim(),
                           stops: trip.stops,
+                          trip: trip,
                         ),
                         borderRadius: BorderRadius.circular(6),
                         child: Container(
@@ -2327,6 +2328,7 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                         origin: trip.origin.trim(),
                         destination: trip.destination.trim(),
                         stops: trip.stops,
+                        trip: trip,
                       );
                     }
                   },
@@ -2394,6 +2396,7 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                 origin: trip.origin.trim(),
                 destination: trip.destination.trim(),
                 stops: trip.stops,
+                trip: trip,
               );
             }
           }
@@ -4156,6 +4159,7 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                 origin: origin,
                 destination: destination,
                 stops: stops,
+                trip: activeTrip,
               );
             },
             style: FilledButton.styleFrom(
@@ -4183,6 +4187,7 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
     required String origin,
     required String destination,
     List<String> stops = const [],
+    TripRecord? trip,
   }) async {
     final cleanDest = destination.trim();
     final cleanOrigin = origin.trim();
@@ -4194,11 +4199,13 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
       );
       return;
     }
-    final routeReady = await widget.controller.resolveAndSetRoute(
-      origin: cleanOrigin,
-      destination: cleanDest,
-      stops: stops,
-    );
+    final routeReady = trip != null
+        ? await widget.controller.loadTripIntoRoute(trip)
+        : await widget.controller.resolveAndSetRoute(
+            origin: cleanOrigin,
+            destination: cleanDest,
+            stops: stops,
+          );
     if (!mounted) return;
     if (!routeReady) {
       ScaffoldMessenger.of(context).showSnackBar(

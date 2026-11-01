@@ -171,11 +171,7 @@ class _DashboardPageState extends State<DashboardPage>
   }
 
   Future<void> _loadTripIntoRoute(TripRecord trip) async {
-    final loaded = await widget.controller.resolveAndSetRoute(
-      origin: trip.origin,
-      destination: trip.destination,
-      stops: trip.stops,
-    );
+    final loaded = await widget.controller.loadTripIntoRoute(trip);
     if (!mounted) return;
     if (!loaded) {
       ScaffoldMessenger.of(context).showSnackBar(

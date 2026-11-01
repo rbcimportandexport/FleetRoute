@@ -359,6 +359,7 @@ class PlannerController extends ChangeNotifier {
 
   bool isRouteRoutable = true;
   String? routeErrorMessage;
+  String selectedRouteTripReference = '';
 
   void setRouteRoutable(bool routable, [String? errorMsg]) {
     if (isRouteRoutable != routable || routeErrorMessage != errorMsg) {
@@ -375,6 +376,18 @@ class PlannerController extends ChangeNotifier {
 
   bool get canShowRoute =>
       origin.trim().isNotEmpty && destination.trim().isNotEmpty;
+
+  TripRecord? get selectedRouteTrip {
+    final reference = selectedRouteTripReference.trim().toLowerCase();
+    if (reference.isEmpty) return null;
+    for (final trip in trips) {
+      if (trip.reference.trim().toLowerCase() == reference ||
+          trip.effectiveTripNumber.trim().toLowerCase() == reference) {
+        return trip;
+      }
+    }
+    return null;
+  }
 
   /// Returns the non-completed trip assigned to the signed-in driver or their
   /// vehicle. Driver navigation uses this as the single source of truth so the
@@ -1932,6 +1945,23 @@ class PlannerController extends ChangeNotifier {
       newStops: resolvedStops,
     );
     return true;
+  }
+
+  /// Selects one exact trip card as the route source for both Admin and Driver.
+  Future<bool> loadTripIntoRoute(TripRecord trip) async {
+    selectedRouteTripReference = trip.reference.trim().isNotEmpty
+        ? trip.reference.trim()
+        : trip.effectiveTripNumber.trim();
+    setRoute(
+      newOrigin: trip.origin,
+      newDestination: trip.destination,
+      newStops: trip.stops,
+    );
+    return resolveAndSetRoute(
+      origin: trip.origin,
+      destination: trip.destination,
+      stops: trip.stops,
+    );
   }
 
   void addStop([String value = '']) {

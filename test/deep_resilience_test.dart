@@ -211,6 +211,28 @@ void main() {
       expect(result.isRealHighwayRoute, isTrue);
     });
 
+    test('exact trip card becomes shared Admin and Driver route source',
+        () async {
+      final controller = PlannerController();
+      const trip = TripRecord(
+        reference: 'CARD-KOCHI-LANKA',
+        origin: 'Kochi',
+        destination: 'Lanka',
+      );
+
+      final loaded = await controller.loadTripIntoRoute(trip);
+
+      expect(loaded, isTrue);
+      expect(controller.selectedRouteTripReference, 'CARD-KOCHI-LANKA');
+      expect(controller.origin, 'Kochi');
+      expect(controller.destination, 'Lanka');
+      expect(RouteTrafficService.parseLocation(controller.origin), isNotNull);
+      expect(
+        RouteTrafficService.parseLocation(controller.destination),
+        isNotNull,
+      );
+    });
+
     test('reorderStop reorders intermediate stops safely', () {
       final controller = PlannerController();
       controller.addStop('Stop 1');
