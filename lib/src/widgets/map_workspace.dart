@@ -4454,15 +4454,15 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                             children: [
                               Icon(
                                 truck.isPhoneCharging
-                                    ? Icons.battery_charging_full_rounded
+                                    ? Icons.bolt_rounded
                                     : (truck.phoneBatteryLevel! <= 20
                                         ? Icons.battery_alert_rounded
                                         : Icons.battery_std_rounded),
-                                size: 14,
-                                color: truck.phoneBatteryLevel! <= 20
-                                    ? const Color(0xFFDC2626)
-                                    : (truck.isPhoneCharging
-                                        ? const Color(0xFF16A34A)
+                                size: 15,
+                                color: truck.isPhoneCharging
+                                    ? const Color(0xFF16A34A)
+                                    : (truck.phoneBatteryLevel! <= 20
+                                        ? const Color(0xFFDC2626)
                                         : const Color(0xFF2563EB)),
                               ),
                               const SizedBox(width: 2),
@@ -4477,6 +4477,17 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                                 ),
                               ),
                             ],
+                          ),
+                          const SizedBox(height: 1),
+                          Text(
+                            truck.isPhoneCharging ? '⚡ Charging' : 'Not Charging',
+                            style: TextStyle(
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w700,
+                              color: truck.isPhoneCharging
+                                  ? const Color(0xFF16A34A)
+                                  : AppColors.slate,
+                            ),
                           ),
                         ],
                       ),

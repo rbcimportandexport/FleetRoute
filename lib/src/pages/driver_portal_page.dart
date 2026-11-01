@@ -649,46 +649,63 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                         ),
                         if (!kIsWeb) ...[
                           const SizedBox(width: 8),
-                          FutureBuilder<int>(
-                            future: Battery().batteryLevel,
+                          FutureBuilder<Map<String, dynamic>>(
+                            future: () async {
+                              final b = Battery();
+                              final lvl = await b.batteryLevel;
+                              final st = await b.batteryState;
+                              final charging = (st == BatteryState.charging || st == BatteryState.full);
+                              return {'level': lvl, 'charging': charging};
+                            }(),
                             builder: (context, snapshot) {
                               if (!snapshot.hasData) return const SizedBox.shrink();
-                              final level = snapshot.data!;
+                              final level = (snapshot.data!['level'] as int?) ?? 100;
+                              final isCharging = snapshot.data!['charging'] == true;
                               return Container(
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 6, vertical: 1.5),
                                 decoration: BoxDecoration(
-                                  color: level <= 20
-                                      ? const Color(0xFFFEE2E2)
-                                      : const Color(0xFFF1F5F9),
+                                  color: isCharging
+                                      ? const Color(0xFFDCFCE7)
+                                      : (level <= 20
+                                          ? const Color(0xFFFEE2E2)
+                                          : const Color(0xFFF1F5F9)),
                                   borderRadius: BorderRadius.circular(5),
                                   border: Border.all(
-                                    color: level <= 20
-                                        ? const Color(0xFFFCA5A5)
-                                        : const Color(0xFFCBD5E1),
+                                    color: isCharging
+                                        ? const Color(0xFF86EFAC)
+                                        : (level <= 20
+                                            ? const Color(0xFFFCA5A5)
+                                            : const Color(0xFFCBD5E1)),
                                   ),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Icon(
-                                      level <= 20
-                                          ? Icons.battery_alert_rounded
-                                          : Icons.battery_std_rounded,
-                                      size: 11,
-                                      color: level <= 20
-                                          ? const Color(0xFFDC2626)
-                                          : const Color(0xFF2563EB),
+                                      isCharging
+                                          ? Icons.bolt_rounded
+                                          : (level <= 20
+                                              ? Icons.battery_alert_rounded
+                                              : Icons.battery_std_rounded),
+                                      size: 12,
+                                      color: isCharging
+                                          ? const Color(0xFF16A34A)
+                                          : (level <= 20
+                                              ? const Color(0xFFDC2626)
+                                              : const Color(0xFF2563EB)),
                                     ),
                                     const SizedBox(width: 2),
                                     Text(
-                                      '$level%',
+                                      isCharging ? '$level% (⚡ Charging)' : '$level%',
                                       style: TextStyle(
                                         fontSize: 10,
                                         fontWeight: FontWeight.w700,
-                                        color: level <= 20
-                                            ? const Color(0xFFDC2626)
-                                            : const Color(0xFF334155),
+                                        color: isCharging
+                                            ? const Color(0xFF16A34A)
+                                            : (level <= 20
+                                                ? const Color(0xFFDC2626)
+                                                : const Color(0xFF334155)),
                                       ),
                                     ),
                                   ],
