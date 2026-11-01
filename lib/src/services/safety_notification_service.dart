@@ -25,13 +25,22 @@ class SafetyNotificationService {
   }) {
     platform_impl.triggerExternalSafetyNotification(
       title: '🚨 New Trip Assigned: $origin ➔ $destination',
-      body: 'Driver: $driverName | Vehicle: $vehicleNumber\nCargo: $cargoSummary\nKripya trip details check karein aur start karein.',
+      body:
+          'Driver: $driverName | Vehicle: $vehicleNumber\nCargo: $cargoSummary\nKripya trip details check karein aur start karein.',
       isRejected: false,
     );
   }
 
-  static void requestPermission() {
-    platform_impl.requestExternalNotificationPermission();
+  static Future<void> requestPermission() {
+    return platform_impl.requestExternalNotificationPermission();
+  }
+
+  static Future<void> scheduleWeeklyCleaningReminder({
+    required String vehicleNumber,
+  }) {
+    return platform_impl.scheduleWeeklyCleaningReminder(
+      vehicleNumber: vehicleNumber,
+    );
   }
 
   static void pickDriverPhoto({

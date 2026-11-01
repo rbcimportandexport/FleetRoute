@@ -35,7 +35,7 @@ void triggerExternalSafetyNotification({
   } catch (_) {}
 }
 
-void requestExternalNotificationPermission() {
+Future<void> requestExternalNotificationPermission() async {
   try {
     final global = js.globalContext;
     if (global.has('TransportSafety')) {
@@ -44,6 +44,10 @@ void requestExternalNotificationPermission() {
     }
   } catch (_) {}
 }
+
+Future<void> scheduleWeeklyCleaningReminder({
+  required String vehicleNumber,
+}) async {}
 
 void pickDriverPhotoWeb({
   required bool useCamera,

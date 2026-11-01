@@ -102,7 +102,8 @@ class _MapWorkspaceState extends State<MapWorkspace> {
       if (!mounted) return;
       _onControllerChanged();
       // Auto sync real GPS coordinates from Protrack GPS tracker or backend
-      unawaited(widget.controller.syncProtrackGps(allowSimulationFallback: false));
+      unawaited(
+          widget.controller.syncProtrackGps(allowSimulationFallback: false));
       // Auto-center on user's real GPS location on startup so vehicle and driver location are active
       final hasPendingIntent = IncomingIntentService().latestLocation != null;
       if (!hasPendingIntent) {
@@ -170,7 +171,8 @@ class _MapWorkspaceState extends State<MapWorkspace> {
       // Fallback: if GPS read is null, try last known position
       if (currentGps == null) {
         try {
-          final lastKnown = kIsWeb ? null : await Geolocator.getLastKnownPosition();
+          final lastKnown =
+              kIsWeb ? null : await Geolocator.getLastKnownPosition();
           if (lastKnown != null) {
             currentGps = LatLng(lastKnown.latitude, lastKnown.longitude);
           }
@@ -289,10 +291,15 @@ class _MapWorkspaceState extends State<MapWorkspace> {
 
       // Link real device GPS coordinates ONLY if driver is actively logged in and on duty
       if (widget.controller.isDriver) {
-        final assignedCode = widget.controller.selectedDriver?.assignedVehicle.trim().toUpperCase() ?? '';
-        final isOnDuty = assignedCode.isNotEmpty && widget.controller.isVehicleDriverOnDuty(assignedCode);
+        final assignedCode = widget.controller.selectedDriver?.assignedVehicle
+                .trim()
+                .toUpperCase() ??
+            '';
+        final isOnDuty = assignedCode.isNotEmpty &&
+            widget.controller.isVehicleDriverOnDuty(assignedCode);
         if (assignedCode.isNotEmpty && isOnDuty) {
-          final vIdx = widget.controller.truckModels.indexWhere((t) => t.code.toUpperCase() == assignedCode);
+          final vIdx = widget.controller.truckModels
+              .indexWhere((t) => t.code.toUpperCase() == assignedCode);
           if (vIdx >= 0) {
             final current = widget.controller.truckModels[vIdx];
             widget.controller.truckModels[vIdx] = current.copyWith(
@@ -536,6 +543,15 @@ class _MapWorkspaceState extends State<MapWorkspace> {
 
     _updateRouteReport(result);
 
+    if (widget.controller.isDriver && result.points.length >= 2) {
+      unawaited(
+        widget.controller.publishCurrentDriverRoute(
+          plannedDistanceKm: result.distanceKm,
+          plannedDurationMinutes: (result.rawDurationSeconds / 60).round(),
+        ),
+      );
+    }
+
     if (!_isNavigating) {
       _fitRoute();
     }
@@ -661,7 +677,11 @@ class _MapWorkspaceState extends State<MapWorkspace> {
   }
 
   Future<void> _openLocationSearch({String? targetMode}) async {
-    final mode = targetMode ?? _activePinMode;
+    // The main search action is a destination search: the driver's live GPS
+    // becomes Pickup automatically. Explicit Pickup/Stop/Drop buttons still
+    // keep their selected behavior through [targetMode].
+    final autoRouteFromGps = targetMode == null;
+    final mode = autoRouteFromGps ? 'drop' : targetMode;
     final title = mode == 'drop'
         ? 'Search Drop / Destination'
         : (mode == 'stop'
@@ -675,8 +695,13 @@ class _MapWorkspaceState extends State<MapWorkspace> {
     );
 
     if (result != null && mounted) {
+      if (autoRouteFromGps) {
+        await _setGpsPickupAndAddressDrop(result);
+        return;
+      }
       final point = result.coordinates;
-      final label = result.shortName.isNotEmpty ? result.shortName : result.displayName;
+      final label =
+          result.shortName.isNotEmpty ? result.shortName : result.displayName;
 
       if (mode == 'drop') {
         setState(() {
@@ -703,6 +728,79 @@ class _MapWorkspaceState extends State<MapWorkspace> {
     }
   }
 
+  Future<void> _setGpsPickupAndAddressDrop(GeocodedPlace drop) async {
+    _showMessage('Current GPS pickup set ho raha hai...');
+    LatLng? pickup;
+    try {
+      if (!await Geolocator.isLocationServiceEnabled()) {
+        await Geolocator.openLocationSettings();
+        throw const _LocationFailure(
+          'Phone GPS ON karke address dobara select karein.',
+        );
+      }
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.deniedForever) {
+        await Geolocator.openAppSettings();
+        throw const _LocationFailure(
+          'App Settings mein Location permission Allow karein.',
+        );
+      }
+      if (permission == LocationPermission.denied) {
+        throw const _LocationFailure(
+          'Current-location pickup ke liye Location permission Allow karein.',
+        );
+      }
+      try {
+        final position = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.high,
+            timeLimit: Duration(seconds: 12),
+          ),
+        );
+        pickup = LatLng(position.latitude, position.longitude);
+      } catch (_) {
+        final lastKnown =
+            kIsWeb ? null : await Geolocator.getLastKnownPosition();
+        if (lastKnown != null) {
+          pickup = LatLng(lastKnown.latitude, lastKnown.longitude);
+        }
+      }
+      if (pickup == null) {
+        throw const _LocationFailure(
+          'Current GPS location nahi mili. Khuli jagah mein dobara try karein.',
+        );
+      }
+
+      final pickupLabel = await ReverseGeocodingService.labelFor(pickup);
+      if (!mounted) return;
+      final dropLabel = drop.formattedLabel;
+      setState(() {
+        _userLocation = pickup;
+        _pinnedOrigin = pickup;
+        _pinnedDestination = drop.coordinates;
+        _activePinMode = 'drop';
+      });
+      widget.controller.setRoute(
+        newOrigin: pickupLabel,
+        newDestination: dropLabel,
+        newStops: const [],
+      );
+      await _fetchRoute(pickup, drop.coordinates, const []);
+      if (!mounted) return;
+      _fitRoute();
+      _showMessage(
+        'Pickup: Current Location | Drop: ${drop.shortName}. Route ready!',
+      );
+    } on _LocationFailure catch (error) {
+      _showMessage(error.message);
+    } catch (error) {
+      _showMessage('GPS pickup set nahi hua: $error');
+    }
+  }
+
   void _resetMapCompass() {
     final camera = _lastGoogleCameraPosition;
     if (camera == null) return;
@@ -720,7 +818,8 @@ class _MapWorkspaceState extends State<MapWorkspace> {
 
   Future<void> _showFleetLocation() async {
     // Proactively fetch latest real GPS telemetry
-    unawaited(widget.controller.syncProtrackGps(allowSimulationFallback: false));
+    unawaited(
+        widget.controller.syncProtrackGps(allowSimulationFallback: false));
 
     final vehicles = widget.controller.truckModels;
     final online = vehicles.where(_isVehicleOnline).length;
@@ -942,10 +1041,13 @@ class _MapWorkspaceState extends State<MapWorkspace> {
       if (t.status != 'completed' && t.status != 'cancelled') {
         final tOrig = t.origin.trim().toLowerCase();
         final tDest = t.destination.trim().toLowerCase();
-        final matchOrigin = tOrig.isNotEmpty && (tOrig.contains(origKey) || origKey.contains(tOrig));
-        final matchDest = tDest.isNotEmpty && (tDest.contains(destKey) || destKey.contains(tDest));
+        final matchOrigin = tOrig.isNotEmpty &&
+            (tOrig.contains(origKey) || origKey.contains(tOrig));
+        final matchDest = tDest.isNotEmpty &&
+            (tDest.contains(destKey) || destKey.contains(tDest));
         if (matchOrigin || matchDest) {
-          if (t.customerName.trim().isNotEmpty && t.cargoDescription.trim().isNotEmpty) {
+          if (t.customerName.trim().isNotEmpty &&
+              t.cargoDescription.trim().isNotEmpty) {
             matchingActiveTrip = t;
             break;
           }
@@ -981,11 +1083,14 @@ class _MapWorkspaceState extends State<MapWorkspace> {
     // 2. Pre-Trip Driver Seatbelt & Cabin Safety Check:
     // Check if driver/vehicle already passed seatbelt safety check recently (e.g. today or in active session)
     final now = DateTime.now();
-    final hasRecentApprovedSeatbelt = widget.controller.seatbeltRecords.any((rec) {
+    final hasRecentApprovedSeatbelt =
+        widget.controller.seatbeltRecords.any((rec) {
       if (!rec.isApproved) return false;
       final diff = now.difference(rec.timestamp);
       // Valid for current shift / trip (12 hours) or same vehicle
-      final matchVehicle = vehicleCode.isEmpty || rec.vehicleNumber.trim().toUpperCase() == vehicleCode.trim().toUpperCase();
+      final matchVehicle = vehicleCode.isEmpty ||
+          rec.vehicleNumber.trim().toUpperCase() ==
+              vehicleCode.trim().toUpperCase();
       return diff.inHours < 12 && matchVehicle;
     });
 
@@ -1470,8 +1575,12 @@ class _MapWorkspaceState extends State<MapWorkspace> {
   List<Marker> get _markers {
     final origin = _effectiveOrigin;
     final dest = _effectiveDestination;
-    final activeAssignedCode = widget.controller.selectedDriver?.assignedVehicle.trim().toUpperCase() ??
-        (widget.controller.isDriver && _selectedLiveTruck != null ? _selectedLiveTruck!.code.toUpperCase() : '');
+    final activeAssignedCode = widget.controller.selectedDriver?.assignedVehicle
+            .trim()
+            .toUpperCase() ??
+        (widget.controller.isDriver && _selectedLiveTruck != null
+            ? _selectedLiveTruck!.code.toUpperCase()
+            : '');
 
     return [
       if (_isNavigating && _currentNavPosition != null)
@@ -1560,11 +1669,13 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                 children: [
                   Container(
                     margin: const EdgeInsets.only(bottom: 2),
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: const Color(0xFF10B981), width: 1.5),
+                      border: Border.all(
+                          color: const Color(0xFF10B981), width: 1.5),
                       boxShadow: const [
                         BoxShadow(
                           color: Color(0x2E000000),
@@ -1778,11 +1889,13 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                 children: [
                   Container(
                     margin: const EdgeInsets.only(bottom: 2),
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: const Color(0xFFEF4444), width: 1.5),
+                      border: Border.all(
+                          color: const Color(0xFFEF4444), width: 1.5),
                       boxShadow: const [
                         BoxShadow(
                           color: Color(0x2E000000),
@@ -1807,7 +1920,8 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                           child: Text(
                             _draggingPin == 'destination'
                                 ? 'Move Drop'
-                                : _shortLocationName(widget.controller.destination),
+                                : _shortLocationName(
+                                    widget.controller.destination),
                             style: const TextStyle(
                               color: Color(0xFF0F172A),
                               fontSize: 11,
@@ -1871,7 +1985,10 @@ class _MapWorkspaceState extends State<MapWorkspace> {
             (_userLocation != null &&
                 (truck.code.toUpperCase() == activeAssignedCode ||
                     (widget.controller.truckModels.isNotEmpty &&
-                        truck.code.toUpperCase() == (_selectedLiveTruck?.code.toUpperCase() ?? widget.controller.truckModels.first.code.toUpperCase())))))
+                        truck.code.toUpperCase() ==
+                            (_selectedLiveTruck?.code.toUpperCase() ??
+                                widget.controller.truckModels.first.code
+                                    .toUpperCase())))))
           Marker(
             key: ValueKey('truck-marker-${truck.code}'),
             point: truck.hasCoordinates
@@ -2016,11 +2133,23 @@ class _MapWorkspaceState extends State<MapWorkspace> {
         },
       ));
     }
-    final activeAssignedCode = widget.controller.selectedDriver?.assignedVehicle.trim().toUpperCase() ??
-        (widget.controller.isDriver && _selectedLiveTruck != null ? _selectedLiveTruck!.code.toUpperCase() : '');
-    final currentSelectedCode = (widget.controller.truckModels.isNotEmpty && widget.controller.truckIndex != null && widget.controller.truckIndex! >= 0 && widget.controller.truckIndex! < widget.controller.truckModels.length)
-        ? widget.controller.truckModels[widget.controller.truckIndex!].code.toUpperCase()
-        : (_selectedLiveTruck?.code.toUpperCase() ?? (widget.controller.truckModels.isNotEmpty ? widget.controller.truckModels.first.code.toUpperCase() : ''));
+    final activeAssignedCode = widget.controller.selectedDriver?.assignedVehicle
+            .trim()
+            .toUpperCase() ??
+        (widget.controller.isDriver && _selectedLiveTruck != null
+            ? _selectedLiveTruck!.code.toUpperCase()
+            : '');
+    final currentSelectedCode = (widget.controller.truckModels.isNotEmpty &&
+            widget.controller.truckIndex != null &&
+            widget.controller.truckIndex! >= 0 &&
+            widget.controller.truckIndex! <
+                widget.controller.truckModels.length)
+        ? widget.controller.truckModels[widget.controller.truckIndex!].code
+            .toUpperCase()
+        : (_selectedLiveTruck?.code.toUpperCase() ??
+            (widget.controller.truckModels.isNotEmpty
+                ? widget.controller.truckModels.first.code.toUpperCase()
+                : ''));
 
     for (int tIdx = 0; tIdx < widget.controller.truckModels.length; tIdx++) {
       final truck = widget.controller.truckModels[tIdx];
@@ -2046,8 +2175,12 @@ class _MapWorkspaceState extends State<MapWorkspace> {
 
       final bool isLiveGps = hasRealGps;
       final double markerHue = isLiveGps
-          ? (truck.isMoving ? gm.BitmapDescriptor.hueAzure : gm.BitmapDescriptor.hueGreen)
-          : (isOnDuty ? gm.BitmapDescriptor.hueGreen : gm.BitmapDescriptor.hueCyan);
+          ? (truck.isMoving
+              ? gm.BitmapDescriptor.hueAzure
+              : gm.BitmapDescriptor.hueGreen)
+          : (isOnDuty
+              ? gm.BitmapDescriptor.hueGreen
+              : gm.BitmapDescriptor.hueCyan);
 
       final String statusSnippet = isLiveGps
           ? (truck.isMoving
@@ -2059,7 +2192,9 @@ class _MapWorkspaceState extends State<MapWorkspace> {
         markerId: gm.MarkerId('truck_${truck.code}'),
         position: gm.LatLng(truckLat, truckLng),
         icon: gm.BitmapDescriptor.defaultMarkerWithHue(markerHue),
-        zIndexInt: isSelectedVehicle || isDriverActiveVehicle ? 10 : (isOnDuty ? 5 : 2),
+        zIndexInt: isSelectedVehicle || isDriverActiveVehicle
+            ? 10
+            : (isOnDuty ? 5 : 2),
         infoWindow: gm.InfoWindow(
           title: ' ${truck.code} · ${truck.name}',
           snippet: statusSnippet,
@@ -2243,14 +2378,21 @@ class _MapWorkspaceState extends State<MapWorkspace> {
       });
       widget.controller.setOrigin(_format(location));
 
-      final assignedCode = widget.controller.selectedDriver?.assignedVehicle.trim().toUpperCase() ??
-          (widget.controller.isDriver && _selectedLiveTruck != null ? _selectedLiveTruck!.code.toUpperCase() : '');
+      final assignedCode = widget.controller.selectedDriver?.assignedVehicle
+              .trim()
+              .toUpperCase() ??
+          (widget.controller.isDriver && _selectedLiveTruck != null
+              ? _selectedLiveTruck!.code.toUpperCase()
+              : '');
       final targetCode = assignedCode.isNotEmpty
           ? assignedCode
           : (_selectedLiveTruck?.code.toUpperCase() ??
-              (widget.controller.truckModels.isNotEmpty ? widget.controller.truckModels.first.code.toUpperCase() : ''));
+              (widget.controller.truckModels.isNotEmpty
+                  ? widget.controller.truckModels.first.code.toUpperCase()
+                  : ''));
       if (targetCode.isNotEmpty) {
-        final vIdx = widget.controller.truckModels.indexWhere((t) => t.code.toUpperCase() == targetCode);
+        final vIdx = widget.controller.truckModels
+            .indexWhere((t) => t.code.toUpperCase() == targetCode);
         if (vIdx >= 0) {
           final current = widget.controller.truckModels[vIdx];
           widget.controller.truckModels[vIdx] = current.copyWith(
@@ -3005,7 +3147,8 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                             ),
                             IconButton(
                               icon: const Icon(Icons.close_rounded, size: 20),
-                              onPressed: () => Navigator.pop(bottomSheetContext),
+                              onPressed: () =>
+                                  Navigator.pop(bottomSheetContext),
                             ),
                           ],
                         ),
@@ -3160,8 +3303,8 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                               children: [
                                 if (originCtrl.text.isNotEmpty)
                                   IconButton(
-                                    icon:
-                                        const Icon(Icons.clear_rounded, size: 18),
+                                    icon: const Icon(Icons.clear_rounded,
+                                        size: 18),
                                     tooltip: 'Clear Pickup',
                                     onPressed: () {
                                       originCtrl.clear();
@@ -3181,9 +3324,12 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                                         ),
                                       )
                                     : IconButton(
-                                        icon: const Icon(Icons.gps_fixed_rounded,
-                                            color: Color(0xFF10B981), size: 20),
-                                        tooltip: 'Use My GPS Location as Pickup',
+                                        icon: const Icon(
+                                            Icons.gps_fixed_rounded,
+                                            color: Color(0xFF10B981),
+                                            size: 20),
+                                        tooltip:
+                                            'Use My GPS Location as Pickup',
                                         onPressed: () async {
                                           setSheetState(
                                               () => locatingPickup = true);
@@ -3192,7 +3338,8 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                                                 .getCurrentPosition(
                                               locationSettings:
                                                   const LocationSettings(
-                                                accuracy: LocationAccuracy.medium,
+                                                accuracy:
+                                                    LocationAccuracy.medium,
                                                 timeLimit: Duration(seconds: 8),
                                               ),
                                             );
@@ -3209,14 +3356,16 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                                             });
                                             widget.controller.setOrigin(place);
                                             try {
-                                              _mapController.move(userPos, 15.0);
+                                              _mapController.move(
+                                                  userPos, 15.0);
                                             } catch (_) {}
                                             _googleMapController?.animateCamera(
                                               gm.CameraUpdate.newLatLngZoom(
                                                   _googlePoint(userPos), 16),
                                             );
                                           } catch (e) {
-                                            _showMessage('GPS fetch skipped: $e');
+                                            _showMessage(
+                                                'GPS fetch skipped: $e');
                                           } finally {
                                             setSheetState(
                                                 () => locatingPickup = false);
@@ -3279,8 +3428,10 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                                         stopCtrls.add(TextEditingController());
                                       });
                                     },
-                                    icon: const Icon(Icons.add_circle_outline_rounded,
-                                        size: 14, color: Color(0xFFD97706)),
+                                    icon: const Icon(
+                                        Icons.add_circle_outline_rounded,
+                                        size: 14,
+                                        color: Color(0xFFD97706)),
                                     label: const Text(
                                       '+ Stop Jodein',
                                       style: TextStyle(
@@ -3311,15 +3462,18 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                                       child: TextField(
                                         controller: stopCtrls[i],
                                         decoration: InputDecoration(
-                                          labelText: 'Stop ${i + 1} (तीसरी / बीच की लोकेशन)',
-                                          hintText: 'e.g. Vadodara, Bharuch, Highway Point...',
+                                          labelText:
+                                              'Stop ${i + 1} (तीसरी / बीच की लोकेशन)',
+                                          hintText:
+                                              'e.g. Vadodara, Bharuch, Highway Point...',
                                           prefixIcon: const Icon(
                                               Icons.location_on_outlined,
                                               color: Color(0xFFF59E0B),
                                               size: 18),
                                           isDense: true,
-                                          contentPadding: const EdgeInsets.symmetric(
-                                              horizontal: 10, vertical: 10),
+                                          contentPadding:
+                                              const EdgeInsets.symmetric(
+                                                  horizontal: 10, vertical: 10),
                                           border: OutlineInputBorder(
                                             borderRadius:
                                                 BorderRadius.circular(8),
@@ -3338,8 +3492,10 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                                     ),
                                     const SizedBox(width: 4),
                                     IconButton(
-                                      icon: const Icon(Icons.remove_circle_outline_rounded,
-                                          color: Color(0xFFDC2626), size: 20),
+                                      icon: const Icon(
+                                          Icons.remove_circle_outline_rounded,
+                                          color: Color(0xFFDC2626),
+                                          size: 20),
                                       tooltip: 'Stop hatayein',
                                       onPressed: () {
                                         setSheetState(() {
@@ -3369,8 +3525,8 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                               children: [
                                 if (destCtrl.text.isNotEmpty)
                                   IconButton(
-                                    icon:
-                                        const Icon(Icons.clear_rounded, size: 18),
+                                    icon: const Icon(Icons.clear_rounded,
+                                        size: 18),
                                     tooltip: 'Clear Drop',
                                     onPressed: () {
                                       destCtrl.clear();
@@ -3390,8 +3546,10 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                                         ),
                                       )
                                     : IconButton(
-                                        icon: const Icon(Icons.gps_fixed_rounded,
-                                            color: Color(0xFFEF4444), size: 20),
+                                        icon: const Icon(
+                                            Icons.gps_fixed_rounded,
+                                            color: Color(0xFFEF4444),
+                                            size: 20),
                                         tooltip: 'Use My GPS Location as Drop',
                                         onPressed: () async {
                                           setSheetState(
@@ -3401,7 +3559,8 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                                                 .getCurrentPosition(
                                               locationSettings:
                                                   const LocationSettings(
-                                                accuracy: LocationAccuracy.medium,
+                                                accuracy:
+                                                    LocationAccuracy.medium,
                                                 timeLimit: Duration(seconds: 8),
                                               ),
                                             );
@@ -3417,14 +3576,16 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                                             widget.controller
                                                 .setDestination(place);
                                             try {
-                                              _mapController.move(userPos, 15.0);
+                                              _mapController.move(
+                                                  userPos, 15.0);
                                             } catch (_) {}
                                             _googleMapController?.animateCamera(
                                               gm.CameraUpdate.newLatLngZoom(
                                                   _googlePoint(userPos), 16),
                                             );
                                           } catch (e) {
-                                            _showMessage('GPS fetch skipped: $e');
+                                            _showMessage(
+                                                'GPS fetch skipped: $e');
                                           } finally {
                                             setSheetState(
                                                 () => locatingDrop = false);
@@ -3479,7 +3640,8 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                                 } else if (destCtrl.text.trim().isEmpty) {
                                   destCtrl.text = city;
                                 } else {
-                                  stopCtrls.add(TextEditingController(text: city));
+                                  stopCtrls
+                                      .add(TextEditingController(text: city));
                                 }
                                 setSheetState(() {});
                               },
@@ -3502,8 +3664,8 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                                     'Tap Mode Active: Map par tap karke Pickup, Stops ya Drop choose karein.',
                                   );
                                 },
-                                icon:
-                                    const Icon(Icons.touch_app_rounded, size: 16),
+                                icon: const Icon(Icons.touch_app_rounded,
+                                    size: 16),
                                 label: const Text('Tap on Map'),
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: AppColors.navy,
@@ -3596,161 +3758,164 @@ class _MapWorkspaceState extends State<MapWorkspace> {
               final shortName = label.split(',').first.trim();
 
               return SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(18, 14, 18, 16),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 40,
-                        height: 4,
-                        margin: const EdgeInsets.only(bottom: 12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFD3DCE8),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                    ),
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 14, 18, 16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          margin: const EdgeInsets.only(bottom: 12),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFEF3C7),
+                            color: const Color(0xFFD3DCE8),
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: const Icon(
-                            Icons.add_location_alt_rounded,
-                            color: Color(0xFFD97706),
-                            size: 22,
+                        ),
+                      ),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFEF3C7),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(
+                              Icons.add_location_alt_rounded,
+                              color: Color(0xFFD97706),
+                              size: 22,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  shortName,
+                                  style: const TextStyle(
+                                    fontSize: 14.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.navy,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  label,
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.slate,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      const Divider(height: 1),
+                      const SizedBox(height: 10),
+                      // 1. Add as Intermediate Stop / Waypoint
+                      FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFFD97706),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                shortName,
-                                style: const TextStyle(
-                                  fontSize: 14.5,
-                                  fontWeight: FontWeight.w800,
-                                  color: AppColors.navy,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                label,
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  color: AppColors.slate,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
+                        onPressed: () {
+                          Navigator.of(ctx).pop();
+                          final newStopLabel =
+                              label.isNotEmpty ? label : coordStr;
+                          widget.controller.addStop(newStopLabel);
+                          _showMessage(
+                              'Delivery stop (Waypoint) joda gaya: $shortName');
+                        },
+                        icon: const Icon(Icons.add_circle_outline_rounded,
+                            size: 18),
+                        label: Text(
+                          'Delivery Stop / Waypoint Jodein (${widget.controller.stops.length + 1})',
+                          style: const TextStyle(
+                              fontSize: 12.5, fontWeight: FontWeight.w800),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      // 2. Set as Drop
+                      OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFFDC2626),
+                          side: const BorderSide(color: Color(0xFFFCA5A5)),
+                          padding: const EdgeInsets.symmetric(vertical: 11),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
                           ),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    const Divider(height: 1),
-                    const SizedBox(height: 10),
-                    // 1. Add as Intermediate Stop / Waypoint
-                    FilledButton.icon(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFFD97706),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                        onPressed: () {
+                          Navigator.of(ctx).pop();
+                          setState(() => _pinnedDestination = point);
+                          final newLabel = label.isNotEmpty ? label : coordStr;
+                          widget.controller.setDestination(newLabel);
+                          _showMessage('New Drop set: $shortName');
+                        },
+                        icon: const Icon(Icons.location_on_rounded, size: 17),
+                        label: const Text(
+                          'Drop / Final Destination Badlein',
+                          style: TextStyle(
+                              fontSize: 12, fontWeight: FontWeight.w700),
                         ),
                       ),
-                      onPressed: () {
-                        Navigator.of(ctx).pop();
-                        final newStopLabel = label.isNotEmpty ? label : coordStr;
-                        widget.controller.addStop(newStopLabel);
-                        _showMessage(
-                            'Delivery stop (Waypoint) joda gaya: $shortName');
-                      },
-                      icon: const Icon(Icons.add_circle_outline_rounded, size: 18),
-                      label: Text(
-                        'Delivery Stop / Waypoint Jodein (${widget.controller.stops.length + 1})',
-                        style: const TextStyle(
-                            fontSize: 12.5, fontWeight: FontWeight.w800),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    // 2. Set as Drop
-                    OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFFDC2626),
-                        side: const BorderSide(color: Color(0xFFFCA5A5)),
-                        padding: const EdgeInsets.symmetric(vertical: 11),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                      const SizedBox(height: 6),
+                      // 3. Set as Pickup
+                      OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF16A34A),
+                          side: const BorderSide(color: Color(0xFF86EFAC)),
+                          padding: const EdgeInsets.symmetric(vertical: 11),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        onPressed: () {
+                          Navigator.of(ctx).pop();
+                          setState(() {
+                            _pinnedOrigin = point;
+                            _userLocation = point;
+                          });
+                          final newLabel = label.isNotEmpty ? label : coordStr;
+                          widget.controller.setOrigin(newLabel);
+                          _showMessage('New Pickup set: $shortName');
+                        },
+                        icon: const Icon(Icons.my_location_rounded, size: 17),
+                        label: const Text(
+                          'Pickup / Starting Point Badlein',
+                          style: TextStyle(
+                              fontSize: 12, fontWeight: FontWeight.w700),
                         ),
                       ),
-                      onPressed: () {
-                        Navigator.of(ctx).pop();
-                        setState(() => _pinnedDestination = point);
-                        final newLabel = label.isNotEmpty ? label : coordStr;
-                        widget.controller.setDestination(newLabel);
-                        _showMessage('New Drop set: $shortName');
-                      },
-                      icon: const Icon(Icons.location_on_rounded, size: 17),
-                      label: const Text(
-                        'Drop / Final Destination Badlein',
-                        style: TextStyle(
-                            fontSize: 12, fontWeight: FontWeight.w700),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    // 3. Set as Pickup
-                    OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFF16A34A),
-                        side: const BorderSide(color: Color(0xFF86EFAC)),
-                        padding: const EdgeInsets.symmetric(vertical: 11),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      onPressed: () {
-                        Navigator.of(ctx).pop();
-                        setState(() {
-                          _pinnedOrigin = point;
-                          _userLocation = point;
-                        });
-                        final newLabel = label.isNotEmpty ? label : coordStr;
-                        widget.controller.setOrigin(newLabel);
-                        _showMessage('New Pickup set: $shortName');
-                      },
-                      icon: const Icon(Icons.my_location_rounded, size: 17),
-                      label: const Text(
-                        'Pickup / Starting Point Badlein',
-                        style: TextStyle(
-                            fontSize: 12, fontWeight: FontWeight.w700),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            );
-          },
-        ),
-      );
-    },
-  );
-}
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
 
   Future<void> _handleMapTap(LatLng point) async {
     if (_isVerifyingSeatbelt) return;
-    if (_isNavigating && !widget.controller.pinMode && _activePinMode != 'stop') return;
+    if (_isNavigating && !widget.controller.pinMode && _activePinMode != 'stop')
+      return;
 
     final coordString = _format(point);
 
@@ -3764,7 +3929,8 @@ class _MapWorkspaceState extends State<MapWorkspace> {
     if (_activePinMode == 'stop') {
       widget.controller.addStop(coordString);
       final stopNum = widget.controller.stops.length;
-      _showMessage('Via Stop $stopNum Pinned ($coordString). Name resolving...');
+      _showMessage(
+          'Via Stop $stopNum Pinned ($coordString). Name resolving...');
       ReverseGeocodingService.labelFor(point).then((locationName) {
         if (!mounted) return;
         final currentIdx = widget.controller.stops.indexOf(coordString);
@@ -3813,7 +3979,8 @@ class _MapWorkspaceState extends State<MapWorkspace> {
       setState(() {
         _pinnedOrigin = point;
         _userLocation = point;
-        _activePinMode = 'drop'; // automatically advance to Drop mode for next tap
+        _activePinMode =
+            'drop'; // automatically advance to Drop mode for next tap
       });
       widget.controller.setOrigin(coordString);
       _showMessage('Pickup Pinned ($coordString). Ab Drop tap karein.');
@@ -4008,8 +4175,10 @@ class _MapWorkspaceState extends State<MapWorkspace> {
     final isOnline = _isVehicleOnline(truck);
     final speed = truck.currentSpeed.toStringAsFixed(0);
     const factoryRbc = LatLng(21.17065, 73.00425);
-    final lat = truck.latitude ?? (_pinnedOrigin?.latitude ?? factoryRbc.latitude);
-    final lng = truck.longitude ?? (_pinnedOrigin?.longitude ?? factoryRbc.longitude);
+    final lat =
+        truck.latitude ?? (_pinnedOrigin?.latitude ?? factoryRbc.latitude);
+    final lng =
+        truck.longitude ?? (_pinnedOrigin?.longitude ?? factoryRbc.longitude);
     final vehiclePoint = LatLng(lat, lng);
 
     showModalBottomSheet<void>(
@@ -4049,9 +4218,14 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                     children: [
                       CircleAvatar(
                         radius: 24,
-                        backgroundColor: isOnline ? const Color(0xFFDCFCE7) : const Color(0xFFF1F5F9),
-                        foregroundColor: isOnline ? const Color(0xFF16A34A) : AppColors.slate,
-                        child: const Icon(Icons.local_shipping_rounded, size: 26),
+                        backgroundColor: isOnline
+                            ? const Color(0xFFDCFCE7)
+                            : const Color(0xFFF1F5F9),
+                        foregroundColor: isOnline
+                            ? const Color(0xFF16A34A)
+                            : AppColors.slate,
+                        child:
+                            const Icon(Icons.local_shipping_rounded, size: 26),
                       ),
                       const SizedBox(width: 14),
                       Expanded(
@@ -4071,9 +4245,12 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                                 ),
                                 const SizedBox(width: 8),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 7, vertical: 2),
                                   decoration: BoxDecoration(
-                                    color: isOnline ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2),
+                                    color: isOnline
+                                        ? const Color(0xFFDCFCE7)
+                                        : const Color(0xFFFEE2E2),
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Text(
@@ -4081,7 +4258,9 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                                     style: TextStyle(
                                       fontSize: 10.5,
                                       fontWeight: FontWeight.w800,
-                                      color: isOnline ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                                      color: isOnline
+                                          ? const Color(0xFF16A34A)
+                                          : const Color(0xFFDC2626),
                                     ),
                                   ),
                                 ),
@@ -4121,39 +4300,55 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                   children: [
                     Column(
                       children: [
-                        const Text('Speed', style: TextStyle(fontSize: 11, color: AppColors.slate)),
+                        const Text('Speed',
+                            style: TextStyle(
+                                fontSize: 11, color: AppColors.slate)),
                         const SizedBox(height: 2),
                         Text('$speed km/h',
                             style: const TextStyle(
-                                fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.navy)),
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.navy)),
                       ],
                     ),
-                    Container(height: 24, width: 1, color: const Color(0xFFCBD5E1)),
+                    Container(
+                        height: 24, width: 1, color: const Color(0xFFCBD5E1)),
                     Column(
                       children: [
-                        const Text('GPS Fix', style: TextStyle(fontSize: 11, color: AppColors.slate)),
+                        const Text('GPS Fix',
+                            style: TextStyle(
+                                fontSize: 11, color: AppColors.slate)),
                         const SizedBox(height: 2),
                         Text(
-                          truck.hasValidGpsFix ? 'Live Satellite' : (isOnDuty ? 'Base / Office' : 'Stationary'),
+                          truck.hasValidGpsFix
+                              ? 'Live Satellite'
+                              : (isOnDuty ? 'Base / Office' : 'Stationary'),
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
-                            color: truck.hasValidGpsFix ? const Color(0xFF16A34A) : AppColors.navy,
+                            color: truck.hasValidGpsFix
+                                ? const Color(0xFF16A34A)
+                                : AppColors.navy,
                           ),
                         ),
                       ],
                     ),
-                    Container(height: 24, width: 1, color: const Color(0xFFCBD5E1)),
+                    Container(
+                        height: 24, width: 1, color: const Color(0xFFCBD5E1)),
                     Column(
                       children: [
-                        const Text('Ignition', style: TextStyle(fontSize: 11, color: AppColors.slate)),
+                        const Text('Ignition',
+                            style: TextStyle(
+                                fontSize: 11, color: AppColors.slate)),
                         const SizedBox(height: 2),
                         Text(
                           truck.isIgnitionOn ? 'ACC ON' : 'ACC OFF',
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
-                            color: truck.isIgnitionOn ? const Color(0xFF16A34A) : AppColors.slate,
+                            color: truck.isIgnitionOn
+                                ? const Color(0xFF16A34A)
+                                : AppColors.slate,
                           ),
                         ),
                       ],
@@ -4169,13 +4364,17 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                     child: OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
                         side: const BorderSide(color: Color(0xFF2563EB)),
                       ),
-                      icon: const Icon(Icons.my_location_rounded, size: 18, color: Color(0xFF2563EB)),
+                      icon: const Icon(Icons.my_location_rounded,
+                          size: 18, color: Color(0xFF2563EB)),
                       label: const Text('Track on Map',
                           style: TextStyle(
-                              color: Color(0xFF2563EB), fontWeight: FontWeight.w700, fontSize: 13)),
+                              color: Color(0xFF2563EB),
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13)),
                       onPressed: () {
                         Navigator.pop(sheetContext);
                         try {
@@ -4183,7 +4382,8 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                         } catch (_) {}
                         try {
                           _googleMapController?.animateCamera(
-                              gm.CameraUpdate.newLatLngZoom(_googlePoint(vehiclePoint), 16.5));
+                              gm.CameraUpdate.newLatLngZoom(
+                                  _googlePoint(vehiclePoint), 16.5));
                         } catch (_) {}
                       },
                     ),
@@ -4194,12 +4394,16 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF16A34A),
                         padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
                       ),
-                      icon: const Icon(Icons.info_outline_rounded, size: 18, color: Colors.white),
+                      icon: const Icon(Icons.info_outline_rounded,
+                          size: 18, color: Colors.white),
                       label: const Text('View All Details',
                           style: TextStyle(
-                              color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13)),
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13)),
                       onPressed: () {
                         Navigator.pop(sheetContext);
                         _showCompleteVehicleDetails(truck);
@@ -4371,8 +4575,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                   key: _mapViewKey,
                   mapController: _mapController,
                   options: MapOptions(
-                    initialCenter:
-                        _effectiveOrigin ?? _userLocation ?? _india,
+                    initialCenter: _effectiveOrigin ?? _userLocation ?? _india,
                     initialZoom: initialZoom,
                     minZoom: 2.5,
                     maxZoom: 19.0,
@@ -4386,8 +4589,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                   ),
                   children: [
                     TileLayer(
-                      key: ValueKey(
-                          '_'),
+                      key: ValueKey('_'),
                       urlTemplate: MapTileService.getTileUrl(
                         satellite: widget.controller.satellite,
                         streetlight: widget.controller.isStreetlight,
@@ -4551,9 +4753,10 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                     onExit: _stopLiveNavigation,
                     isSatellite: widget.controller.satellite,
                     onToggleSatellite: () {
-                      final next = widget.controller.mapStyle == MapViewStyle.satellite
-                          ? MapViewStyle.street
-                          : MapViewStyle.satellite;
+                      final next =
+                          widget.controller.mapStyle == MapViewStyle.satellite
+                              ? MapViewStyle.street
+                              : MapViewStyle.satellite;
                       widget.controller.setMapStyle(next);
                     },
                     onAddStop: _openSetLocationSheet,
@@ -4799,7 +5002,8 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                                   offset: Offset(0, 2),
                                 ),
                               ],
-                              border: Border.all(color: const Color(0xFFE2E8F0)),
+                              border:
+                                  Border.all(color: const Color(0xFFE2E8F0)),
                             ),
                             child: InkWell(
                               onTap: () {
@@ -4884,9 +5088,10 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                             origin: widget.controller.origin.isNotEmpty
                                 ? widget.controller.origin
                                 : _format(_effectiveOrigin!),
-                            destination: widget.controller.destination.isNotEmpty
-                                ? widget.controller.destination
-                                : _format(_effectiveDestination!),
+                            destination:
+                                widget.controller.destination.isNotEmpty
+                                    ? widget.controller.destination
+                                    : _format(_effectiveDestination!),
                             vehicle: widget.controller.vehicle,
                             trafficEnabled: _trafficEnabled,
                             isLoadingRoute: _loadingRoute,
@@ -5058,7 +5263,9 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                                     ),
                                   ),
                                   child: Text(
-                                    widget.controller.stops.isNotEmpty ? '+ Stop ()' : '+ Stop',
+                                    widget.controller.stops.isNotEmpty
+                                        ? '+ Stop ()'
+                                        : '+ Stop',
                                     style: TextStyle(
                                       color: _activePinMode == 'stop'
                                           ? Colors.white
@@ -5474,12 +5681,16 @@ class _NavigationTopHud extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: isOverspeeding
                           ? const Color(0xFFFEE2E8)
-                          : (speed < 1.0 ? const Color(0xFFF1F5F9) : const Color(0xFFDCFCE7)),
+                          : (speed < 1.0
+                              ? const Color(0xFFF1F5F9)
+                              : const Color(0xFFDCFCE7)),
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
                         color: isOverspeeding
                             ? const Color(0xFFEF4444)
-                            : (speed < 1.0 ? const Color(0xFFCBD5E1) : const Color(0xFF10B981)),
+                            : (speed < 1.0
+                                ? const Color(0xFFCBD5E1)
+                                : const Color(0xFF10B981)),
                         width: 1.2,
                       ),
                     ),
@@ -5523,7 +5734,8 @@ class _NavigationTopHud extends StatelessWidget {
                   if (onAddStop != null)
                     IconButton(
                       onPressed: onAddStop,
-                      tooltip: '+ Add Stop / 3rd Location (रास्ते का स्टॉप जोड़ें)',
+                      tooltip:
+                          '+ Add Stop / 3rd Location (रास्ते का स्टॉप जोड़ें)',
                       style: IconButton.styleFrom(
                         backgroundColor: const Color(0xFFFFFBEB),
                         foregroundColor: const Color(0xFFD97706),
@@ -5544,12 +5756,15 @@ class _NavigationTopHud extends StatelessWidget {
                   if (onToggleSatellite != null)
                     IconButton(
                       onPressed: onToggleSatellite,
-                      tooltip: isSatellite ? 'Normal Map Mode' : 'Satellite (सैटेलाइट) Mode',
+                      tooltip: isSatellite
+                          ? 'Normal Map Mode'
+                          : 'Satellite (सैटेलाइट) Mode',
                       style: IconButton.styleFrom(
                         backgroundColor: isSatellite
                             ? const Color(0xFF2563EB)
                             : const Color(0xFFF1F5F9),
-                        foregroundColor: isSatellite ? Colors.white : AppColors.navy,
+                        foregroundColor:
+                            isSatellite ? Colors.white : AppColors.navy,
                         visualDensity: compact
                             ? VisualDensity.compact
                             : VisualDensity.standard,
@@ -5747,10 +5962,12 @@ class _NavigationBottomControls extends StatelessWidget {
                       borderRadius: BorderRadius.circular(9),
                     ),
                   ),
-                  icon: const Icon(Icons.add_location_alt_rounded, size: 15, color: Color(0xFFD97706)),
+                  icon: const Icon(Icons.add_location_alt_rounded,
+                      size: 15, color: Color(0xFFD97706)),
                   label: const Text(
                     '+ STOP',
-                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 10.5),
+                    style:
+                        TextStyle(fontWeight: FontWeight.w800, fontSize: 10.5),
                   ),
                 ),
 

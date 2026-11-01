@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:timezone/data/latest.dart' as tz_data;
+import 'package:timezone/timezone.dart' as tz;
 
 typedef PhotoPickerHandler = void Function({
   required bool useCamera,
@@ -19,6 +21,10 @@ PhotoPickerHandler? _customPhotoPicker;
 final List<NotificationHandler> _notificationHandlers = [];
 FlutterLocalNotificationsPlugin? _notificationsPlugin;
 bool _notificationsInitialized = false;
+bool _notificationPermissionRequested = false;
+bool _timeZonesInitialized = false;
+int _nextNotificationId =
+    DateTime.now().millisecondsSinceEpoch.remainder(0x7fffffff);
 
 Future<void> _ensureNotificationsInitialized() async {
   if (_notificationsInitialized) return;
@@ -67,9 +73,9 @@ void triggerExternalSafetyNotification({
       await _ensureNotificationsInitialized();
       final androidDetails = AndroidNotificationDetails(
         'transport_safety_channel',
-        'Safety & Verification Alerts',
+        'Transport One Alerts & Reminders',
         channelDescription:
-            'Critical safety and seatbelt verification alerts for drivers',
+            'Trip, safety, compliance, maintenance, and cleaning reminders',
         importance: Importance.max,
         priority: Priority.high,
         icon: '@drawable/ic_stat_transport',
@@ -77,9 +83,11 @@ void triggerExternalSafetyNotification({
         color: isRejected ? const Color(0xFFDC2626) : const Color(0xFF16A34A),
       );
       final details = NotificationDetails(android: androidDetails);
-      final id = DateTime.now().millisecondsSinceEpoch ~/ 1000 % 100000;
+      // A seconds-based ID caused alerts created together (for example several
+      // compliance reminders at startup) to replace one another in the tray.
+      _nextNotificationId = (_nextNotificationId + 1) & 0x7fffffff;
       await _notificationsPlugin?.show(
-        id: id,
+        id: _nextNotificationId,
         title: title,
         body: body,
         notificationDetails: details,
@@ -90,19 +98,69 @@ void triggerExternalSafetyNotification({
   }();
 }
 
-void requestExternalNotificationPermission() {
+Future<void> requestExternalNotificationPermission() async {
   debugPrint('[SafetyNotification] Notification permission requested');
-  () async {
-    try {
-      await _ensureNotificationsInitialized();
-      final androidImplementation =
-          _notificationsPlugin?.resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>();
-      await androidImplementation?.requestNotificationsPermission();
-    } catch (e) {
-      debugPrint('[SafetyNotification] Permission request warning: $e');
+  try {
+    await _ensureNotificationsInitialized();
+    if (_notificationPermissionRequested) return;
+    _notificationPermissionRequested = true;
+    final androidImplementation =
+        _notificationsPlugin?.resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+    await androidImplementation?.requestNotificationsPermission();
+  } catch (e) {
+    debugPrint('[SafetyNotification] Permission request warning: $e');
+  }
+}
+
+Future<void> scheduleWeeklyCleaningReminder({
+  required String vehicleNumber,
+}) async {
+  final vehicle = vehicleNumber.trim().toUpperCase();
+  if (vehicle.isEmpty) return;
+  try {
+    await _ensureNotificationsInitialized();
+    if (!_timeZonesInitialized) {
+      tz_data.initializeTimeZones();
+      tz.setLocalLocation(tz.getLocation('Asia/Kolkata'));
+      _timeZonesInitialized = true;
     }
-  }();
+
+    final now = tz.TZDateTime.now(tz.local);
+    var daysUntilSunday = (DateTime.sunday - now.weekday) % 7;
+    if (daysUntilSunday == 0) daysUntilSunday = 7;
+    final nextSunday = tz.TZDateTime(
+      tz.local,
+      now.year,
+      now.month,
+      now.day + daysUntilSunday,
+      8,
+    );
+    const androidDetails = AndroidNotificationDetails(
+      'transport_safety_channel',
+      'Transport One Alerts & Reminders',
+      channelDescription:
+          'Trip, safety, compliance, maintenance, and cleaning reminders',
+      importance: Importance.max,
+      priority: Priority.high,
+      icon: '@drawable/ic_stat_transport',
+      largeIcon: DrawableResourceAndroidBitmap('@drawable/ic_launcher'),
+      color: Color(0xFF16A34A),
+    );
+    await _notificationsPlugin?.zonedSchedule(
+      id: 700001,
+      title: 'Sunday Vehicle Cleaning Reminder',
+      body: 'Please clean vehicle $vehicle and upload the verification photo.',
+      scheduledDate: nextSunday,
+      notificationDetails:
+          const NotificationDetails(android: androidDetails),
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+      payload: 'weekly_cleaning:$vehicle',
+    );
+  } catch (e) {
+    debugPrint('[SafetyNotification] Weekly cleaning schedule warning: $e');
+  }
 }
 
 void pickDriverPhotoWeb({

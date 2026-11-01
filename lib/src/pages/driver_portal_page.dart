@@ -89,22 +89,7 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
 
   void _checkWeeklyReminders() {
     if (widget.adminPreview) return;
-    final now = DateTime.now();
-    final driver = widget.controller.currentDriver;
-    final vehicle = driver?.assignedVehicle.trim() ?? '';
-    if (vehicle.isEmpty) return;
-
-    if (now.weekday == DateTime.sunday) {
-      final hasCleaningAlert = widget.controller.alerts.any(
-        (a) => a.category == 'cleaning' && a.vehicleNumber == vehicle,
-      );
-      if (!hasCleaningAlert) {
-        widget.controller.logSundayCleaningAlert(
-          driverName: driver?.name ?? 'Driver',
-          vehicleNumber: vehicle,
-        );
-      }
-    }
+    widget.controller.checkDriverScheduledNotifications();
   }
 
   void _openPhotoCapture(BuildContext context, {required String category}) {
@@ -401,7 +386,9 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                   t.assignedDriver.trim().toLowerCase() ==
                       driverName.trim().toLowerCase();
               if (vMatch || dMatch) {
-                if (t.status != 'delivered') {
+                if (t.status != 'delivered' &&
+                    t.status != 'completed' &&
+                    t.status != 'cancelled') {
                   activeTrip = t;
                   break;
                 }
@@ -1453,11 +1440,13 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                                     : '${place.coordinates.latitude.toStringAsFixed(6)}, ${place.coordinates.longitude.toStringAsFixed(6)}');
                             final updatedTrip =
                                 trip.copyWith(destination: newDest);
-                            await widget.controller.updateTripRecord(updatedTrip);
+                            await widget.controller
+                                .updateTripRecord(updatedTrip);
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text('Drop Location updated: $newDest'),
+                                  content:
+                                      Text('Drop Location updated: $newDest'),
                                   backgroundColor: const Color(0xFF16A34A),
                                 ),
                               );
@@ -2251,7 +2240,8 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                 ),
                 if (trip.plannedDistanceKm > 0)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: const Color(0xFFF1F5F9),
                       borderRadius: BorderRadius.circular(6),
@@ -2289,7 +2279,8 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                       await widget.controller.acceptTrip(trip.reference);
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('Ride Accepted! Ab aap trip start kar sakte hain.'),
+                          content: Text(
+                              'Ride Accepted! Ab aap trip start kar sakte hain.'),
                           backgroundColor: Color(0xFF16A34A),
                         ),
                       );
@@ -2371,14 +2362,18 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
         label = isAssignedOnly
             ? '1. ACCEPT RIDE (एडमिन की राइड स्वीकार करें)'
             : '1. START TRIP & OPEN MAP (यात्रा शुरू करें)';
-        icon = isAssignedOnly ? Icons.check_circle_rounded : Icons.play_arrow_rounded;
-        buttonColor = isAssignedOnly ? const Color(0xFF16A34A) : AppColors.primary;
+        icon = isAssignedOnly
+            ? Icons.check_circle_rounded
+            : Icons.play_arrow_rounded;
+        buttonColor =
+            isAssignedOnly ? const Color(0xFF16A34A) : AppColors.primary;
         onTap = () async {
           if (isAssignedOnly) {
             await widget.controller.acceptTrip(trip.reference);
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Ride Accepted! Ab aap trip start kar sakte hain.'),
+                content:
+                    Text('Ride Accepted! Ab aap trip start kar sakte hain.'),
                 backgroundColor: Color(0xFF16A34A),
               ),
             );
@@ -4192,11 +4187,29 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
     final cleanDest = destination.trim();
     final cleanOrigin = origin.trim();
 
-    widget.controller.setRoute(
-      newOrigin: cleanOrigin,
-      newDestination: cleanDest,
-      newStops: stops,
+    if (cleanOrigin.isEmpty || cleanDest.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Trip pickup aur drop location missing hai.')),
+      );
+      return;
+    }
+    final routeReady = await widget.controller.resolveAndSetRoute(
+      origin: cleanOrigin,
+      destination: cleanDest,
+      stops: stops,
     );
+    if (!mounted) return;
+    if (!routeReady) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Trip location nahi mili. Pickup/drop address check karke retry karein.',
+          ),
+        ),
+      );
+      return;
+    }
 
     await showModalBottomSheet<void>(
       context: context,

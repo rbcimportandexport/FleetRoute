@@ -170,12 +170,19 @@ class _DashboardPageState extends State<DashboardPage>
     }
   }
 
-  void _loadTripIntoRoute(TripRecord trip) {
-    widget.controller.setRoute(
-      newOrigin: trip.origin,
-      newDestination: trip.destination,
-      newStops: trip.stops,
+  Future<void> _loadTripIntoRoute(TripRecord trip) async {
+    final loaded = await widget.controller.resolveAndSetRoute(
+      origin: trip.origin,
+      destination: trip.destination,
+      stops: trip.stops,
     );
+    if (!mounted) return;
+    if (!loaded) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Trip pickup/drop location nahi mili.')),
+      );
+      return;
+    }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
@@ -564,6 +571,26 @@ class _DashboardPageState extends State<DashboardPage>
     final initial = driver.name.trim().isEmpty
         ? 'D'
         : driver.name.trim().substring(0, 1).toUpperCase();
+    final vehicleKey =
+        driver.assignedVehicle.replaceAll(RegExp(r'[\s\-]'), '').toUpperCase();
+    final driverNameKey = driver.name.trim().toLowerCase();
+    final driverEmailKey = driver.email.trim().toLowerCase();
+    final matchingTrips = widget.controller.trips.where((trip) {
+      final status = trip.status.trim().toLowerCase();
+      if (status == 'completed' ||
+          status == 'delivered' ||
+          status == 'cancelled') {
+        return false;
+      }
+      final tripVehicle =
+          trip.assignedVehicle.replaceAll(RegExp(r'[\s\-]'), '').toUpperCase();
+      final tripDriver = trip.assignedDriver.trim().toLowerCase();
+      return (vehicleKey.isNotEmpty && tripVehicle == vehicleKey) ||
+          (driverNameKey.isNotEmpty && tripDriver == driverNameKey) ||
+          (driverEmailKey.isNotEmpty && tripDriver == driverEmailKey);
+    }).toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    final activeRoute = matchingTrips.isEmpty ? null : matchingTrips.first;
     return InkWell(
       onTap: () => DriverPortalPage.openDriverDashboard(
         context,
@@ -587,13 +614,55 @@ class _DashboardPageState extends State<DashboardPage>
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                     fontWeight: FontWeight.w700, color: AppColors.navy)),
-            Text(
-                driver.assignedVehicle.isEmpty
-                    ? (driver.phone.isEmpty ? driver.email : driver.phone)
-                    : 'Vehicle: ${driver.assignedVehicle}',
+            if (activeRoute != null) ...[
+              const SizedBox(height: 2),
+              Row(
+                children: [
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFDCFCE7),
+                      borderRadius: BorderRadius.circular(5),
+                    ),
+                    child: const Text(
+                      'ACTIVE ROUTE',
+                      style: TextStyle(
+                        fontSize: 8,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF15803D),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 5),
+                  Expanded(
+                    child: Text(
+                      '${_friendlyLocation(activeRoute.origin)} → ${_friendlyLocation(activeRoute.destination)}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF087549),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              Text(
+                'Vehicle: ${activeRoute.assignedVehicle.isNotEmpty ? activeRoute.assignedVehicle : driver.assignedVehicle}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 11, color: AppColors.slate)),
+                style: const TextStyle(fontSize: 10, color: AppColors.slate),
+              ),
+            ] else
+              Text(
+                  driver.assignedVehicle.isEmpty
+                      ? (driver.phone.isEmpty ? driver.email : driver.phone)
+                      : 'Vehicle: ${driver.assignedVehicle} · No active route',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 11, color: AppColors.slate)),
           ],
         )),
         const Icon(Icons.chevron_right_rounded, color: AppColors.slate),

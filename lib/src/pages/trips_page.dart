@@ -153,7 +153,8 @@ class _ProductCatalogPageState extends State<_ProductCatalogPage> {
                 onPressed: () {
                   Navigator.of(context).pop(_selectedMap.values.toList());
                 },
-                icon: const Icon(Icons.check_circle_rounded, color: Colors.green),
+                icon:
+                    const Icon(Icons.check_circle_rounded, color: Colors.green),
                 label: Text(
                   'Done ($selectedCount items)',
                   style: const TextStyle(fontWeight: FontWeight.w800),
@@ -204,7 +205,8 @@ class _ProductCatalogPageState extends State<_ProductCatalogPage> {
                     FilledButton.icon(
                       style: FilledButton.styleFrom(
                         backgroundColor: AppColors.primary,
-                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 18, vertical: 12),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
@@ -292,9 +294,7 @@ class _ProductCatalogPageState extends State<_ProductCatalogPage> {
                               (_category == 'SHAMPOO'
                                   ? product.category.startsWith('SHAMPOO')
                                   : product.category == _category);
-                          final text =
-                              '   '
-                                  .toLowerCase();
+                          final text = '   '.toLowerCase();
                           return brandMatch &&
                               categoryMatch &&
                               (_query.isEmpty || text.contains(_query));
@@ -316,7 +316,8 @@ class _ProductCatalogPageState extends State<_ProductCatalogPage> {
                           ),
                           itemBuilder: (context, index) {
                             final product = filtered[index];
-                            final isSelected = _selectedMap.containsKey(product.id);
+                            final isSelected =
+                                _selectedMap.containsKey(product.id);
                             final selectedItem = _selectedMap[product.id];
                             final qty = selectedItem?.quantity ?? 0;
 
@@ -337,7 +338,8 @@ class _ProductCatalogPageState extends State<_ProductCatalogPage> {
                                   boxShadow: isSelected
                                       ? [
                                           BoxShadow(
-                                            color: AppColors.primary.withValues(alpha: 0.12),
+                                            color: AppColors.primary
+                                                .withValues(alpha: 0.12),
                                             blurRadius: 6,
                                             offset: const Offset(0, 2),
                                           )
@@ -376,7 +378,8 @@ class _ProductCatalogPageState extends State<_ProductCatalogPage> {
                                               decoration: BoxDecoration(
                                                 color: isSelected
                                                     ? AppColors.primary
-                                                    : Colors.white.withValues(alpha: 0.9),
+                                                    : Colors.white
+                                                        .withValues(alpha: 0.9),
                                                 shape: BoxShape.circle,
                                                 border: Border.all(
                                                   color: isSelected
@@ -400,7 +403,8 @@ class _ProductCatalogPageState extends State<_ProductCatalogPage> {
                                       ),
                                     ),
                                     Padding(
-                                      padding: const EdgeInsets.fromLTRB(8, 6, 8, 4),
+                                      padding:
+                                          const EdgeInsets.fromLTRB(8, 6, 8, 4),
                                       child: Column(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
@@ -431,22 +435,32 @@ class _ProductCatalogPageState extends State<_ProductCatalogPage> {
                                     ),
                                     if (isSelected)
                                       Container(
-                                        margin: const EdgeInsets.fromLTRB(6, 0, 6, 6),
-                                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                        margin: const EdgeInsets.fromLTRB(
+                                            6, 0, 6, 6),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 4, vertical: 2),
                                         decoration: BoxDecoration(
                                           color: const Color(0xFFEFF6FF),
-                                          borderRadius: BorderRadius.circular(6),
-                                          border: Border.all(color: const Color(0xFFBFDBFE)),
+                                          borderRadius:
+                                              BorderRadius.circular(6),
+                                          border: Border.all(
+                                              color: const Color(0xFFBFDBFE)),
                                         ),
                                         child: Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
                                           children: [
                                             InkWell(
-                                              onTap: () => _updateQuantity(product.id, -1),
-                                              borderRadius: BorderRadius.circular(4),
+                                              onTap: () => _updateQuantity(
+                                                  product.id, -1),
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
                                               child: const Padding(
                                                 padding: EdgeInsets.all(2),
-                                                child: Icon(Icons.remove_circle_outline, size: 18, color: AppColors.primary),
+                                                child: Icon(
+                                                    Icons.remove_circle_outline,
+                                                    size: 18,
+                                                    color: AppColors.primary),
                                               ),
                                             ),
                                             Text(
@@ -458,11 +472,15 @@ class _ProductCatalogPageState extends State<_ProductCatalogPage> {
                                               ),
                                             ),
                                             InkWell(
-                                              onTap: () => _updateQuantity(product.id, 1),
-                                              borderRadius: BorderRadius.circular(4),
+                                              onTap: () => _updateQuantity(
+                                                  product.id, 1),
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
                                               child: const Padding(
                                                 padding: EdgeInsets.all(2),
-                                                child: Icon(Icons.add_circle, size: 18, color: AppColors.primary),
+                                                child: Icon(Icons.add_circle,
+                                                    size: 18,
+                                                    color: AppColors.primary),
                                               ),
                                             ),
                                           ],
@@ -470,12 +488,15 @@ class _ProductCatalogPageState extends State<_ProductCatalogPage> {
                                       )
                                     else
                                       Container(
-                                        margin: const EdgeInsets.fromLTRB(6, 0, 6, 6),
-                                        padding: const EdgeInsets.symmetric(vertical: 4),
+                                        margin: const EdgeInsets.fromLTRB(
+                                            6, 0, 6, 6),
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 4),
                                         alignment: Alignment.center,
                                         decoration: BoxDecoration(
                                           color: const Color(0xFFF8FAFC),
-                                          borderRadius: BorderRadius.circular(6),
+                                          borderRadius:
+                                              BorderRadius.circular(6),
                                         ),
                                         child: const Text(
                                           'Tap to Select',
@@ -504,7 +525,6 @@ class _ProductCatalogPageState extends State<_ProductCatalogPage> {
     );
   }
 }
-
 
 class _TripsPageState extends State<TripsPage> {
   final referenceController = TextEditingController();
@@ -596,12 +616,28 @@ class _TripsPageState extends State<TripsPage> {
   Future<void> _handleSearchLocation({
     required String title,
     required void Function(LatLng point) onSelected,
+    bool useCurrentAsPickupIfMissing = false,
   }) async {
     final result = await LocationSearchDialog.show(
       context,
       title: title,
     );
     if (result != null && mounted) {
+      if (useCurrentAsPickupIfMissing && origin == null) {
+        await _useCurrentLocation();
+        if (!mounted || origin == null) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Drop select hua, lekin GPS pickup nahi mila. Location permission Allow karke dobara try karein.',
+                ),
+              ),
+            );
+          }
+          return;
+        }
+      }
       onSelected(result.coordinates);
       _centerMapOn(result.coordinates);
       _fetchRoadPolyline();
@@ -865,7 +901,8 @@ class _TripsPageState extends State<TripsPage> {
 
     final String finalCargoDesc = _customCargoItems.isNotEmpty
         ? _customCargoItems
-            .map((item) => '${item.loadedQuantity.toStringAsFixed(item.unit == 'Ton' ? 1 : 0)} ${item.unit} ${item.productName}')
+            .map((item) =>
+                '${item.loadedQuantity.toStringAsFixed(item.unit == 'Ton' ? 1 : 0)} ${item.unit} ${item.productName}')
             .join(', ')
         : (cargoDescController.text.trim().isNotEmpty
             ? cargoDescController.text.trim()
@@ -1018,101 +1055,99 @@ class _TripsPageState extends State<TripsPage> {
           child: Stack(
             children: [
               Positioned.fill(
-                child: fm.FlutterMap(
-                        mapController: _flutterMapController,
-                        options: fm.MapOptions(
-                          initialCenter:
-                              origin ?? const LatLng(21.1702, 72.8311),
-                          initialZoom: origin == null ? 11.0 : 15.0,
-                          minZoom: 2.5,
-                          maxZoom: 19.0,
-                          onTap: (tapPosition, point) => _pin(point),
-                          onLongPress: (tapPosition, point) => _pin(point),
+                  child: fm.FlutterMap(
+                mapController: _flutterMapController,
+                options: fm.MapOptions(
+                  initialCenter: origin ?? const LatLng(21.1702, 72.8311),
+                  initialZoom: origin == null ? 11.0 : 15.0,
+                  minZoom: 2.5,
+                  maxZoom: 19.0,
+                  onTap: (tapPosition, point) => _pin(point),
+                  onLongPress: (tapPosition, point) => _pin(point),
+                ),
+                children: [
+                  fm.TileLayer(
+                    key: ValueKey(mapStyle),
+                    urlTemplate: MapTileService.getTileUrl(
+                      satellite: satellite,
+                      streetlight: false,
+                      traffic: false,
+                    ),
+                    subdomains: MapTileService.getSubdomains(
+                      streetlight: false,
+                    ),
+                    fallbackUrl: MapTileService.fallbackTileUrl,
+                    maxNativeZoom: 19,
+                    userAgentPackageName: MapTileService.userAgent,
+                    maxZoom: 19,
+                  ),
+                  if (satellite) ...[
+                    fm.TileLayer(
+                      key: const ValueKey('trips_sat_roads'),
+                      urlTemplate: MapTileService.satelliteRoadsTileUrl,
+                      maxNativeZoom: 19,
+                      userAgentPackageName: MapTileService.userAgent,
+                      maxZoom: 19,
+                    ),
+                    fm.TileLayer(
+                      key: const ValueKey('trips_sat_labels'),
+                      urlTemplate: MapTileService.satelliteLabelsTileUrl,
+                      maxNativeZoom: 19,
+                      userAgentPackageName: MapTileService.userAgent,
+                      maxZoom: 19,
+                    ),
+                  ],
+                  fm.PolylineLayer(
+                    polylines: [
+                      if (origin != null && destination != null)
+                        fm.Polyline(
+                          points: _routePoints.isNotEmpty
+                              ? _routePoints
+                              : [origin!, ...stops, destination!],
+                          color: AppColors.blue,
+                          strokeWidth: 5,
                         ),
-                        children: [
-                          fm.TileLayer(
-                            key: ValueKey(mapStyle),
-                            urlTemplate: MapTileService.getTileUrl(
-                              satellite: satellite,
-                              streetlight: false,
-                              traffic: false,
-                            ),
-                            subdomains: MapTileService.getSubdomains(
-                              streetlight: false,
-                            ),
-                            fallbackUrl: MapTileService.fallbackTileUrl,
-                            maxNativeZoom: 19,
-                            userAgentPackageName: MapTileService.userAgent,
-                            maxZoom: 19,
+                    ],
+                  ),
+                  fm.MarkerLayer(
+                    markers: [
+                      if (origin != null)
+                        fm.Marker(
+                          point: origin!,
+                          width: 40,
+                          height: 40,
+                          child: const Icon(
+                            Icons.location_on,
+                            color: Colors.green,
+                            size: 38,
                           ),
-                          if (satellite) ...[
-                            fm.TileLayer(
-                              key: const ValueKey('trips_sat_roads'),
-                              urlTemplate: MapTileService.satelliteRoadsTileUrl,
-                              maxNativeZoom: 19,
-                              userAgentPackageName: MapTileService.userAgent,
-                              maxZoom: 19,
-                            ),
-                            fm.TileLayer(
-                              key: const ValueKey('trips_sat_labels'),
-                              urlTemplate: MapTileService.satelliteLabelsTileUrl,
-                              maxNativeZoom: 19,
-                              userAgentPackageName: MapTileService.userAgent,
-                              maxZoom: 19,
-                            ),
-                          ],
-                          fm.PolylineLayer(
-                            polylines: [
-                              if (origin != null && destination != null)
-                                fm.Polyline(
-                                  points: _routePoints.isNotEmpty
-                                      ? _routePoints
-                                      : [origin!, ...stops, destination!],
-                                  color: AppColors.blue,
-                                  strokeWidth: 5,
-                                ),
-                            ],
+                        ),
+                      for (int i = 0; i < stops.length; i++)
+                        fm.Marker(
+                          point: stops[i],
+                          width: 36,
+                          height: 36,
+                          child: const Icon(
+                            Icons.location_on,
+                            color: Colors.orange,
+                            size: 34,
                           ),
-                          fm.MarkerLayer(
-                            markers: [
-                              if (origin != null)
-                                fm.Marker(
-                                  point: origin!,
-                                  width: 40,
-                                  height: 40,
-                                  child: const Icon(
-                                    Icons.location_on,
-                                    color: Colors.green,
-                                    size: 38,
-                                  ),
-                                ),
-                              for (int i = 0; i < stops.length; i++)
-                                fm.Marker(
-                                  point: stops[i],
-                                  width: 36,
-                                  height: 36,
-                                  child: const Icon(
-                                    Icons.location_on,
-                                    color: Colors.orange,
-                                    size: 34,
-                                  ),
-                                ),
-                              if (destination != null)
-                                fm.Marker(
-                                  point: destination!,
-                                  width: 40,
-                                  height: 40,
-                                  child: const Icon(
-                                    Icons.location_on,
-                                    color: Colors.red,
-                                    size: 38,
-                                  ),
-                                ),
-                            ],
+                        ),
+                      if (destination != null)
+                        fm.Marker(
+                          point: destination!,
+                          width: 40,
+                          height: 40,
+                          child: const Icon(
+                            Icons.location_on,
+                            color: Colors.red,
+                            size: 38,
                           ),
-                        ],
-                      )
-              ),
+                        ),
+                    ],
+                  ),
+                ],
+              )),
               // Top Controls: Street/Satellite toggle + Search / Paste Location Button
               Positioned(
                 left: 12,
@@ -1148,17 +1183,14 @@ class _TripsPageState extends State<TripsPage> {
                       const Spacer(),
                       FilledButton.icon(
                         onPressed: () {
-                          final title = origin == null
-                              ? 'Pickup Location Search / Paste Link'
-                              : destination == null
-                                  ? 'Drop Location Search / Paste Link'
-                                  : 'Add Intermediate Stop (Via Waypoint)';
+                          final title = destination == null
+                              ? 'Drop Location Search / Paste Link'
+                              : 'Add Intermediate Stop (Via Waypoint)';
                           _handleSearchLocation(
                             title: title,
+                            useCurrentAsPickupIfMissing: destination == null,
                             onSelected: (point) {
-                              if (origin == null) {
-                                setState(() => origin = point);
-                              } else if (destination == null) {
+                              if (destination == null) {
                                 setState(() => destination = point);
                               } else {
                                 _addViaStop(point);
@@ -1169,12 +1201,14 @@ class _TripsPageState extends State<TripsPage> {
                         icon: const Icon(Icons.search_rounded, size: 16),
                         label: const Text(
                           'SEARCH / ADD PIN',
-                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
+                          style: TextStyle(
+                              fontSize: 11, fontWeight: FontWeight.w800),
                         ),
                         style: FilledButton.styleFrom(
                           backgroundColor: AppColors.primary,
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
                           visualDensity: VisualDensity.compact,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(20),
@@ -1194,17 +1228,14 @@ class _TripsPageState extends State<TripsPage> {
                   child: Center(
                     child: InkWell(
                       onTap: () {
-                        final title = origin == null
-                            ? 'Pickup Location Search / Paste Link'
-                            : destination == null
-                                ? 'Drop Location Search / Paste Link'
-                                : 'Add Intermediate Stop (Via Waypoint)';
+                        final title = destination == null
+                            ? 'Drop Location Search / Paste Link'
+                            : 'Add Intermediate Stop (Via Waypoint)';
                         _handleSearchLocation(
                           title: title,
+                          useCurrentAsPickupIfMissing: destination == null,
                           onSelected: (point) {
-                            if (origin == null) {
-                              setState(() => origin = point);
-                            } else if (destination == null) {
+                            if (destination == null) {
                               setState(() => destination = point);
                             } else {
                               _addViaStop(point);
@@ -1219,7 +1250,8 @@ class _TripsPageState extends State<TripsPage> {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(24),
-                          border: Border.all(color: AppColors.primaryBorder, width: 1.2),
+                          border: Border.all(
+                              color: AppColors.primaryBorder, width: 1.2),
                           boxShadow: const [
                             BoxShadow(
                               color: Color(0x24000000),
@@ -1273,8 +1305,14 @@ class _TripsPageState extends State<TripsPage> {
             // Prepopulate already selected catalog items from _customCargoItems
             final initialList = <SelectedCatalogItem>[];
             for (final ci in _customCargoItems) {
-              if (ci.productId != 'custom-product' && ci.productId != 'custom-item' && ci.productId.isNotEmpty) {
-                final qty = ci.loadedQuantity > 0 ? (ci.unit == 'Ton' ? (ci.loadedQuantity * 1000 / 50.0).round() : ci.loadedQuantity.round()) : 1;
+              if (ci.productId != 'custom-product' &&
+                  ci.productId != 'custom-item' &&
+                  ci.productId.isNotEmpty) {
+                final qty = ci.loadedQuantity > 0
+                    ? (ci.unit == 'Ton'
+                        ? (ci.loadedQuantity * 1000 / 50.0).round()
+                        : ci.loadedQuantity.round())
+                    : 1;
                 initialList.add(
                   SelectedCatalogItem(
                     product: CatalogProduct(
@@ -1287,15 +1325,21 @@ class _TripsPageState extends State<TripsPage> {
                       originalPath: '',
                     ),
                     quantity: qty > 0 ? qty : 1,
-                    weightKg: ci.category.isNotEmpty ? ci.loadedQuantity > 0 && ci.unit == 'KG' ? ci.loadedQuantity : null : null,
+                    weightKg: ci.category.isNotEmpty
+                        ? ci.loadedQuantity > 0 && ci.unit == 'KG'
+                            ? ci.loadedQuantity
+                            : null
+                        : null,
                   ),
                 );
               }
             }
 
-            final items = await Navigator.of(context).push<List<SelectedCatalogItem>>(
+            final items =
+                await Navigator.of(context).push<List<SelectedCatalogItem>>(
               MaterialPageRoute(
-                builder: (_) => _ProductCatalogPage(initialSelected: initialList),
+                builder: (_) =>
+                    _ProductCatalogPage(initialSelected: initialList),
               ),
             );
             if (items != null && mounted) {
@@ -1306,15 +1350,21 @@ class _TripsPageState extends State<TripsPage> {
                   selectedCatalogProduct = null;
                 }
                 // Remove previously added catalog items from _customCargoItems to avoid duplicates
-                _customCargoItems.removeWhere((ci) => ci.productId != 'custom-product' && ci.productId != 'custom-item' && ci.productId.isNotEmpty);
-                
+                _customCargoItems.removeWhere((ci) =>
+                    ci.productId != 'custom-product' &&
+                    ci.productId != 'custom-item' &&
+                    ci.productId.isNotEmpty);
+
                 // Add all newly selected products into _customCargoItems
                 for (final sel in items) {
                   final totalWeightTon = (sel.quantity * sel.weightKg) / 1000.0;
                   final totalKg = (sel.quantity * sel.weightKg).round();
                   _customCargoItems.add(
                     CargoItem(
-                      id: 'CI-' + DateTime.now().millisecondsSinceEpoch.toString() + '-' + sel.product.code,
+                      id: 'CI-' +
+                          DateTime.now().millisecondsSinceEpoch.toString() +
+                          '-' +
+                          sel.product.code,
                       productId: sel.product.id,
                       brand: sel.product.brand,
                       category: sel.product.category,
@@ -1322,7 +1372,8 @@ class _TripsPageState extends State<TripsPage> {
                       productName: sel.product.displayName,
                       loadedQuantity: totalWeightTon,
                       unit: 'Ton',
-                      notes: '${sel.product.category.isNotEmpty ? sel.product.category : "Item"} · ${sel.quantity} Pcs (${totalKg} KG)',
+                      notes:
+                          '${sel.product.category.isNotEmpty ? sel.product.category : "Item"} · ${sel.quantity} Pcs (${totalKg} KG)',
                     ),
                   );
                 }
@@ -1330,9 +1381,12 @@ class _TripsPageState extends State<TripsPage> {
                 // Recompute total weight and description
                 double totalTon = 0;
                 for (final ci in _customCargoItems) {
-                  totalTon += ci.unit == 'KG' ? ci.loadedQuantity / 1000.0 : ci.loadedQuantity;
+                  totalTon += ci.unit == 'KG'
+                      ? ci.loadedQuantity / 1000.0
+                      : ci.loadedQuantity;
                 }
-                cargoWeightController.text = totalTon > 0 ? totalTon.toStringAsFixed(2) : '';
+                cargoWeightController.text =
+                    totalTon > 0 ? totalTon.toStringAsFixed(2) : '';
                 cargoDescController.text = _customCargoItems
                     .map((e) => e.productName + ' (' + e.notes + ')')
                     .join(', ');
@@ -1360,6 +1414,7 @@ class _TripsPageState extends State<TripsPage> {
           ),
           onSearchDestination: () => _handleSearchLocation(
             title: 'Drop Destination Search / Paste Link',
+            useCurrentAsPickupIfMissing: true,
             onSelected: (point) => setState(() => destination = point),
           ),
           onAddViaStopSearch: () => _handleSearchLocation(
@@ -1379,7 +1434,8 @@ class _TripsPageState extends State<TripsPage> {
               }
               cargoWeightController.text = totalTon.toStringAsFixed(2);
               cargoDescController.text = _customCargoItems
-                  .map((e) => '${e.loadedQuantity.toStringAsFixed(e.unit == 'Ton' ? 1 : 0)} ${e.unit} ${e.productName}')
+                  .map((e) =>
+                      '${e.loadedQuantity.toStringAsFixed(e.unit == 'Ton' ? 1 : 0)} ${e.unit} ${e.productName}')
                   .join(', ');
             });
           },
@@ -1392,9 +1448,11 @@ class _TripsPageState extends State<TripsPage> {
                     ? ci.loadedQuantity / 1000.0
                     : ci.loadedQuantity;
               }
-              cargoWeightController.text = totalTon > 0 ? totalTon.toStringAsFixed(2) : '';
+              cargoWeightController.text =
+                  totalTon > 0 ? totalTon.toStringAsFixed(2) : '';
               cargoDescController.text = _customCargoItems
-                  .map((e) => '${e.loadedQuantity.toStringAsFixed(e.unit == 'Ton' ? 1 : 0)} ${e.unit} ${e.productName}')
+                  .map((e) =>
+                      '${e.loadedQuantity.toStringAsFixed(e.unit == 'Ton' ? 1 : 0)} ${e.unit} ${e.productName}')
                   .join(', ');
             });
           },
@@ -1546,12 +1604,21 @@ class _TripsPageState extends State<TripsPage> {
             tripIndex: entry.$1,
             controller: widget.controller,
             onOpen: () => _openRoute(entry.$2),
-            onOpenInPlanner: () {
-              widget.controller.setRoute(
-                newOrigin: entry.$2.origin,
-                newDestination: entry.$2.destination,
-                newStops: entry.$2.stops,
+            onOpenInPlanner: () async {
+              final loaded = await widget.controller.resolveAndSetRoute(
+                origin: entry.$2.origin,
+                destination: entry.$2.destination,
+                stops: entry.$2.stops,
               );
+              if (!mounted) return;
+              if (!loaded) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Trip pickup/drop location nahi mili.'),
+                  ),
+                );
+                return;
+              }
               widget.onOpenPlanner?.call();
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -1710,9 +1777,14 @@ class _TripSetupPanelState extends State<_TripSetupPanel> {
   }
 
   void _syncQuickFieldsFromCatalog() {
-    final catalogItems = widget.customCargoItems.where(
-      (c) => c.productId.isNotEmpty && c.productId != 'custom-product' && c.productId != 'custom-item',
-    ).toList();
+    final catalogItems = widget.customCargoItems
+        .where(
+          (c) =>
+              c.productId.isNotEmpty &&
+              c.productId != 'custom-product' &&
+              c.productId != 'custom-item',
+        )
+        .toList();
 
     if (catalogItems.isNotEmpty) {
       final latest = catalogItems.last;
@@ -1767,7 +1839,8 @@ class _TripSetupPanelState extends State<_TripSetupPanel> {
         ? _quickItemNameCtrl.text.trim()
         : 'Item';
     final qty = double.tryParse(_quickItemQtyCtrl.text.trim()) ?? 1.0;
-    final singleWeight = double.tryParse(_quickItemWeightCtrl.text.trim()) ?? 10.0;
+    final singleWeight =
+        double.tryParse(_quickItemWeightCtrl.text.trim()) ?? 10.0;
     final totalW = qty * singleWeight;
 
     final item = CargoItem(
@@ -1776,7 +1849,8 @@ class _TripSetupPanelState extends State<_TripSetupPanel> {
       productName: '$name (Qty: ${qty.toInt()})',
       loadedQuantity: _quickItemUnit == 'KG' ? totalW / 1000.0 : totalW,
       unit: _quickItemUnit,
-      notes: '${qty.toInt()} pieces × ${singleWeight.toStringAsFixed(1)} $_quickItemUnit',
+      notes:
+          '${qty.toInt()} pieces × ${singleWeight.toStringAsFixed(1)} $_quickItemUnit',
     );
     widget.onAddCargoItem(item);
   }
@@ -1819,18 +1893,33 @@ class _TripSetupPanelState extends State<_TripSetupPanel> {
             onPressed: widget.onChooseProduct,
             icon: const Icon(Icons.add_shopping_cart_rounded, size: 20),
             label: Text(
-              widget.customCargoItems.any((c) => c.productId.isNotEmpty && c.productId != 'custom-product' && c.productId != 'custom-item')
-                  ? 'Select / Change Products (' + widget.customCargoItems.where((c) => c.productId.isNotEmpty && c.productId != 'custom-product' && c.productId != 'custom-item').length.toString() + ' selected)'
+              widget.customCargoItems.any((c) =>
+                      c.productId.isNotEmpty &&
+                      c.productId != 'custom-product' &&
+                      c.productId != 'custom-item')
+                  ? 'Select / Change Products (' +
+                      widget.customCargoItems
+                          .where((c) =>
+                              c.productId.isNotEmpty &&
+                              c.productId != 'custom-product' &&
+                              c.productId != 'custom-item')
+                          .length
+                          .toString() +
+                      ' selected)'
                   : 'Choose RBC / RAMA Products with Photos (Multi-Select)',
               style: const TextStyle(fontWeight: FontWeight.w700),
               overflow: TextOverflow.ellipsis,
             ),
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
             ),
           ),
-          if (widget.customCargoItems.any((c) => c.productId.isNotEmpty && c.productId != 'custom-product' && c.productId != 'custom-item')) ...[
+          if (widget.customCargoItems.any((c) =>
+              c.productId.isNotEmpty &&
+              c.productId != 'custom-product' &&
+              c.productId != 'custom-item')) ...[
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.all(8),
@@ -1846,7 +1935,15 @@ class _TripSetupPanelState extends State<_TripSetupPanel> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Selected Products (' + widget.customCargoItems.where((c) => c.productId.isNotEmpty && c.productId != 'custom-product' && c.productId != 'custom-item').length.toString() + '):',
+                        'Selected Products (' +
+                            widget.customCargoItems
+                                .where((c) =>
+                                    c.productId.isNotEmpty &&
+                                    c.productId != 'custom-product' &&
+                                    c.productId != 'custom-item')
+                                .length
+                                .toString() +
+                            '):',
                         style: const TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w800,
@@ -1860,7 +1957,8 @@ class _TripSetupPanelState extends State<_TripSetupPanel> {
                         ),
                         onPressed: widget.onChooseProduct,
                         icon: const Icon(Icons.edit_rounded, size: 14),
-                        label: const Text('Add More / Edit', style: TextStyle(fontSize: 11)),
+                        label: const Text('Add More / Edit',
+                            style: TextStyle(fontSize: 11)),
                       ),
                     ],
                   ),
@@ -1870,7 +1968,10 @@ class _TripSetupPanelState extends State<_TripSetupPanel> {
                     child: ListView(
                       scrollDirection: Axis.horizontal,
                       children: [
-                        for (final item in widget.customCargoItems.where((c) => c.productId.isNotEmpty && c.productId != 'custom-product' && c.productId != 'custom-item')) ...[
+                        for (final item in widget.customCargoItems.where((c) =>
+                            c.productId.isNotEmpty &&
+                            c.productId != 'custom-product' &&
+                            c.productId != 'custom-item')) ...[
                           Container(
                             width: 190,
                             margin: const EdgeInsets.only(right: 8),
@@ -1878,7 +1979,8 @@ class _TripSetupPanelState extends State<_TripSetupPanel> {
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: const Color(0xFFE2E8F0)),
+                              border:
+                                  Border.all(color: const Color(0xFFE2E8F0)),
                             ),
                             child: Row(
                               children: [
@@ -1890,7 +1992,9 @@ class _TripSetupPanelState extends State<_TripSetupPanel> {
                                         id: item.productId,
                                         brand: item.brand,
                                         category: item.category,
-                                        code: item.productName.replaceFirst(item.brand, '').trim(),
+                                        code: item.productName
+                                            .replaceFirst(item.brand, '')
+                                            .trim(),
                                         name: item.productName,
                                         photoAsset: item.photoAsset,
                                         originalPath: '',
@@ -1903,7 +2007,11 @@ class _TripSetupPanelState extends State<_TripSetupPanel> {
                                         width: 48,
                                         height: 48,
                                         fit: BoxFit.contain,
-                                        errorBuilder: (_, __, ___) => const Icon(Icons.broken_image_outlined, size: 28, color: Colors.grey),
+                                        errorBuilder: (_, __, ___) =>
+                                            const Icon(
+                                                Icons.broken_image_outlined,
+                                                size: 28,
+                                                color: Colors.grey),
                                       ),
                                     ),
                                   )
@@ -1915,32 +2023,48 @@ class _TripSetupPanelState extends State<_TripSetupPanel> {
                                       color: const Color(0xFFF1F5F9),
                                       borderRadius: BorderRadius.circular(6),
                                     ),
-                                    child: const Icon(Icons.inventory_2_outlined, size: 24, color: AppColors.slate),
+                                    child: const Icon(
+                                        Icons.inventory_2_outlined,
+                                        size: 24,
+                                        color: AppColors.slate),
                                   ),
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
                                       Text(
                                         item.productName,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800),
+                                        style: const TextStyle(
+                                            fontSize: 11.5,
+                                            fontWeight: FontWeight.w800),
                                       ),
                                       if (item.category.isNotEmpty)
                                         Text(
                                           item.category,
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(fontSize: 10, color: AppColors.slate),
+                                          style: const TextStyle(
+                                              fontSize: 10,
+                                              color: AppColors.slate),
                                         ),
                                       Text(
-                                        item.notes.isNotEmpty ? item.notes : (item.loadedQuantity.toStringAsFixed(1) + ' ' + item.unit),
+                                        item.notes.isNotEmpty
+                                            ? item.notes
+                                            : (item.loadedQuantity
+                                                    .toStringAsFixed(1) +
+                                                ' ' +
+                                                item.unit),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: AppColors.primary),
+                                        style: const TextStyle(
+                                            fontSize: 10.5,
+                                            fontWeight: FontWeight.w700,
+                                            color: AppColors.primary),
                                       ),
                                     ],
                                   ),
@@ -2032,7 +2156,8 @@ class _TripSetupPanelState extends State<_TripSetupPanel> {
             onChanged: (code) {
               if (code == null) return;
               try {
-                final found = widget.truckModels.firstWhere((t) => t.code == code);
+                final found =
+                    widget.truckModels.firstWhere((t) => t.code == code);
                 widget.onVehicleSelected(found);
               } catch (_) {}
             },
@@ -2114,9 +2239,16 @@ class _TripSetupPanelState extends State<_TripSetupPanel> {
                   spacing: 6,
                   runSpacing: 4,
                   children: [
-                    for (final preset in ['Chairs', 'Tables', 'Beds', 'Boxes', 'Desks'])
+                    for (final preset in [
+                      'Chairs',
+                      'Tables',
+                      'Beds',
+                      'Boxes',
+                      'Desks'
+                    ])
                       ActionChip(
-                        label: Text(preset, style: const TextStyle(fontSize: 11)),
+                        label:
+                            Text(preset, style: const TextStyle(fontSize: 11)),
                         padding: const EdgeInsets.symmetric(horizontal: 4),
                         visualDensity: VisualDensity.compact,
                         onPressed: () {
@@ -2152,13 +2284,17 @@ class _TripSetupPanelState extends State<_TripSetupPanel> {
                             height: 38,
                             child: TextField(
                               controller: _quickItemNameCtrl,
-                              style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+                              style: const TextStyle(
+                                  fontSize: 12.5, fontWeight: FontWeight.w600),
                               decoration: InputDecoration(
                                 hintText: 'Chair, Table...',
-                                hintStyle: const TextStyle(fontSize: 11, color: Colors.grey),
+                                hintStyle: const TextStyle(
+                                    fontSize: 11, color: Colors.grey),
                                 isDense: true,
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 8),
+                                border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8)),
                               ),
                             ),
                           ),
@@ -2188,13 +2324,17 @@ class _TripSetupPanelState extends State<_TripSetupPanel> {
                               controller: _quickItemQtyCtrl,
                               keyboardType: TextInputType.number,
                               textAlign: TextAlign.center,
-                              style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+                              style: const TextStyle(
+                                  fontSize: 12.5, fontWeight: FontWeight.w700),
                               decoration: InputDecoration(
                                 hintText: '10',
-                                hintStyle: const TextStyle(fontSize: 11, color: Colors.grey),
+                                hintStyle: const TextStyle(
+                                    fontSize: 11, color: Colors.grey),
                                 isDense: true,
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 4, vertical: 8),
+                                border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8)),
                               ),
                             ),
                           ),
@@ -2224,13 +2364,17 @@ class _TripSetupPanelState extends State<_TripSetupPanel> {
                               controller: _quickItemWeightCtrl,
                               keyboardType: TextInputType.number,
                               textAlign: TextAlign.center,
-                              style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+                              style: const TextStyle(
+                                  fontSize: 12.5, fontWeight: FontWeight.w700),
                               decoration: InputDecoration(
                                 hintText: '50',
-                                hintStyle: const TextStyle(fontSize: 11, color: Colors.grey),
+                                hintStyle: const TextStyle(
+                                    fontSize: 11, color: Colors.grey),
                                 isDense: true,
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 4, vertical: 8),
+                                border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8)),
                               ),
                             ),
                           ),
@@ -2246,13 +2390,15 @@ class _TripSetupPanelState extends State<_TripSetupPanel> {
                         icon: const Icon(Icons.add_rounded, size: 16),
                         label: const Text(
                           'ADD',
-                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
+                          style: TextStyle(
+                              fontSize: 11, fontWeight: FontWeight.w800),
                         ),
                         style: FilledButton.styleFrom(
                           backgroundColor: const Color(0xFF16A34A),
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(horizontal: 10),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8)),
                           visualDensity: VisualDensity.compact,
                         ),
                       ),
@@ -2292,10 +2438,12 @@ class _TripSetupPanelState extends State<_TripSetupPanel> {
                           ),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.delete_outline, size: 16, color: Colors.red),
+                          icon: const Icon(Icons.delete_outline,
+                              size: 16, color: Colors.red),
                           visualDensity: VisualDensity.compact,
                           padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+                          constraints:
+                              const BoxConstraints(minWidth: 24, minHeight: 24),
                           onPressed: () => widget.onRemoveCargoItem(i),
                         ),
                       ],
@@ -2461,7 +2609,8 @@ class _TripSetupPanelState extends State<_TripSetupPanel> {
             trailingAction: OutlinedButton.icon(
               onPressed: widget.onSearchOrigin,
               icon: const Icon(Icons.search_rounded, size: 14),
-              label: const Text('Search / Link', style: TextStyle(fontSize: 11)),
+              label:
+                  const Text('Search / Link', style: TextStyle(fontSize: 11)),
               style: OutlinedButton.styleFrom(
                 visualDensity: VisualDensity.compact,
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -2483,7 +2632,8 @@ class _TripSetupPanelState extends State<_TripSetupPanel> {
             trailingAction: OutlinedButton.icon(
               onPressed: widget.onSearchDestination,
               icon: const Icon(Icons.search_rounded, size: 14),
-              label: const Text('Search / Link', style: TextStyle(fontSize: 11)),
+              label:
+                  const Text('Search / Link', style: TextStyle(fontSize: 11)),
               style: OutlinedButton.styleFrom(
                 visualDensity: VisualDensity.compact,
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -2545,8 +2695,9 @@ class _TripSetupPanelState extends State<_TripSetupPanel> {
                     ),
                     IconButton(
                       icon: const Icon(Icons.arrow_downward_rounded, size: 16),
-                      onPressed:
-                          i < widget.stops.length - 1 ? () => widget.onMoveStopDown(i) : null,
+                      onPressed: i < widget.stops.length - 1
+                          ? () => widget.onMoveStopDown(i)
+                          : null,
                       tooltip: 'Move Down',
                       visualDensity: VisualDensity.compact,
                       padding: EdgeInsets.zero,
@@ -2581,7 +2732,8 @@ class _TripSetupPanelState extends State<_TripSetupPanel> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.my_location_rounded, size: 15),
-                  label: const Text('GPS Pickup', style: TextStyle(fontSize: 11)),
+                  label:
+                      const Text('GPS Pickup', style: TextStyle(fontSize: 11)),
                   style: OutlinedButton.styleFrom(
                     visualDensity: VisualDensity.compact,
                   ),
@@ -2592,7 +2744,8 @@ class _TripSetupPanelState extends State<_TripSetupPanel> {
                 child: FilledButton.tonalIcon(
                   onPressed: widget.onAddViaStopSearch,
                   icon: const Icon(Icons.add_location_alt_outlined, size: 15),
-                  label: const Text('+ Add Stop', style: TextStyle(fontSize: 11)),
+                  label:
+                      const Text('+ Add Stop', style: TextStyle(fontSize: 11)),
                   style: FilledButton.styleFrom(
                     visualDensity: VisualDensity.compact,
                   ),
@@ -2613,7 +2766,8 @@ class _TripSetupPanelState extends State<_TripSetupPanel> {
           const SizedBox(height: 18),
           Row(
             children: [
-              TextButton(onPressed: widget.onReset, child: const Text('Reset pins')),
+              TextButton(
+                  onPressed: widget.onReset, child: const Text('Reset pins')),
               const Spacer(),
               FilledButton.icon(
                 onPressed: widget.onSave,

@@ -494,6 +494,92 @@ void main() {
     );
   });
 
+  test('Sunday cleaning reminder is generated once per vehicle and date',
+      () async {
+    final controller = PlannerController();
+    await controller.load();
+    controller.setAdminSessionForTesting();
+    await controller.addDriver(
+      const DriverProfile(
+        'Reminder Driver',
+        'reminder-driver@example.com',
+        assignedVehicle: 'REMINDER-TRUCK-1',
+        password: 'TestPassword123!',
+      ),
+    );
+    controller.setDriverSessionForTesting(
+      email: 'reminder-driver@example.com',
+      name: 'Reminder Driver',
+      assignedVehicle: 'REMINDER-TRUCK-1',
+    );
+
+    controller.alerts.add(
+      OperationsAlert(
+        title: 'Sunday Vehicle Cleaning Due',
+        details: 'Previous week reminder',
+        severity: 'warning',
+        createdAt: DateTime(2026, 10, 25, 9).toIso8601String(),
+        category: 'cleaning',
+        vehicleNumber: 'REMINDER-TRUCK-1',
+      ),
+    );
+
+    await controller.checkDriverScheduledNotifications(
+      now: DateTime(2026, 11, 1, 9),
+    );
+    await controller.checkDriverScheduledNotifications(
+      now: DateTime(2026, 11, 1, 18),
+    );
+
+    final cleaningAlerts = controller.alerts
+        .where((alert) => alert.category == 'cleaning')
+        .toList();
+    expect(cleaningAlerts, hasLength(2));
+    expect(
+      cleaningAlerts.where((alert) => DateTime.parse(alert.createdAt).day == 1),
+      hasLength(1),
+    );
+    controller.dispose();
+  });
+
+  test('driver-created route is added as an active synced trip', () async {
+    final controller = PlannerController();
+    await controller.load();
+    controller.setAdminSessionForTesting();
+    await controller.addDriver(
+      const DriverProfile(
+        'Route Driver',
+        'route-driver@example.com',
+        assignedVehicle: 'ROUTE-TRUCK-1',
+        password: 'TestPassword123!',
+      ),
+    );
+    controller.setDriverSessionForTesting(
+      email: 'route-driver@example.com',
+      name: 'Route Driver',
+      assignedVehicle: 'ROUTE-TRUCK-1',
+    );
+    controller.setRoute(
+      newOrigin: 'Current GPS Location (13.0827, 80.2707)',
+      newDestination: 'Egmore, Chennai (13.0732, 80.2609)',
+    );
+
+    await controller.publishCurrentDriverRoute(
+      plannedDistanceKm: 4.2,
+      plannedDurationMinutes: 18,
+    );
+
+    final route = controller.trips.singleWhere(
+      (trip) => trip.reference.startsWith('DRIVER-ROUTE-'),
+    );
+    expect(route.status, 'in_progress');
+    expect(route.operationalStep, 'route_created');
+    expect(route.assignedVehicle, 'ROUTE-TRUCK-1');
+    expect(route.assignedDriver, 'Route Driver');
+    expect(route.destination, contains('Egmore'));
+    controller.dispose();
+  });
+
   test('SeatbeltRecord serialization and roundtrip test', () {
     final record = SeatbeltRecord(
       id: 'REC-001',
