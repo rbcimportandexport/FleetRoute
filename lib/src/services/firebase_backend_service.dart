@@ -139,6 +139,8 @@ class FirebaseBackendService {
     required bool isIgnitionOn,
     String driverId = '',
     String driverName = '',
+    int? phoneBatteryLevel,
+    bool isPhoneCharging = false,
     http.Client? client,
   }) {
     if (latitude < -90 ||
@@ -158,6 +160,8 @@ class FirebaseBackendService {
           'isIgnitionOn': isIgnitionOn,
           'driverId': driverId,
           'driverName': driverName,
+          if (phoneBatteryLevel != null) 'phoneBatteryLevel': phoneBatteryLevel,
+          'isPhoneCharging': isPhoneCharging,
           'lastUpdate': FieldValue.serverTimestamp(),
         },
         client: client);

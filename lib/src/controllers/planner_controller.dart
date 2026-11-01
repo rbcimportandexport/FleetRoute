@@ -4,6 +4,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:battery_plus/battery_plus.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -1532,6 +1533,19 @@ class PlannerController extends ChangeNotifier {
           ? math.max(reportedSpeed, calculatedSpeed).clamp(0.0, 220.0)
           : 0.0;
       _lastPublishedDriverPosition = position;
+      int? batteryPct;
+      bool isCharging = false;
+      try {
+        if (!kIsWeb) {
+          final battery = Battery();
+          batteryPct = await battery.batteryLevel;
+          final state = await battery.batteryState;
+          isCharging = (state == BatteryState.charging || state == BatteryState.full);
+        }
+      } catch (batteryError) {
+        debugPrint('Battery status fetch error: $batteryError');
+      }
+
       final synced = await FirebaseBackendService.instance.syncVehicleTelemetry(
         vehicleCode: vehicleCode,
         latitude: position.latitude,
@@ -1540,6 +1554,8 @@ class PlannerController extends ChangeNotifier {
         isIgnitionOn: hasRealMovement,
         driverId: FirebaseBackendService.instance.currentEmail ?? driver.email,
         driverName: driver.name,
+        phoneBatteryLevel: batteryPct,
+        isPhoneCharging: isCharging,
       );
       if (!synced) {
         throw StateError(FirebaseBackendService.instance.lastWriteError ??
@@ -1613,11 +1629,19 @@ class PlannerController extends ChangeNotifier {
       final lat = data['latitude'];
       final lng = data['longitude'];
       if (index < 0 || lat is! num || lng is! num) continue;
+      final rawBattery = data['phoneBatteryLevel'] ?? data['batteryLevel'];
+      final phoneBattery = rawBattery is num
+          ? rawBattery.toInt()
+          : int.tryParse(rawBattery?.toString() ?? '');
+      final isCharging = data['isPhoneCharging'] == true;
+
       truckModels[index] = truckModels[index].copyWith(
         currentLat: lat.toDouble(),
         currentLng: lng.toDouble(),
         currentSpeed: (data['speed'] as num?)?.toDouble() ?? 0,
         isIgnitionOn: data['isIgnitionOn'] == true,
+        phoneBatteryLevel: phoneBattery,
+        isPhoneCharging: isCharging,
         lastGpsUpdate: data['lastUpdate']?.toString() ?? '',
         hasValidGpsFix: true,
         isDemoTelemetry: false,

@@ -5,6 +5,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:battery_plus/battery_plus.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart' as gm;
 import 'package:latlong2/latlong.dart';
@@ -1514,15 +1515,29 @@ class _MapWorkspaceState extends State<MapWorkspace> {
         widget.controller.selectedDriver?.assignedVehicle ??
         '';
     if (activeVehicleCode.isNotEmpty) {
-      unawaited(
-        FirebaseBackendService.instance.syncVehicleTelemetry(
+      unawaited(() async {
+        int? batteryPct;
+        bool isCharging = false;
+        try {
+          if (!kIsWeb) {
+            final batt = Battery();
+            batteryPct = await batt.batteryLevel;
+            final state = await batt.batteryState;
+            isCharging =
+                (state == BatteryState.charging || state == BatteryState.full);
+          }
+        } catch (_) {}
+
+        await FirebaseBackendService.instance.syncVehicleTelemetry(
           vehicleCode: activeVehicleCode,
           latitude: newLatLng.latitude,
           longitude: newLatLng.longitude,
           speed: realSpeed,
           isIgnitionOn: realSpeed > 1.0,
-        ),
-      );
+          phoneBatteryLevel: batteryPct,
+          isPhoneCharging: isCharging,
+        );
+      }());
     }
 
     final destination = _effectiveDestination;
@@ -4425,6 +4440,47 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                         ),
                       ],
                     ),
+                    if (truck.phoneBatteryLevel != null) ...[
+                      Container(
+                          height: 24, width: 1, color: const Color(0xFFCBD5E1)),
+                      Column(
+                        children: [
+                          const Text('Phone Batt',
+                              style: TextStyle(
+                                  fontSize: 11, color: AppColors.slate)),
+                          const SizedBox(height: 2),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                truck.isPhoneCharging
+                                    ? Icons.battery_charging_full_rounded
+                                    : (truck.phoneBatteryLevel! <= 20
+                                        ? Icons.battery_alert_rounded
+                                        : Icons.battery_std_rounded),
+                                size: 14,
+                                color: truck.phoneBatteryLevel! <= 20
+                                    ? const Color(0xFFDC2626)
+                                    : (truck.isPhoneCharging
+                                        ? const Color(0xFF16A34A)
+                                        : const Color(0xFF2563EB)),
+                              ),
+                              const SizedBox(width: 2),
+                              Text(
+                                '${truck.phoneBatteryLevel}%',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: truck.phoneBatteryLevel! <= 20
+                                      ? const Color(0xFFDC2626)
+                                      : const Color(0xFF1E293B),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),

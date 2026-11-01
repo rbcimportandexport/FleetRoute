@@ -272,6 +272,8 @@ class TruckModel {
     required this.capacity,
     this.maxSpeed = 80,
     this.imei = '',
+    this.phoneBatteryLevel,
+    this.isPhoneCharging = false,
     this.currentLat,
     this.currentLng,
     this.currentSpeed = 0.0,
@@ -315,6 +317,8 @@ class TruckModel {
   final String capacity;
   final int maxSpeed;
   final String imei;
+  final int? phoneBatteryLevel;
+  final bool isPhoneCharging;
   final double? currentLat;
   final double? currentLng;
   final double currentSpeed;
@@ -420,6 +424,8 @@ class TruckModel {
     String? capacity,
     int? maxSpeed,
     String? imei,
+    int? phoneBatteryLevel,
+    bool? isPhoneCharging,
     double? currentLat,
     double? currentLng,
     double? currentSpeed,
@@ -464,6 +470,8 @@ class TruckModel {
         capacity: capacity ?? this.capacity,
         maxSpeed: maxSpeed ?? this.maxSpeed,
         imei: imei ?? this.imei,
+        phoneBatteryLevel: phoneBatteryLevel ?? this.phoneBatteryLevel,
+        isPhoneCharging: isPhoneCharging ?? this.isPhoneCharging,
         currentLat:
             clearGpsCoordinates ? null : (currentLat ?? this.currentLat),
         currentLng:
@@ -512,6 +520,8 @@ class TruckModel {
         'capacity': capacity,
         'maxSpeed': maxSpeed,
         'imei': imei,
+        if (phoneBatteryLevel != null) 'phoneBatteryLevel': phoneBatteryLevel!,
+        'isPhoneCharging': isPhoneCharging,
         if (currentLat != null) 'currentLat': currentLat!,
         if (currentLng != null) 'currentLng': currentLng!,
         'currentSpeed': currentSpeed,
@@ -554,6 +564,12 @@ class TruckModel {
     final maxSpeed = rawSpeed is num
         ? rawSpeed.toInt()
         : int.tryParse(rawSpeed?.toString() ?? '') ?? 80;
+
+    final rawBattery = json['phoneBatteryLevel'] ?? json['batteryLevel'];
+    final phoneBatteryLevel = rawBattery is num
+        ? rawBattery.toInt()
+        : int.tryParse(rawBattery?.toString() ?? '');
+    final isPhoneCharging = json['isPhoneCharging'] == true;
 
     double? lat;
     if (json['currentLat'] != null) {
@@ -637,6 +653,8 @@ class TruckModel {
       capacity: json['capacity']?.toString() ?? '',
       maxSpeed: maxSpeed,
       imei: json['imei']?.toString() ?? '',
+      phoneBatteryLevel: phoneBatteryLevel,
+      isPhoneCharging: isPhoneCharging,
       currentLat: lat,
       currentLng: lng,
       currentSpeed: speed,
