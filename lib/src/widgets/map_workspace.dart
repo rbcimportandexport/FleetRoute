@@ -536,7 +536,19 @@ class _MapWorkspaceState extends State<MapWorkspace> {
       return;
     }
 
-    final isFallback = !result.isRealHighwayRoute && result.points.isNotEmpty;
+    final isFallback = !result.isRealHighwayRoute;
+    final visiblePoints = result.points.isNotEmpty
+        ? result.points
+        : <LatLng>[origin, ...stops, dest];
+    var visibleDistanceKm = result.distanceKm;
+    if (visibleDistanceKm <= 0) {
+      for (var i = 0; i < visiblePoints.length - 1; i++) {
+        visibleDistanceKm += RouteTrafficService.estimateRoadDistanceKm(
+          visiblePoints[i],
+          visiblePoints[i + 1],
+        );
+      }
+    }
     widget.controller.setRouteRoutable(
       !isFallback,
       isFallback
@@ -545,8 +557,8 @@ class _MapWorkspaceState extends State<MapWorkspace> {
     );
 
     setState(() {
-      _routePoints = result.points;
-      _routeDistanceKm = result.distanceKm;
+      _routePoints = visiblePoints;
+      _routeDistanceKm = visibleDistanceKm;
       _isFallbackRoute = isFallback;
       _loadingRoute = false;
     });
@@ -564,6 +576,23 @@ class _MapWorkspaceState extends State<MapWorkspace> {
 
     if (!_isNavigating) {
       _fitRoute();
+      _scheduleRouteFitRetries();
+    }
+  }
+
+  void _scheduleRouteFitRetries() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && !_isNavigating) _fitRoute();
+    });
+    for (final delay in const [
+      Duration(milliseconds: 350),
+      Duration(milliseconds: 1100),
+    ]) {
+      Future<void>.delayed(delay, () {
+        if (mounted && !_isNavigating && _routePoints.length >= 2) {
+          _fitRoute();
+        }
+      });
     }
   }
 
