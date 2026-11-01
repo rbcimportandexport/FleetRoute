@@ -947,46 +947,61 @@ class RouteTrafficService {
       }
     }
 
+    String formatDistance(double meters) {
+      if (meters >= 1000) {
+        final km = meters / 1000.0;
+        return km >= 10 ? '${km.toStringAsFixed(0)} km' : '${km.toStringAsFixed(1)} km';
+      }
+      return '${meters.round()} m';
+    }
+
+    final distStr = formatDistance(accumulatedDistance);
     String hindiText;
     String engText;
-    final dist = accumulatedDistance.round();
 
-    switch (turnManeuver) {
-      case ManeuverType.turnLeft:
-      case ManeuverType.sharpLeft:
-        hindiText = dist > 40
-            ? '$dist m बाद बाएँ मुड़ें (Left Turn)'
-            : 'अब बाएँ मुड़ें (Turn Left Now)';
-        engText = dist > 40 ? 'In $dist m turn left' : 'Turn left now';
-        break;
-      case ManeuverType.slightLeft:
-        hindiText = dist > 40
-            ? '$dist m बाद हल्का बाएँ रखें'
-            : 'हल्का बाएँ चलें (Keep Left)';
-        engText = dist > 40 ? 'In $dist m keep left' : 'Keep left';
-        break;
-      case ManeuverType.turnRight:
-      case ManeuverType.sharpRight:
-        hindiText = dist > 40
-            ? '$dist m बाद दाएँ मुड़ें (Right Turn)'
-            : 'अब दाएँ मुड़ें (Turn Right Now)';
-        engText = dist > 40 ? 'In $dist m turn right' : 'Turn right now';
-        break;
-      case ManeuverType.slightRight:
-        hindiText = dist > 40
-            ? '$dist m बाद हल्का दाएँ रखें'
-            : 'हल्का दाएँ चलें (Keep Right)';
-        engText = dist > 40 ? 'In $dist m keep right' : 'Keep right';
-        break;
-      case ManeuverType.uTurn:
-        hindiText =
-            dist > 40 ? '$dist m बाद U-Turn लें' : 'वापस मुड़ें (U-Turn Now)';
-        engText = dist > 40 ? 'In $dist m make a U-Turn' : 'Make a U-Turn';
-        break;
-      case ManeuverType.straight:
-        hindiText = 'सीधे चलें (Continue Straight)';
-        engText = 'Continue straight on route';
-        break;
+    // If next turn is far away (> 4 km), tell the driver to continue straight rather than alerting a turn hundreds of km ahead!
+    if (accumulatedDistance > 4000) {
+      hindiText = '$distStr तक सीधे चलें (Continue Straight)';
+      engText = 'Continue straight for $distStr';
+    } else {
+      switch (turnManeuver) {
+        case ManeuverType.turnLeft:
+        case ManeuverType.sharpLeft:
+          hindiText = accumulatedDistance > 40
+              ? '$distStr बाद बाएँ मुड़ें (Left Turn)'
+              : 'अब बाएँ मुड़ें (Turn Left Now)';
+          engText = accumulatedDistance > 40 ? 'In $distStr turn left' : 'Turn left now';
+          break;
+        case ManeuverType.slightLeft:
+          hindiText = accumulatedDistance > 40
+              ? '$distStr बाद हल्का बाएँ रखें'
+              : 'हल्का बाएँ चलें (Keep Left)';
+          engText = accumulatedDistance > 40 ? 'In $distStr keep left' : 'Keep left';
+          break;
+        case ManeuverType.turnRight:
+        case ManeuverType.sharpRight:
+          hindiText = accumulatedDistance > 40
+              ? '$distStr बाद दाएँ मुड़ें (Right Turn)'
+              : 'अब दाएँ मुड़ें (Turn Right Now)';
+          engText = accumulatedDistance > 40 ? 'In $distStr turn right' : 'Turn right now';
+          break;
+        case ManeuverType.slightRight:
+          hindiText = accumulatedDistance > 40
+              ? '$distStr बाद हल्का दाएँ रखें'
+              : 'हल्का दाएँ चलें (Keep Right)';
+          engText = accumulatedDistance > 40 ? 'In $distStr keep right' : 'Keep right';
+          break;
+        case ManeuverType.uTurn:
+          hindiText = accumulatedDistance > 40
+              ? '$distStr बाद U-Turn लें'
+              : 'वापस मुड़ें (U-Turn Now)';
+          engText = accumulatedDistance > 40 ? 'In $distStr make a U-Turn' : 'Make a U-Turn';
+          break;
+        case ManeuverType.straight:
+          hindiText = 'सीधे चलें (Continue Straight)';
+          engText = 'Continue straight on route';
+          break;
+      }
     }
 
     return NavigationTurnInfo(

@@ -1236,18 +1236,9 @@ class _MapWorkspaceState extends State<MapWorkspace> {
           if (_routePoints.isNotEmpty &&
               closestIdx >= 0 &&
               closestIdx < _routePoints.length) {
-            final distMeters = Geolocator.distanceBetween(
-              gpsLatLng.latitude,
-              gpsLatLng.longitude,
-              _routePoints[closestIdx].latitude,
-              _routePoints[closestIdx].longitude,
-            );
-
-            // If GPS is within 25 km of the plotted route, place vehicle directly at real GPS location
-            if (distMeters <= 25000) {
-              initialPos = gpsLatLng;
-              initialNavIndex = closestIdx;
-            }
+            // Snap navigation to user's real position and route index
+            initialPos = gpsLatLng;
+            initialNavIndex = closestIdx;
           }
           if (pos.heading > 0) {
             initialBearing = pos.heading;
@@ -5475,10 +5466,31 @@ class _MapWorkspaceState extends State<MapWorkspace> {
   }
 
   double get _remainingDistanceKm {
-    if (_routePoints.length < 2) return 0;
-    final total = _routeDistanceKm;
-    final fraction = _navIndex / (_routePoints.length - 1);
-    return (total * (1.0 - fraction)).clamp(0, total);
+    if (_routePoints.length < 2) return 0.0;
+    
+    final startIndex = _navIndex.clamp(0, _routePoints.length - 1);
+    double remainingMeters = 0.0;
+    
+    if (_currentNavPosition != null && startIndex < _routePoints.length) {
+      remainingMeters += Geolocator.distanceBetween(
+        _currentNavPosition!.latitude,
+        _currentNavPosition!.longitude,
+        _routePoints[startIndex].latitude,
+        _routePoints[startIndex].longitude,
+      );
+    }
+    
+    for (int i = startIndex; i < _routePoints.length - 1; i++) {
+      remainingMeters += Geolocator.distanceBetween(
+        _routePoints[i].latitude,
+        _routePoints[i].longitude,
+        _routePoints[i + 1].latitude,
+        _routePoints[i + 1].longitude,
+      );
+    }
+    
+    final realKm = remainingMeters / 1000.0;
+    return realKm.clamp(0.0, _routeDistanceKm > 0 ? _routeDistanceKm : realKm);
   }
 
   String get _remainingTimeStr {
