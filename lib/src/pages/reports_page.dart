@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:excel/excel.dart' as xlsx;
 import 'package:file_saver/file_saver.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -1086,6 +1087,9 @@ class _ReportsPageState extends State<ReportsPage> {
   }
 
   void _showLiveFleetGpsDialog(BuildContext context) {
+    if (!kIsWeb) {
+      widget.controller.syncDriverPhoneBattery();
+    }
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
@@ -1238,7 +1242,7 @@ class _ReportsPageState extends State<ReportsPage> {
                                       ? (vehicle.isPhoneCharging
                                           ? '${vehicle.phoneBatteryLevel}% ⚡ Charging'
                                           : '${vehicle.phoneBatteryLevel}% Not Charging')
-                                      : (isOnline ? 'Batt: Active' : 'Battery: Offline'),
+                                      : (isOnline ? 'Phone Online' : 'Battery: Offline'),
                                   style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.w700,

@@ -77,6 +77,9 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkWeeklyReminders();
       _ensureActiveDutyGps();
+      if (!kIsWeb) {
+        widget.controller.syncDriverPhoneBattery();
+      }
     });
   }
 

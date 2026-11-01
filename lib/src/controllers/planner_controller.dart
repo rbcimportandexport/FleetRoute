@@ -1229,6 +1229,7 @@ class PlannerController extends ChangeNotifier {
   String? lastGpsSyncError;
   DateTime? lastGpsSyncTime;
   Timer? _gpsAutoPollTimer;
+  Timer? _driverBatteryPollTimer;
   final Map<String, DateTime> _lastOverspeedAlerts = {};
   StreamSubscription<Position>? _foregroundLocationSubscription;
   Position? _lastPublishedDriverPosition;
@@ -1312,6 +1313,9 @@ class PlannerController extends ChangeNotifier {
       lastGpsSyncError = 'Live driver location sync failed: $error';
       notifyListeners();
     });
+
+    // Start periodic battery sync for driver phone
+    _startDriverBatteryPeriodicSync();
 
     if (isAdmin) {
       _customersSubscription = FirebaseBackendService.instance
@@ -1627,6 +1631,52 @@ class PlannerController extends ChangeNotifier {
     return lastGpsSyncError;
   }
 
+  void _startDriverBatteryPeriodicSync() {
+    _driverBatteryPollTimer?.cancel();
+    if (kIsWeb) return;
+    // Initial immediate sync
+    unawaited(syncDriverPhoneBattery());
+    // Periodic poll every 20 seconds
+    _driverBatteryPollTimer = Timer.periodic(const Duration(seconds: 20), (_) {
+      unawaited(syncDriverPhoneBattery());
+    });
+  }
+
+  /// Explicitly reads this device's battery level and charging status and pushes
+  /// to Firestore `fleet_telemetry/{vehicleCode}` so all admin consoles immediately see
+  /// the exact percentage and charging state without requiring vehicle movement.
+  Future<void> syncDriverPhoneBattery() async {
+    if (kIsWeb) return;
+    try {
+      final driver = selectedDriver ?? currentDriver;
+      final vehicleCode = driver?.assignedVehicle.trim().toUpperCase() ?? '';
+      if (vehicleCode.isEmpty) return;
+
+      final battery = Battery();
+      final level = await battery.batteryLevel;
+      final state = await battery.batteryState;
+      final isCharging = (state == BatteryState.charging || state == BatteryState.full);
+
+      // Optimistically update local truckModel
+      final idx = truckModels.indexWhere((t) => t.code.toUpperCase() == vehicleCode);
+      if (idx >= 0) {
+        truckModels[idx] = truckModels[idx].copyWith(
+          phoneBatteryLevel: level,
+          isPhoneCharging: isCharging,
+        );
+        notifyListeners();
+      }
+
+      await FirebaseBackendService.instance.updateVehicleBatteryTelemetry(
+        vehicleCode: vehicleCode,
+        phoneBatteryLevel: level,
+        isPhoneCharging: isCharging,
+      );
+    } catch (e) {
+      debugPrint('[BatterySync] Error syncing phone battery: $e');
+    }
+  }
+
   void _applyFleetTelemetry(List<Map<String, dynamic>> updates) {
     var changed = false;
     for (final data in updates) {
@@ -1635,24 +1685,25 @@ class PlannerController extends ChangeNotifier {
           .trim()
           .toUpperCase();
       final index = truckModels.indexWhere((t) => t.code.toUpperCase() == code);
+      if (index < 0) continue;
       final lat = data['latitude'];
       final lng = data['longitude'];
-      if (index < 0 || lat is! num || lng is! num) continue;
       final rawBattery = data['phoneBatteryLevel'] ?? data['batteryLevel'];
       final phoneBattery = rawBattery is num
           ? rawBattery.toInt()
           : int.tryParse(rawBattery?.toString() ?? '');
       final isCharging = data['isPhoneCharging'] == true;
 
+      // Update battery/charging even if lat/lng are unchanged or null
       truckModels[index] = truckModels[index].copyWith(
-        currentLat: lat.toDouble(),
-        currentLng: lng.toDouble(),
-        currentSpeed: (data['speed'] as num?)?.toDouble() ?? 0,
-        isIgnitionOn: data['isIgnitionOn'] == true,
-        phoneBatteryLevel: phoneBattery,
-        isPhoneCharging: isCharging,
-        lastGpsUpdate: data['lastUpdate']?.toString() ?? '',
-        hasValidGpsFix: true,
+        currentLat: (lat is num) ? lat.toDouble() : truckModels[index].currentLat,
+        currentLng: (lng is num) ? lng.toDouble() : truckModels[index].currentLng,
+        currentSpeed: (data['speed'] as num?)?.toDouble() ?? truckModels[index].currentSpeed,
+        isIgnitionOn: data.containsKey('isIgnitionOn') ? (data['isIgnitionOn'] == true) : truckModels[index].isIgnitionOn,
+        phoneBatteryLevel: phoneBattery ?? truckModels[index].phoneBatteryLevel,
+        isPhoneCharging: data.containsKey('isPhoneCharging') ? isCharging : truckModels[index].isPhoneCharging,
+        lastGpsUpdate: data['lastUpdate']?.toString() ?? truckModels[index].lastGpsUpdate,
+        hasValidGpsFix: (lat is num && lng is num) ? true : truckModels[index].hasValidGpsFix,
         isDemoTelemetry: false,
       );
       changed = true;
@@ -1665,6 +1716,8 @@ class PlannerController extends ChangeNotifier {
   }
 
   void stopGpsAutoPolling() {
+    _driverBatteryPollTimer?.cancel();
+    _driverBatteryPollTimer = null;
     _gpsAutoPollTimer?.cancel();
     _gpsAutoPollTimer = null;
     _foregroundLocationSubscription?.cancel();
@@ -3086,6 +3139,8 @@ class PlannerController extends ChangeNotifier {
     await _saveAttendance();
     await FirebaseBackendService.instance
         .syncAttendanceRecord(record: newRecord);
+    // Immediately broadcast phone battery & charging status on duty start
+    unawaited(syncDriverPhoneBattery());
     await logActivity(
       title: 'Driver Duty Started',
       details:
@@ -3136,6 +3191,8 @@ class PlannerController extends ChangeNotifier {
     notifyListeners();
     await _saveAttendance();
     await FirebaseBackendService.instance.syncAttendanceRecord(record: updated);
+    // Broadcast final battery status on duty end
+    unawaited(syncDriverPhoneBattery());
     await logActivity(
       title: 'Driver Duty Ended',
       details:

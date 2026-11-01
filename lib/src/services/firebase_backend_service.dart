@@ -131,6 +131,26 @@ class FirebaseBackendService {
             }).toList(growable: false));
   }
 
+  Future<bool> updateVehicleBatteryTelemetry({
+    required String vehicleCode,
+    required int phoneBatteryLevel,
+    required bool isPhoneCharging,
+    http.Client? client,
+  }) {
+    final cleanCode = vehicleCode.trim().toUpperCase();
+    if (cleanCode.isEmpty) return Future<bool>.value(false);
+    return _put(
+        'fleet_telemetry',
+        cleanCode,
+        <String, dynamic>{
+          'vehicleCode': cleanCode,
+          'phoneBatteryLevel': phoneBatteryLevel,
+          'isPhoneCharging': isPhoneCharging,
+          'lastUpdate': FieldValue.serverTimestamp(),
+        },
+        client: client);
+  }
+
   Future<bool> syncVehicleTelemetry({
     required String vehicleCode,
     required double latitude,
