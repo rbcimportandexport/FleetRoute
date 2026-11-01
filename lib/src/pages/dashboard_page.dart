@@ -325,8 +325,10 @@ class _DashboardPageState extends State<DashboardPage>
                       color: AppColors.navy)),
               Text(
                 activeTrips == 0
-                    ? 'Aaj koi trip transit mein nahi hai'
-                    : '$activeTrips trip abhi transit mein',
+                    ? 'Aaj koi active trip nahi hai'
+                    : (activeTrips == 1
+                        ? '1 active trip'
+                        : '$activeTrips active trips'),
                 style: const TextStyle(fontSize: 12, color: AppColors.slate),
               ),
             ],

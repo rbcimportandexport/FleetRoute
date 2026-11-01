@@ -4878,7 +4878,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                 Positioned(
                   left: 14,
                   right: 14,
-                  top: 14,
+                  top: MediaQuery.of(context).padding.top + 8,
                   child: _NavigationTopHud(
                     turnInfo: _currentTurnInfo,
                     speed: _currentSpeed,
@@ -5806,25 +5806,26 @@ class _NavigationTopHud extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text(
                           info?.instructionHindi ?? 'सीधे चलें',
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: AppColors.navy,
-                            fontSize: 14,
+                            fontSize: compact ? 13 : 14,
                             fontWeight: FontWeight.w800,
                             letterSpacing: .2,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
+                        const SizedBox(height: 2),
                         Text(
                           speed < 1.0
-                              ? 'रुकी हुई है (Physical movement hone par hi aage badhegi)'
+                              ? 'रुकी हुई है (Movement par aage badhegi)'
                               : (info?.instructionEnglish ??
                                   'Continue straight'),
                           style: TextStyle(
                             color: speed < 1.0
                                 ? const Color(0xFFD97706)
                                 : AppColors.slate,
-                            fontSize: 11,
+                            fontSize: compact ? 10 : 11,
                             fontWeight: FontWeight.w600,
                           ),
                           maxLines: 1,
@@ -5888,7 +5889,7 @@ class _NavigationTopHud extends StatelessWidget {
                       ],
                     ),
                   ),
-                  SizedBox(width: compact ? 4 : 8),
+                  SizedBox(width: compact ? 6 : 10),
 
                   // Add Intermediate Stop / Waypoint button during navigation
                   if (onAddStop != null)
@@ -5900,17 +5901,16 @@ class _NavigationTopHud extends StatelessWidget {
                         backgroundColor: const Color(0xFFFFFBEB),
                         foregroundColor: const Color(0xFFD97706),
                         side: const BorderSide(color: Color(0xFFFDE68A)),
-                        visualDensity: compact
-                            ? VisualDensity.compact
-                            : VisualDensity.standard,
+                        padding: const EdgeInsets.all(6),
+                        visualDensity: VisualDensity.compact,
                       ),
                       icon: const Icon(
                         Icons.add_location_alt_rounded,
-                        size: 20,
+                        size: 18,
                         color: Color(0xFFD97706),
                       ),
                     ),
-                  if (onAddStop != null) SizedBox(width: compact ? 4 : 8),
+                  if (onAddStop != null) SizedBox(width: compact ? 4 : 6),
 
                   // Satellite Mode Toggle Button
                   if (onToggleSatellite != null)
@@ -5925,18 +5925,17 @@ class _NavigationTopHud extends StatelessWidget {
                             : const Color(0xFFF1F5F9),
                         foregroundColor:
                             isSatellite ? Colors.white : AppColors.navy,
-                        visualDensity: compact
-                            ? VisualDensity.compact
-                            : VisualDensity.standard,
+                        padding: const EdgeInsets.all(6),
+                        visualDensity: VisualDensity.compact,
                       ),
                       icon: Icon(
                         isSatellite
                             ? Icons.satellite_alt_rounded
                             : Icons.satellite_alt_outlined,
-                        size: 20,
+                        size: 18,
                       ),
                     ),
-                  SizedBox(width: compact ? 4 : 8),
+                  SizedBox(width: compact ? 4 : 6),
 
                   // Exit Navigation Button
                   IconButton(
@@ -5945,11 +5944,10 @@ class _NavigationTopHud extends StatelessWidget {
                     style: IconButton.styleFrom(
                       backgroundColor: const Color(0xFFEF4444),
                       foregroundColor: Colors.white,
-                      visualDensity: compact
-                          ? VisualDensity.compact
-                          : VisualDensity.standard,
+                      padding: const EdgeInsets.all(6),
+                      visualDensity: VisualDensity.compact,
                     ),
-                    icon: const Icon(Icons.close_rounded, size: 20),
+                    icon: const Icon(Icons.close_rounded, size: 18),
                   ),
                 ],
               ),
