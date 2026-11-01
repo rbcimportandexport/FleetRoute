@@ -1304,6 +1304,15 @@ class PlannerController extends ChangeNotifier {
         notifyListeners();
       }
     }, onError: (_) {});
+
+    // Listen to real-time fleet telemetry (phone battery, charging, live speed & GPS) for both Admin and Driver views
+    _fleetTelemetrySubscription = FirebaseBackendService.instance
+        .watchFleetTelemetry()
+        .listen(_applyFleetTelemetry, onError: (Object error) {
+      lastGpsSyncError = 'Live driver location sync failed: $error';
+      notifyListeners();
+    });
+
     if (isAdmin) {
       _customersSubscription = FirebaseBackendService.instance
           .watchCustomers()
@@ -1315,12 +1324,6 @@ class PlannerController extends ChangeNotifier {
           notifyListeners();
         }
       }, onError: (_) {});
-      _fleetTelemetrySubscription = FirebaseBackendService.instance
-          .watchFleetTelemetry()
-          .listen(_applyFleetTelemetry, onError: (Object error) {
-        lastGpsSyncError = 'Live driver location sync failed: $error';
-        notifyListeners();
-      });
       _attendanceSubscription = FirebaseBackendService.instance
           .watchAttendanceRecords()
           .listen(_applyRemoteAttendance, onError: (Object error) {
@@ -1429,6 +1432,12 @@ class PlannerController extends ChangeNotifier {
           ..clear()
           ..addAll(parsedAlerts);
         notifyListeners();
+      }
+
+      // 5. Fetch remote live fleet telemetry (Battery, Charging, Speed)
+      final remoteTelemetry = await FirebaseBackendService.instance.fetchCollection('fleet_telemetry');
+      if (remoteTelemetry.isNotEmpty) {
+        _applyFleetTelemetry(remoteTelemetry);
       }
     } catch (e) {
       debugPrint('[CloudSync] syncAllDataFromCloud failed: ');
