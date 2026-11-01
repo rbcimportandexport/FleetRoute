@@ -167,6 +167,43 @@ void main() {
       expect(result.distanceKm, 3);
     });
 
+    test('long routes request mobile-safe simplified road geometry', () async {
+      String? requestedOverview;
+      final client = MockClient((request) async {
+        requestedOverview = request.url.queryParameters['overview'];
+        return http.Response(
+          jsonEncode({
+            'code': 'Ok',
+            'routes': [
+              {
+                'distance': 3042789.3,
+                'duration': 138039.3,
+                'geometry': {
+                  'coordinates': [
+                    [76.244438, 9.967903],
+                    [93.025668, 25.913311],
+                  ],
+                },
+              },
+            ],
+          }),
+          200,
+        );
+      });
+
+      final result = await RouteTrafficService.fetchMultiStopRoute(
+        waypoints: const [
+          LatLng(9.967903, 76.244438),
+          LatLng(25.913311, 93.025668),
+        ],
+        client: client,
+      );
+
+      expect(requestedOverview, 'simplified');
+      expect(result.points, hasLength(2));
+      expect(result.isRealHighwayRoute, isTrue);
+    });
+
     test('reorderStop reorders intermediate stops safely', () {
       final controller = PlannerController();
       controller.addStop('Stop 1');

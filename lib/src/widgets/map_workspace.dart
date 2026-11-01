@@ -107,9 +107,12 @@ class _MapWorkspaceState extends State<MapWorkspace> {
       // Auto-center on user's real GPS location on startup so vehicle and driver location are active
       final hasPendingIntent = IncomingIntentService().latestLocation != null;
       if (!hasPendingIntent) {
-        if (_userLocation == null) {
+        // A trip can already be loaded before this page is created. Do not let
+        // asynchronous GPS startup replace its pickup or move off its route.
+        if (_userLocation == null && !widget.controller.canShowRoute) {
           _autoCenterUserLocation();
-        } else if (widget.controller.truckModels.any((t) => t.hasCoordinates)) {
+        } else if (!widget.controller.canShowRoute &&
+            widget.controller.truckModels.any((t) => t.hasCoordinates)) {
           _fitFleet();
         }
       }
@@ -283,6 +286,13 @@ class _MapWorkspaceState extends State<MapWorkspace> {
       );
       if (!mounted) return;
       final userPos = LatLng(pos.latitude, pos.longitude);
+
+      // The user may load a trip while the GPS request is in flight. Keep the
+      // device position for tracking, but never overwrite the loaded route.
+      if (widget.controller.canShowRoute) {
+        setState(() => _userLocation = userPos);
+        return;
+      }
       setState(() {
         _userLocation = userPos;
         _pinnedOrigin = userPos;
@@ -324,7 +334,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
         );
       } catch (_) {}
       final locationName = await ReverseGeocodingService.labelFor(userPos);
-      if (!mounted) return;
+      if (!mounted || widget.controller.canShowRoute) return;
       widget.controller.setOrigin(locationName);
     } catch (e) {
       debugPrint('[MapWorkspace] Initial location skipped or unavailable: $e');

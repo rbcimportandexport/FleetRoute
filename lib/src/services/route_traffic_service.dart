@@ -578,11 +578,20 @@ class RouteTrafficService {
         return _routeCache[cacheKey];
       }
 
+      // A cross-country full geometry can contain tens of thousands of points
+      // and stall mobile rendering. OSRM simplified geometry still follows the
+      // road while drawing immediately. Keep full detail for local routes.
+      var routeDistanceKm = 0.0;
+      for (var i = 0; i < waypoints.length - 1; i++) {
+        routeDistanceKm += straightDistanceKm(waypoints[i], waypoints[i + 1]);
+      }
+      final overview = routeDistanceKm >= 300 ? 'simplified' : 'full';
+
       final uri = routingProxyUrl.isNotEmpty
           ? Uri.parse('$routingProxyUrl?coords=$coordsParam')
           : Uri.parse(
               'https://router.project-osrm.org/route/v1/driving/'
-              '$coordsParam?overview=full&geometries=geojson&steps=false',
+              '$coordsParam?overview=$overview&geometries=geojson&steps=false',
             );
 
       final headers = <String, String>{'User-Agent': 'TransportOne/1.1'};
