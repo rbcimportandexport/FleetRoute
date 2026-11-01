@@ -627,16 +627,8 @@ class RouteTrafficService {
       if (geometry['coordinates'] is! List) return null;
 
       final rawCoords = geometry['coordinates'] as List;
-      final totalRaw = rawCoords.length;
-      final step = totalRaw > 3000 ? (totalRaw / 2000).ceil() : 1;
-      
       final points = <LatLng>[];
-      for (var i = 0; i < totalRaw; i++) {
-        // Keep start, end, and sampled road curve points
-        if (i != 0 && i != totalRaw - 1 && step > 1 && (i % step != 0)) {
-          continue;
-        }
-        final coordinate = rawCoords[i];
+      for (final coordinate in rawCoords) {
         if (coordinate is List &&
             coordinate.length >= 2 &&
             coordinate[0] is num &&
