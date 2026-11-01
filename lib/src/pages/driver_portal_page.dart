@@ -395,9 +395,10 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
               }
             }
             activeTrip ??=
-                !widget.adminPreview && widget.controller.trips.isNotEmpty
+                widget.controller.activeTripForCurrentDriver ??
+                (widget.controller.trips.isNotEmpty
                     ? widget.controller.trips.first
-                    : null;
+                    : null);
 
             return Scaffold(
               backgroundColor: AppColors.canvas,

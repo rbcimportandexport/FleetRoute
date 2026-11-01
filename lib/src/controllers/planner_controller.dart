@@ -413,6 +413,14 @@ class PlannerController extends ChangeNotifier {
         return trip;
       }
     }
+    for (final trip in trips) {
+      final status = trip.status.trim().toLowerCase();
+      if (status != 'delivered' &&
+          status != 'completed' &&
+          status != 'cancelled') {
+        return trip;
+      }
+    }
     return trips.isEmpty ? null : trips.first;
   }
 

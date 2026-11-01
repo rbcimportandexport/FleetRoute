@@ -1308,9 +1308,19 @@ class _TripsPageState extends State<TripsPage> {
               if (ci.productId != 'custom-product' &&
                   ci.productId != 'custom-item' &&
                   ci.productId.isNotEmpty) {
+                final defaultKg = CatalogProduct(
+                  id: ci.productId,
+                  brand: ci.brand,
+                  category: ci.category,
+                  code: '',
+                  name: ci.productName,
+                  photoAsset: '',
+                  originalPath: '',
+                ).approximateWeightKg;
+                final singleW = defaultKg > 0 ? defaultKg : 30.0;
                 final qty = ci.loadedQuantity > 0
                     ? (ci.unit == 'Ton'
-                        ? (ci.loadedQuantity * 1000 / 50.0).round()
+                        ? (ci.loadedQuantity * 1000 / singleW).round()
                         : ci.loadedQuantity.round())
                     : 1;
                 initialList.add(
@@ -1790,11 +1800,21 @@ class _TripSetupPanelState extends State<_TripSetupPanel> {
       if (match != null) {
         _quickItemQtyCtrl.text = match.group(1)!;
       }
-      _quickItemWeightCtrl.text = '50';
+      final defaultW = CatalogProduct(
+        id: latest.productId,
+        brand: latest.brand,
+        category: latest.category,
+        code: '',
+        name: latest.productName,
+        photoAsset: '',
+        originalPath: '',
+      ).approximateWeightKg;
+      _quickItemWeightCtrl.text = defaultW.round().toString();
     } else if (widget.selectedCatalogProduct != null) {
       _quickItemNameCtrl.text = widget.selectedCatalogProduct!.displayName;
       _quickItemQtyCtrl.text = '10';
-      _quickItemWeightCtrl.text = '50';
+      _quickItemWeightCtrl.text =
+          widget.selectedCatalogProduct!.approximateWeightKg.round().toString();
     }
   }
 
