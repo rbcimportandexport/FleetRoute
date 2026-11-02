@@ -107,6 +107,17 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
       );
       return;
     }
+    if (category == 'Sunday Vehicle Cleaning') {
+      showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (ctx) => _CleaningMultiAngleBottomSheet(
+          controller: widget.controller,
+        ),
+      );
+      return;
+    }
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -304,6 +315,17 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                                               style: const TextStyle(
                                                   fontSize: 10.5,
                                                   color: AppColors.slate)),
+                                        ],
+                                        if (record.notes.trim().isNotEmpty) ...[
+                                          const SizedBox(height: 3),
+                                          Text(
+                                            record.notes,
+                                            style: const TextStyle(
+                                              fontSize: 10.5,
+                                              fontWeight: FontWeight.w600,
+                                              color: AppColors.primary,
+                                            ),
+                                          ),
                                         ],
                                       ],
                                     ),
@@ -5040,6 +5062,776 @@ class _PhotoUploadBottomSheetState extends State<_PhotoUploadBottomSheet> {
               ),
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+class _CleaningAngleConfig {
+  const _CleaningAngleConfig({
+    required this.id,
+    required this.labelHindi,
+    required this.labelEnglish,
+    required this.icon,
+    required this.description,
+  });
+
+  final String id;
+  final String labelHindi;
+  final String labelEnglish;
+  final IconData icon;
+  final String description;
+}
+
+class _CleaningMultiAngleBottomSheet extends StatefulWidget {
+  const _CleaningMultiAngleBottomSheet({
+    required this.controller,
+  });
+
+  final PlannerController controller;
+
+  @override
+  State<_CleaningMultiAngleBottomSheet> createState() =>
+      _CleaningMultiAngleBottomSheetState();
+}
+
+class _CleaningMultiAngleBottomSheetState
+    extends State<_CleaningMultiAngleBottomSheet> {
+  static const List<_CleaningAngleConfig> _angles = [
+    _CleaningAngleConfig(
+      id: 'front',
+      labelHindi: 'आगे का हिस्सा',
+      labelEnglish: 'Front Angle',
+      icon: Icons.directions_car_filled_rounded,
+      description: 'Headlight, Number Plate & Windshield saaf dikhe',
+    ),
+    _CleaningAngleConfig(
+      id: 'back',
+      labelHindi: 'पीछे का हिस्सा',
+      labelEnglish: 'Back Angle',
+      icon: Icons.car_crash_rounded,
+      description: 'Back Door, Taillights & Rear plate',
+    ),
+    _CleaningAngleConfig(
+      id: 'left',
+      labelHindi: 'बायाँ हिस्सा',
+      labelEnglish: 'Left Side',
+      icon: Icons.align_horizontal_left_rounded,
+      description: 'Left tyres, Body sheet & Side mirrors',
+    ),
+    _CleaningAngleConfig(
+      id: 'right',
+      labelHindi: 'दायाँ हिस्सा',
+      labelEnglish: 'Right Side',
+      icon: Icons.align_horizontal_right_rounded,
+      description: 'Right tyres, Fuel tank & Side body',
+    ),
+    _CleaningAngleConfig(
+      id: 'cabin',
+      labelHindi: 'अंदर केबिन',
+      labelEnglish: 'Cabin / Interior',
+      icon: Icons.airline_seat_recline_normal_rounded,
+      description: 'Dashboard, Floor mats, Seat & Clean windshield',
+    ),
+  ];
+
+  // 0 = Before Cleaning (धोने से पहले), 1 = After Cleaning (धोने के बाद)
+  int _currentStage = 0;
+
+  // Key format: stageIndex_angleId (e.g., '0_front', '1_front')
+  final Map<String, String> _capturedBase64 = {};
+  final Map<String, Uint8List> _capturedBytes = {};
+
+  bool _isUploading = false;
+  String? _uploadStatusText;
+  final TextEditingController _notesController = TextEditingController();
+
+  @override
+  void dispose() {
+    _notesController.dispose();
+    super.dispose();
+  }
+
+  int get _beforeCapturedCount =>
+      _angles.where((a) => _capturedBytes.containsKey('0_${a.id}')).length;
+
+  int get _afterCapturedCount =>
+      _angles.where((a) => _capturedBytes.containsKey('1_${a.id}')).length;
+
+  int get _totalCapturedCount => _capturedBytes.length;
+
+  void _onPhotoCaptured(String angleId, int stage, String base64Data) {
+    try {
+      String clean = base64Data;
+      if (clean.contains(',')) clean = clean.split(',').last;
+      final bytes = base64Decode(clean.trim());
+      if (bytes.isEmpty || bytes.length > 2621440) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('Photo 2.5 MB se chhoti honi chahiye.')),
+          );
+        }
+        return;
+      }
+      if (mounted) {
+        setState(() {
+          _capturedBytes['${stage}_$angleId'] = bytes;
+          _capturedBase64['${stage}_$angleId'] = clean;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Photo read nahi ho paayi.')),
+        );
+      }
+    }
+  }
+
+  void _pickPhotoForAngle(_CleaningAngleConfig angle, int stage,
+      {bool useCamera = true}) {
+    SafetyNotificationService.pickDriverPhoto(
+      useCamera: useCamera,
+      onPhotoSelected: (b64) => _onPhotoCaptured(angle.id, stage, b64),
+      onError: (msg) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(msg)),
+        );
+      },
+    );
+  }
+
+  void _showAngleCapturePicker(_CleaningAngleConfig angle, int stage) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                '${stage == 0 ? "BEFORE (सफाई से पहले)" : "AFTER (सफाई के बाद)"} - ${angle.labelHindi} (${angle.labelEnglish})',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 15,
+                  color: AppColors.navy,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                angle.description,
+                style: const TextStyle(fontSize: 12, color: AppColors.slate),
+              ),
+              const SizedBox(height: 18),
+              FilledButton.icon(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _pickPhotoForAngle(angle, stage, useCamera: true);
+                },
+                icon: const Icon(Icons.camera_alt_rounded),
+                label: const Text('CAMERA SE PHOTO LEIN'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  padding: const EdgeInsets.symmetric(vertical: 13),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _pickPhotoForAngle(angle, stage, useCamera: false);
+                },
+                icon: const Icon(Icons.photo_library_outlined),
+                label: const Text('GALLERY SE CHUNEIN'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.navy,
+                  side: const BorderSide(color: AppColors.border, width: 1.2),
+                  padding: const EdgeInsets.symmetric(vertical: 13),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _submitCleaningPhotos() async {
+    if (_beforeCapturedCount == 0 && _afterCapturedCount == 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+              'Kripya kam se kam ek angle ki photo lein (Before ya After).'),
+          backgroundColor: AppColors.primary,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isUploading = true;
+      _uploadStatusText = 'Photos save ho rahi hain... (0/$_totalCapturedCount)';
+    });
+
+    final driver = widget.controller.currentDriver;
+    final vehicle = driver?.assignedVehicle.trim().isNotEmpty == true
+        ? driver!.assignedVehicle.trim().toUpperCase()
+        : 'UNASSIGNED';
+    final userNote = _notesController.text.trim();
+
+    int completed = 0;
+    for (final entry in _capturedBase64.entries) {
+      final parts = entry.key.split('_');
+      final stage = parts[0] == '0' ? 'Before Cleaning' : 'After Cleaning';
+      final angleId = parts.length > 1 ? parts[1] : 'general';
+      final angleCfg = _angles.firstWhere(
+        (a) => a.id == angleId,
+        orElse: () => _angles.first,
+      );
+
+      final combinedNotes =
+          '$stage [${angleCfg.labelEnglish} - ${angleCfg.labelHindi}]${userNote.isNotEmpty ? " • Note: $userNote" : ""}';
+
+      await widget.controller.submitDriverPhotoRecord(
+        category: 'Sunday Vehicle Cleaning',
+        photoBase64: entry.value,
+        vehicleNumber: vehicle,
+        notes: combinedNotes,
+      );
+
+      completed++;
+      if (mounted) {
+        setState(() {
+          _uploadStatusText =
+              'Photos save ho rahi hain... ($completed/$_totalCapturedCount)';
+        });
+      }
+    }
+
+    if (!mounted) return;
+    Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+            'Shabash! Sunday Vehicle Cleaning ke $_totalCapturedCount photos safaltapoorvak jama ho gaye!'),
+        backgroundColor: AppColors.primary,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final driver = widget.controller.currentDriver;
+    final vehicle = driver?.assignedVehicle.trim().isNotEmpty == true
+        ? driver!.assignedVehicle.trim()
+        : 'Not assigned';
+
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.92,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      padding: EdgeInsets.fromLTRB(
+          16, 14, 16, MediaQuery.of(context).viewInsets.bottom + 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Drag handle
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: const Color(0xFFCBD5E1),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Header
+          Row(
+            children: [
+              const AppIconBadge(
+                icon: Icons.local_car_wash_rounded,
+                size: 22,
+                padding: 8,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Sunday Vehicle Cleaning Verification',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                        color: AppColors.navy,
+                        fontFamily: 'sans-serif',
+                      ),
+                    ),
+                    Text(
+                      'Vehicle: $vehicle · Driver: ${driver?.name ?? "Fleet Driver"}',
+                      style: const TextStyle(
+                        color: AppColors.slate,
+                        fontSize: 11.5,
+                        fontFamily: 'sans-serif',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.close_rounded, color: AppColors.slate),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Instruction Alert Banner
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppColors.primarySoft,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppColors.iconBadgeBorder),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.info_outline_rounded,
+                    size: 18, color: AppColors.primary),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Pehle SAFALTA SE DHONE SE PEHLE (BEFORE) har angle ki photo lein, fir DHONE KE BAAD (AFTER) ki photo lein.',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: AppColors.navy,
+                      fontWeight: FontWeight.w700,
+                      height: 1.25,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Stage Switcher Tabs: BEFORE CLEANING vs AFTER CLEANING
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(9),
+                    onTap: () => setState(() => _currentStage = 0),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 9),
+                      decoration: BoxDecoration(
+                        color: _currentStage == 0 ? Colors.white : Colors.transparent,
+                        borderRadius: BorderRadius.circular(9),
+                        boxShadow: _currentStage == 0
+                            ? [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.08),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                )
+                              ]
+                            : null,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.history_rounded,
+                            size: 16,
+                            color: _currentStage == 0
+                                ? AppColors.primary
+                                : AppColors.slate,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            '1. BEFORE (धोने से पहले)',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: _currentStage == 0
+                                  ? FontWeight.w800
+                                  : FontWeight.w600,
+                              color: _currentStage == 0
+                                  ? AppColors.navy
+                                  : AppColors.slate,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: _beforeCapturedCount > 0
+                                  ? AppColors.primary
+                                  : Colors.grey.shade400,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              '$_beforeCapturedCount/5',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(9),
+                    onTap: () => setState(() => _currentStage = 1),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 9),
+                      decoration: BoxDecoration(
+                        color: _currentStage == 1 ? Colors.white : Colors.transparent,
+                        borderRadius: BorderRadius.circular(9),
+                        boxShadow: _currentStage == 1
+                            ? [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.08),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                )
+                              ]
+                            : null,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.auto_awesome_rounded,
+                            size: 16,
+                            color: _currentStage == 1
+                                ? AppColors.primary
+                                : AppColors.slate,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            '2. AFTER (धोने के बाद)',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: _currentStage == 1
+                                  ? FontWeight.w800
+                                  : FontWeight.w600,
+                              color: _currentStage == 1
+                                  ? AppColors.navy
+                                  : AppColors.slate,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: _afterCapturedCount > 0
+                                  ? AppColors.primary
+                                  : Colors.grey.shade400,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              '$_afterCapturedCount/5',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          // Angle Slots Grid / List
+          Expanded(
+            child: ListView(
+              children: [
+                ..._angles.map((angle) {
+                  final key = '${_currentStage}_${angle.id}';
+                  final bytes = _capturedBytes[key];
+                  final hasPhoto = bytes != null;
+
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: hasPhoto
+                          ? AppColors.primarySoft.withValues(alpha: 0.4)
+                          : Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: hasPhoto
+                            ? AppColors.primary.withValues(alpha: 0.4)
+                            : AppColors.border,
+                        width: hasPhoto ? 1.5 : 1.2,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        // Thumbnail or Icon
+                        GestureDetector(
+                          onTap: () =>
+                              _showAngleCapturePicker(angle, _currentStage),
+                          child: Container(
+                            width: 64,
+                            height: 64,
+                            decoration: BoxDecoration(
+                              color: hasPhoto
+                                  ? Colors.black12
+                                  : AppColors.primarySoft,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: hasPhoto
+                                    ? AppColors.primary
+                                    : AppColors.iconBadgeBorder,
+                              ),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(9),
+                              child: hasPhoto
+                                  ? Stack(
+                                      fit: StackFit.expand,
+                                      children: [
+                                        Image.memory(bytes, fit: BoxFit.cover),
+                                        Positioned(
+                                          bottom: 2,
+                                          right: 2,
+                                          child: Container(
+                                            padding: const EdgeInsets.all(2),
+                                            decoration: const BoxDecoration(
+                                              color: AppColors.primary,
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: const Icon(
+                                              Icons.check_rounded,
+                                              size: 12,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    )
+                                  : Icon(
+                                      angle.icon,
+                                      color: AppColors.primary,
+                                      size: 28,
+                                    ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+
+                        // Angle Information
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    angle.labelHindi,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 13,
+                                      color: AppColors.navy,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    '(${angle.labelEnglish})',
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: AppColors.slate,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                angle.description,
+                                style: const TextStyle(
+                                  fontSize: 10.5,
+                                  color: AppColors.slate,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                hasPhoto
+                                    ? '✓ Photo Selected'
+                                    : 'Pending (Photo nahi li)',
+                                style: TextStyle(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: hasPhoto
+                                      ? AppColors.primary
+                                      : Colors.amber.shade800,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // Action Buttons: Retake / Camera
+                        IconButton(
+                          onPressed: () =>
+                              _pickPhotoForAngle(angle, _currentStage, useCamera: true),
+                          icon: Icon(
+                            hasPhoto
+                                ? Icons.replay_rounded
+                                : Icons.camera_alt_rounded,
+                            color: AppColors.primary,
+                          ),
+                          tooltip: hasPhoto ? 'Retake Photo' : 'Take Photo',
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+                const SizedBox(height: 8),
+
+                // Optional Notes
+                TextField(
+                  controller: _notesController,
+                  decoration: InputDecoration(
+                    hintText:
+                        'Optional Note (e.g. Foam wash kiya, cabin vacuum kiya)',
+                    hintStyle: const TextStyle(fontSize: 11.5),
+                    prefixIcon: const Icon(Icons.note_alt_outlined, size: 18),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: AppColors.border),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 10),
+                  ),
+                  style: const TextStyle(fontSize: 12),
+                ),
+                const SizedBox(height: 12),
+              ],
+            ),
+          ),
+
+          // Bottom Step Buttons
+          Row(
+            children: [
+              if (_currentStage == 0) ...[
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => setState(() => _currentStage = 1),
+                    icon: const Icon(Icons.arrow_forward_rounded, size: 16),
+                    label: const Text(
+                      'NEXT: AFTER PHOTOS (धोने के बाद)',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 11.5,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.primary,
+                      side: const BorderSide(color: AppColors.primary, width: 1.2),
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ),
+              ] else ...[
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => setState(() => _currentStage = 0),
+                    icon: const Icon(Icons.arrow_back_rounded, size: 16),
+                    label: const Text(
+                      'BACK: BEFORE PHOTOS',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 11.5,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.slate,
+                      side: const BorderSide(color: AppColors.border, width: 1.2),
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // Final Submit Button
+          FilledButton.icon(
+            onPressed: _isUploading ? null : _submitCleaningPhotos,
+            icon: _isUploading
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white),
+                  )
+                : const Icon(Icons.cloud_upload_rounded, size: 18),
+            label: Text(
+              _isUploading
+                  ? (_uploadStatusText ?? 'SAVING PHOTOS...')
+                  : 'SUBMIT ALL CLEANING PHOTOS ($_totalCapturedCount CAPTURED)',
+              style: const TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 12.5,
+                fontFamily: 'sans-serif',
+              ),
+            ),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+            ),
+          ),
         ],
       ),
     );
