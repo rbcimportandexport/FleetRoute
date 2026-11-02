@@ -1411,22 +1411,10 @@ class _MapWorkspaceState extends State<MapWorkspace> {
   void _updateGpsLocation(Position pos) {
     if (!mounted || !_isNavigating) return;
 
-    // P1.8: "Remote Vehicle Tracking" uses only Protrack data.
-    // Never replace a stale remote truck position with the admin phone location.
     final selectedTruck = _selectedLiveTruck;
+    // On Admin view with a selected truck: admin's phone location shouldn't override truck position,
+    // unless the user is driver mode or tracking this handset.
     if (widget.controller.isAdmin && selectedTruck != null) {
-      // An administrator's handset location is never the selected truck's
-      // location. Wait for a fresh tracker fix instead of moving the truck.
-      return;
-    }
-    if (_usingVehicleTracker && selectedTruck != null) {
-      // Retain the vehicle tracker as authoritative; update phone position metadata only
-      _lastGpsPosition = pos;
-      _lastGpsTime = DateTime.now();
-      return;
-    }
-
-    if (_hasFreshTrackerFix(selectedTruck)) {
       return;
     }
 
@@ -1445,15 +1433,15 @@ class _MapWorkspaceState extends State<MapWorkspace> {
     }
 
     // Real Speed Calculation:
-    // Only calculate speed if user actually moved > 1.2 meters (avoids GPS jitter / drift when stopped)
+    // Prefer sensor speed (pos.speed in m/s converted to km/h) if valid, or fallback to displacement / time.
     double realSpeed = 0.0;
-    if (pos.speed > 0.4 && movedMeters > 1.2) {
+    if (pos.speed > 0.3) {
       realSpeed = pos.speed * 3.6; // convert m/s to km/h
     } else if (_lastGpsPosition != null &&
         _lastGpsTime != null &&
-        movedMeters > 2.0) {
+        movedMeters > 1.5) {
       final elapsedSec = now.difference(_lastGpsTime!).inMilliseconds / 1000.0;
-      if (elapsedSec > 0.4) {
+      if (elapsedSec > 0.3) {
         realSpeed = (movedMeters / elapsedSec) * 3.6;
       }
     }
@@ -1464,9 +1452,9 @@ class _MapWorkspaceState extends State<MapWorkspace> {
 
     // Heading / Bearing Calculation:
     double bearing = _currentNavBearing;
-    if (pos.heading > 0 && (movedMeters > 1.5 || pos.speed > 0.5)) {
+    if (pos.heading > 0 && (movedMeters > 1.2 || pos.speed > 0.4)) {
       bearing = pos.heading;
-    } else if (_lastGpsPosition != null && movedMeters > 2.0) {
+    } else if (_lastGpsPosition != null && movedMeters > 1.5) {
       bearing = RouteTrafficService.calculateBearing(
         LatLng(_lastGpsPosition!.latitude, _lastGpsPosition!.longitude),
         newLatLng,
@@ -2039,14 +2027,18 @@ class _MapWorkspaceState extends State<MapWorkspace> {
           ),
         ),
       for (final truck in widget.controller.truckModels)
-        if (truck.hasCoordinates ||
-            (_userLocation != null &&
-                (truck.code.toUpperCase() == activeAssignedCode ||
-                    (widget.controller.truckModels.isNotEmpty &&
-                        truck.code.toUpperCase() ==
-                            (_selectedLiveTruck?.code.toUpperCase() ??
-                                widget.controller.truckModels.first.code
-                                    .toUpperCase())))))
+        if ((!_isNavigating ||
+                (truck.code.toUpperCase() != activeAssignedCode &&
+                    truck.code.toUpperCase() !=
+                        (_selectedLiveTruck?.code.toUpperCase() ?? ''))) &&
+            (truck.hasCoordinates ||
+                (_userLocation != null &&
+                    (truck.code.toUpperCase() == activeAssignedCode ||
+                        (widget.controller.truckModels.isNotEmpty &&
+                            truck.code.toUpperCase() ==
+                                (_selectedLiveTruck?.code.toUpperCase() ??
+                                    widget.controller.truckModels.first.code
+                                        .toUpperCase()))))))
           Marker(
             key: ValueKey('truck-marker-${truck.code}'),
             point: truck.hasCoordinates
