@@ -21,6 +21,7 @@ import '../theme/app_theme.dart';
 import '../widgets/cargo_workflow_dialogs.dart';
 import '../widgets/delivery_proof_dialog.dart';
 import '../widgets/location_search_dialog.dart';
+import '../widgets/driver_calendar_dialog.dart';
 import '../widgets/trip_detail_report_dialog.dart';
 
 class TripsPage extends StatefulWidget {
@@ -1550,19 +1551,32 @@ class _TripsPageState extends State<TripsPage> {
     if (widget.controller.trips.isEmpty) {
       return _EmptyTrips(onAdd: _startCreatingTrip);
     }
+    final selectedYmd = _historyDate != null
+        ? '${_historyDate!.year.toString().padLeft(4, '0')}-${_historyDate!.month.toString().padLeft(2, '0')}-${_historyDate!.day.toString().padLeft(2, '0')}'
+        : null;
     final source = widget.controller.trips.indexed.where((entry) {
-      if (_historyDate == null) return true;
+      if (selectedYmd == null) return true;
       final trip = entry.$2;
-      final rawDate = trip.startedAt.isNotEmpty
-          ? trip.startedAt
-          : (trip.departureDateTime.isNotEmpty
-              ? trip.departureDateTime.replaceFirst(' ', 'T')
-              : trip.createdAt);
-      final date = DateTime.tryParse(rawDate);
-      return date != null &&
-          date.year == _historyDate!.year &&
-          date.month == _historyDate!.month &&
-          date.day == _historyDate!.day;
+      final candidates = [
+        trip.startedAt,
+        trip.departureDateTime,
+        trip.loadingDateTime,
+        trip.unloadingDateTime,
+        trip.completedAt,
+        trip.createdAt,
+      ];
+      for (final raw in candidates) {
+        if (raw.trim().isEmpty) continue;
+        if (raw.contains(selectedYmd)) return true;
+        final parsed = DateTime.tryParse(raw.replaceFirst(' ', 'T'));
+        if (parsed != null &&
+            parsed.year == _historyDate!.year &&
+            parsed.month == _historyDate!.month &&
+            parsed.day == _historyDate!.day) {
+          return true;
+        }
+      }
+      return false;
     });
     final indexed = source.toList().reversed;
     return ListView(
@@ -1587,9 +1601,9 @@ class _TripsPageState extends State<TripsPage> {
                   setState(() => _historyDate = picked);
                 }
               },
-              icon: const Icon(Icons.calendar_month_outlined),
+              icon: const Icon(Icons.filter_alt_outlined, size: 16),
               label: Text(_historyDate == null
-                  ? 'Date-wise trip history'
+                  ? 'Date-wise filter'
                   : '${_historyDate!.day.toString().padLeft(2, '0')}-${_historyDate!.month.toString().padLeft(2, '0')}-${_historyDate!.year}'),
             ),
           ),
@@ -1601,6 +1615,27 @@ class _TripsPageState extends State<TripsPage> {
               icon: const Icon(Icons.close_rounded),
             ),
           ],
+          const SizedBox(width: 8),
+          FilledButton.icon(
+            onPressed: () {
+              DriverCalendarDialog.show(
+                context,
+                driverId: widget.controller.selectedDriver?.email ?? '',
+                driverName: widget.controller.selectedDriver?.name ?? 'Driver',
+                controller: widget.controller,
+              );
+            },
+            icon: const Icon(Icons.calendar_month_rounded, size: 15),
+            label: const Text('CALENDAR',
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800)),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+            ),
+          ),
         ]),
         const SizedBox(height: 14),
         if (indexed.isEmpty)
