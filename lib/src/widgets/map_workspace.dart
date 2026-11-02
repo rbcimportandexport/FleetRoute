@@ -1209,14 +1209,15 @@ class _MapWorkspaceState extends State<MapWorkspace> {
 
     // Prefer the vehicle's position (Protrack or Driver phone telemetry).
     final liveTruck = _selectedLiveTruck;
-    final hasVehicleFix = liveTruck != null && liveTruck.hasCoordinates;
-    final mayUsePhoneGps = widget.controller.isDriver ||
-        liveTruck == null ||
-        !liveTruck.hasCoordinates;
-    if (hasVehicleFix) {
+    final hasVehicleFix = liveTruck != null &&
+        liveTruck.hasCoordinates &&
+        !liveTruck.isGpsStale;
+    // When driver is on device, phone GPS takes absolute active precedence for instantaneous navigation!
+    final mayUsePhoneGps = true;
+    if (hasVehicleFix && !widget.controller.isDriver) {
       initialPos = LatLng(liveTruck.latitude!, liveTruck.longitude!);
       initialBearing = liveTruck.course;
-      initialSpeed = liveTruck.currentSpeed.clamp(0.0, 180.0);
+      initialSpeed = (liveTruck.currentSpeed < 1.0) ? 0.0 : liveTruck.currentSpeed.clamp(0.0, 180.0);
       initialNavIndex = RouteTrafficService.findClosestPointIndex(
         _routePoints,
         initialPos,
@@ -1225,12 +1226,10 @@ class _MapWorkspaceState extends State<MapWorkspace> {
       _lastTrackerPosition = initialPos;
     }
 
-    // Fall back to this phone's GPS only when the selected vehicle does not
-    // have a fresh tracker fix.
+    // Fall back to this phone's GPS immediately without blocking navigation startup
     try {
-      if (hasVehicleFix) {
-        // The phone stream is still started below as an automatic fallback
-        // if the vehicle tracker later becomes stale.
+      if (hasVehicleFix && !widget.controller.isDriver) {
+        // Vehicle tracker remote view
       } else if (mayUsePhoneGps) {
         if (!await Geolocator.isLocationServiceEnabled()) {
           _showMessage(
@@ -1247,10 +1246,30 @@ class _MapWorkspaceState extends State<MapWorkspace> {
 
         if (permission == LocationPermission.whileInUse ||
             permission == LocationPermission.always) {
+          // Instant cached/last-known position lookup (takes 0ms! No lag!)
+          final lastKnown = await Geolocator.getLastKnownPosition();
+          if (lastKnown != null) {
+            _lastGpsPosition = lastKnown;
+            _lastGpsTime = DateTime.now();
+            final gpsLatLng = LatLng(lastKnown.latitude, lastKnown.longitude);
+            final closestIdx = RouteTrafficService.findClosestPointIndex(
+                _routePoints, gpsLatLng);
+            if (_routePoints.isNotEmpty &&
+                closestIdx >= 0 &&
+                closestIdx < _routePoints.length) {
+              initialPos = gpsLatLng;
+              initialNavIndex = closestIdx;
+            }
+            if (lastKnown.heading > 0) {
+              initialBearing = lastKnown.heading;
+            }
+          }
+
+          // Trigger high-accuracy reading with 1.5s max timeout so start never hangs
           final pos = await Geolocator.getCurrentPosition(
             locationSettings: const LocationSettings(
               accuracy: LocationAccuracy.high,
-              timeLimit: Duration(seconds: 4),
+              timeLimit: Duration(milliseconds: 1500),
             ),
           );
           _lastGpsPosition = pos;
@@ -1391,6 +1410,9 @@ class _MapWorkspaceState extends State<MapWorkspace> {
 
   void _applySelectedTruckFix() {
     if (!mounted || !_isNavigating) return;
+    // If user is driver using the phone, phone GPS is primary — don't let stale tracker override phone
+    if (widget.controller.isDriver) return;
+
     final truck = _selectedLiveTruck;
     if (truck == null || !truck.hasCoordinates) {
       if (_usingVehicleTracker) {
@@ -1419,7 +1441,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
         : _currentNavBearing;
     final rawSpeed = truck.currentSpeed;
     // Show real speed from 1 km/h onwards directly without jumping
-    final speed = (rawSpeed < 0.6) ? 0.0 : rawSpeed.clamp(0.0, 180.0);
+    final speed = (rawSpeed < 1.0 || truck.isGpsStale) ? 0.0 : rawSpeed.clamp(0.0, 180.0);
 
     setState(() {
       _usingVehicleTracker = true;
