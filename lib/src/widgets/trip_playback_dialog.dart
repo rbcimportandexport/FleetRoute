@@ -9,6 +9,7 @@ import '../models/planner_models.dart';
 import '../services/map_tile_service.dart';
 import '../services/route_traffic_service.dart';
 import '../theme/app_theme.dart';
+import 'hotel_stay_meal_expense_sheet.dart';
 
 /// Interactive Video-Style Live Trip Route & Telematics Playback
 /// Allows viewing exactly how the vehicle moved, at what speeds,
@@ -763,6 +764,14 @@ class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
                                         onTap: () {
                                           _pausePlayback();
                                           _seekTo((s.timelineIndex / math.max(1, _timeline.length - 1)).clamp(0.0, 1.0));
+                                          if (s.category == StopCategory.foodHotel && widget.controller != null) {
+                                            HotelStayMealExpenseSheet.show(
+                                              context,
+                                              controller: widget.controller!,
+                                              trip: widget.trip,
+                                              hotelName: s.name,
+                                            );
+                                          }
                                         },
                                         child: Stack(
                                           alignment: Alignment.center,
@@ -966,6 +975,37 @@ class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
                                         fontWeight: FontWeight.w700,
                                       ),
                                     ),
+                                    if (currentPoint.stop?.category == StopCategory.foodHotel &&
+                                        widget.controller != null) ...[
+                                      const SizedBox(width: 6),
+                                      InkWell(
+                                        onTap: () {
+                                          _pausePlayback();
+                                          HotelStayMealExpenseSheet.show(
+                                            context,
+                                            controller: widget.controller!,
+                                            trip: widget.trip,
+                                            hotelName: currentPoint.stop!.name,
+                                          );
+                                        },
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFEA580C),
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: const Text(
+                                            '+ BILL / KHANA',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 8.5,
+                                              fontWeight: FontWeight.w900,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ],
                                 ),
                               ),

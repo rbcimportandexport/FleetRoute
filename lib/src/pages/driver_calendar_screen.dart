@@ -8,6 +8,7 @@ import '../models/planner_models.dart';
 import '../theme/app_theme.dart';
 import '../widgets/trip_detail_report_dialog.dart';
 import '../widgets/trip_playback_dialog.dart';
+import '../widgets/hotel_stay_meal_expense_sheet.dart';
 
 /// Full Dedicated Screen for Driver Activity & Operations Calendar
 class DriverCalendarScreen extends StatefulWidget {
@@ -380,7 +381,24 @@ class _DriverCalendarScreenState extends State<DriverCalendarScreen> {
                         backgroundColor: AppColors.primary,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 8),
+                            horizontal: 10, vertical: 8),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    FilledButton.icon(
+                      onPressed: () => HotelStayMealExpenseSheet.show(
+                        context,
+                        controller: widget.controller,
+                      ),
+                      icon: const Icon(Icons.restaurant_rounded, size: 15),
+                      label: const Text('Hotel Bill'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFFEA580C),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 8),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8)),
                       ),

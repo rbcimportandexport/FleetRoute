@@ -16,6 +16,7 @@ import '../widgets/cargo_workflow_dialogs.dart';
 import '../widgets/delivery_proof_dialog.dart';
 import '../widgets/driver_calendar_dialog.dart';
 import 'driver_calendar_screen.dart';
+import '../widgets/hotel_stay_meal_expense_sheet.dart';
 import '../widgets/driver_trip_history_dialog.dart';
 import '../widgets/location_search_dialog.dart';
 import '../widgets/seatbelt_records_dialog.dart';
@@ -4101,6 +4102,30 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
         keys: const ['bilty & fuel receipts', 'diesel', 'toll'],
         action: () =>
             _openPhotoCapture(context, category: 'Bilty & Fuel Receipts'),
+      ),
+      (
+        title: 'Hotel & Food Stay',
+        subtitle: 'Khana & Hotel Stay Bills',
+        hindi: 'होटल खाना व बिल',
+        icon: Icons.restaurant_rounded,
+        keys: const ['hotel', 'food', 'meal', 'dhaba'],
+        action: () => HotelStayMealExpenseSheet.show(
+          context,
+          controller: widget.controller,
+          trip: widget.controller.trips.where((t) => t.assignedDriver.toLowerCase() == (widget.controller.loggedInName ?? widget.controller.currentDriver?.name ?? '').toLowerCase() && (t.status == 'in_progress' || t.status == 'dispatched')).firstOrNull,
+        ),
+      ),
+      (
+        title: 'Hotel & Food Stay',
+        subtitle: 'Khana & Hotel Stay Bills',
+        hindi: 'होटल खाना व बिल',
+        icon: Icons.restaurant_rounded,
+        keys: const ['hotel', 'food', 'meal', 'dhaba'],
+        action: () => HotelStayMealExpenseSheet.show(
+          context,
+          controller: widget.controller,
+          trip: widget.controller.trips.where((t) => t.assignedDriver.toLowerCase() == (widget.controller.loggedInName ?? widget.controller.currentDriver?.name ?? '').toLowerCase() && (t.status == 'in_progress' || t.status == 'dispatched')).firstOrNull,
+        ),
       ),
     ];
 
