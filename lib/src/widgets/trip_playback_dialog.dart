@@ -39,6 +39,70 @@ class TripPlaybackDialog extends StatefulWidget {
   State<TripPlaybackDialog> createState() => _TripPlaybackDialogState();
 }
 
+enum StopCategory {
+  foodHotel,
+  petrolPump,
+  trafficToll,
+  loadingHold,
+}
+
+class _ConsolidatedStop {
+  const _ConsolidatedStop({
+    required this.position,
+    required this.category,
+    required this.name,
+    required this.durationMinutes,
+    required this.time,
+    required this.timelineIndex,
+  });
+
+  final LatLng position;
+  final StopCategory category;
+  final String name;
+  final int durationMinutes;
+  final DateTime time;
+  final int timelineIndex;
+
+  IconData get icon {
+    switch (category) {
+      case StopCategory.foodHotel:
+        return Icons.restaurant_rounded;
+      case StopCategory.petrolPump:
+        return Icons.local_gas_station_rounded;
+      case StopCategory.trafficToll:
+        return Icons.traffic_rounded;
+      case StopCategory.loadingHold:
+        return Icons.inventory_2_rounded;
+    }
+  }
+
+  Color get color {
+    switch (category) {
+      case StopCategory.foodHotel:
+        return const Color(0xFFEA580C); // Warm Orange for Hotel/Food
+      case StopCategory.petrolPump:
+        return const Color(0xFF7C3AED); // Indigo / Purple for Fuel
+      case StopCategory.trafficToll:
+        return const Color(0xFFDC2626); // Red / Crimson for Traffic / Toll
+      case StopCategory.loadingHold:
+        return const Color(0xFF2563EB); // Blue for Loading
+    }
+  }
+
+  String get categoryLabel {
+    switch (category) {
+      case StopCategory.foodHotel:
+        return 'Hotel / Dhaba Break';
+      case StopCategory.petrolPump:
+        return 'Petrol Pump / Fuel Stop';
+      case StopCategory.trafficToll:
+        return 'Traffic / Toll Plaza Halt';
+      case StopCategory.loadingHold:
+        return 'Loading / Unloading Hold';
+    }
+  }
+}
+
 class _PlaybackPoint {
   const _PlaybackPoint({
     required this.position,
@@ -48,6 +112,7 @@ class _PlaybackPoint {
     this.isHold = false,
     this.holdDurationSeconds = 0,
     this.label = '',
+    this.stop,
   });
 
   final LatLng position;
@@ -57,12 +122,14 @@ class _PlaybackPoint {
   final bool isHold;
   final int holdDurationSeconds;
   final String label;
+  final _ConsolidatedStop? stop;
 }
 
 class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
   final MapController _mapController = MapController();
   List<_PlaybackPoint> _timeline = [];
   List<LatLng> _routeGeometry = [];
+  List<_ConsolidatedStop> _consolidatedStops = [];
   bool _isLoading = true;
 
   // Video-style playback controls
@@ -137,38 +204,81 @@ class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
 
     // 3. Assemble timeline points from real breadcrumbs or synthesize along route
     final points = <_PlaybackPoint>[];
+    final consolidatedStops = <_ConsolidatedStop>[];
     final baseTime = DateTime.tryParse(widget.trip.startedAt.isNotEmpty
             ? widget.trip.startedAt
             : widget.trip.createdAt) ??
         DateTime.now().subtract(const Duration(hours: 4));
 
     if (rawBreadcrumbs.length >= 5) {
+      int currentHoldStartIdx = -1;
+      int accumulatedHoldSec = 0;
+
       for (int i = 0; i < rawBreadcrumbs.length; i++) {
         final b = rawBreadcrumbs[i];
         final isStopped = b.speed < 2.0;
-        int holdSec = 0;
-        if (isStopped && i > 0) {
-          holdSec = b.timestamp
+        int stepSec = 0;
+        if (i > 0) {
+          stepSec = b.timestamp
               .difference(rawBreadcrumbs[i - 1].timestamp)
               .inSeconds
               .clamp(0, 7200);
         }
+
+        if (isStopped) {
+          if (currentHoldStartIdx == -1) currentHoldStartIdx = i;
+          accumulatedHoldSec += stepSec;
+        } else {
+          // Check if previous stop was significant (> 3 mins)
+          if (currentHoldStartIdx != -1 && accumulatedHoldSec >= 180) {
+            final stopPt = rawBreadcrumbs[currentHoldStartIdx];
+            final durMin = (accumulatedHoldSec / 60).round();
+            // Categorize stop based on duration and order
+            final category = durMin >= 30
+                ? StopCategory.foodHotel
+                : (consolidatedStops.isEmpty
+                    ? StopCategory.loadingHold
+                    : (durMin >= 15 ? StopCategory.petrolPump : StopCategory.trafficToll));
+            final stopName = category == StopCategory.foodHotel
+                ? 'Hotel & Dhaba Meal Break'
+                : (category == StopCategory.petrolPump
+                    ? 'Fuel / Petrol Pump Station'
+                    : (category == StopCategory.trafficToll
+                        ? 'Traffic & Toll Plaza Halt'
+                        : 'Warehouse / Loading Halt'));
+
+            consolidatedStops.add(
+              _ConsolidatedStop(
+                position: LatLng(stopPt.latitude, stopPt.longitude),
+                category: category,
+                name: stopName,
+                durationMinutes: durMin,
+                time: stopPt.timestamp,
+                timelineIndex: currentHoldStartIdx,
+              ),
+            );
+          }
+          currentHoldStartIdx = -1;
+          accumulatedHoldSec = 0;
+        }
+
         points.add(
           _PlaybackPoint(
             position: LatLng(b.latitude, b.longitude),
             speed: b.speed,
             course: b.course,
             timestamp: b.timestamp,
-            isHold: isStopped && holdSec > 60,
-            holdDurationSeconds: holdSec,
-            label: isStopped && holdSec > 60
-                ? 'Hold (${(holdSec / 60).round()}m)'
-                : (b.speed > 80 ? 'Overspeed' : ''),
+            isHold: isStopped,
+            holdDurationSeconds: stepSec,
+            label: b.speed > 80 ? 'Overspeed (>80 km/h)' : '',
           ),
         );
       }
     } else if (routePoints.isNotEmpty) {
-      // Synthesize realistic highway profile for the route
+      // Synthesize realistic highway driving profile with 2-3 specific distinct stops:
+      // Stop 1 (~32%): Hotel / Dhaba Food Break (35 mins)
+      // Stop 2 (~68%): Petrol Pump / Diesel Station (12 mins)
+      // (Optionally at ~88%: Traffic / Toll Plaza (8 mins))
       final totalSteps = math.max(60, routePoints.length);
       final stepDurationSec =
           ((widget.trip.plannedDurationMinutes > 0
@@ -177,24 +287,75 @@ class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
                       60) ~/
                   totalSteps;
 
+      final hotelIdx = (routePoints.length * 0.33).round().clamp(1, routePoints.length - 2);
+      final fuelIdx = (routePoints.length * 0.68).round().clamp(1, routePoints.length - 2);
+      final trafficIdx = routePoints.length > 25
+          ? (routePoints.length * 0.86).round().clamp(1, routePoints.length - 2)
+          : -1;
+
+      // 1. Hotel / Dhaba Stop
+      final hotelStop = _ConsolidatedStop(
+        position: routePoints[hotelIdx],
+        category: StopCategory.foodHotel,
+        name: 'Dhaba / Highway Restaurant Break',
+        durationMinutes: 35,
+        time: baseTime.add(Duration(seconds: hotelIdx * stepDurationSec)),
+        timelineIndex: hotelIdx,
+      );
+      consolidatedStops.add(hotelStop);
+
+      // 2. Petrol Pump / Fuel Station Stop
+      final fuelStop = _ConsolidatedStop(
+        position: routePoints[fuelIdx],
+        category: StopCategory.petrolPump,
+        name: 'Fuel / Diesel Station Stop',
+        durationMinutes: 12,
+        time: baseTime.add(Duration(seconds: fuelIdx * stepDurationSec)),
+        timelineIndex: fuelIdx,
+      );
+      consolidatedStops.add(fuelStop);
+
+      // 3. Traffic / Toll Halt
+      _ConsolidatedStop? tollStop;
+      if (trafficIdx > 0 && trafficIdx != hotelIdx && trafficIdx != fuelIdx) {
+        tollStop = _ConsolidatedStop(
+          position: routePoints[trafficIdx],
+          category: StopCategory.trafficToll,
+          name: 'Toll Plaza / Traffic Halt',
+          durationMinutes: 8,
+          time: baseTime.add(Duration(seconds: trafficIdx * stepDurationSec)),
+          timelineIndex: trafficIdx,
+        );
+        consolidatedStops.add(tollStop);
+      }
+
       for (int i = 0; i < routePoints.length; i++) {
         final p = routePoints[i];
-        final progress = i / routePoints.length;
-
-        // Simulate realistic driving speeds: highways 65-75 km/h, city 25-40 km/h, hold/stops at 30% and 70%
-        final bool isHoldPoint = (progress > 0.32 && progress < 0.36) ||
-            (progress > 0.68 && progress < 0.72) ||
-            (i == 0) ||
-            (i == routePoints.length - 1);
+        final bool isAtHotel = (i == hotelIdx);
+        final bool isAtFuel = (i == fuelIdx);
+        final bool isAtToll = (i == trafficIdx);
+        final bool isHoldPoint = isAtHotel || isAtFuel || isAtToll;
 
         double speed = 0.0;
         int holdSec = 0;
         String label = '';
+        _ConsolidatedStop? stopRef;
 
-        if (isHoldPoint) {
+        if (isAtHotel) {
           speed = 0.0;
-          holdSec = (progress > 0.32 && progress < 0.36) ? 900 : 1200; // 15-20 min stop
-          label = progress > 0.5 ? 'Toll & Tea Hold' : 'Loading/Naka Hold';
+          holdSec = 35 * 60;
+          label = '🍽️ Hotel / Dhaba Break (35m)';
+          stopRef = hotelStop;
+        } else if (isAtFuel) {
+          speed = 0.0;
+          holdSec = 12 * 60;
+          label = '⛽ Petrol Pump / Fuel Stop (12m)';
+          stopRef = fuelStop;
+        } else if (isAtToll) {
+          speed = 0.0;
+          holdSec = 8 * 60;
+          label = '🚦 Toll Plaza / Traffic Halt (8m)';
+          stopRef = tollStop;
         } else {
           // Highway cruise speed with natural variation
           final jitter = (math.sin(i * 0.4) * 8.0);
@@ -215,10 +376,13 @@ class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
             isHold: isHoldPoint,
             holdDurationSeconds: holdSec,
             label: label,
+            stop: stopRef,
           ),
         );
       }
     }
+
+    _consolidatedStops = consolidatedStops;
 
     if (points.isNotEmpty) {
       _timeline = points;
@@ -229,10 +393,9 @@ class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
               movingPoints.length)
           : (widget.trip.averageSpeedKmh > 0 ? widget.trip.averageSpeedKmh : 54.0);
 
-      final holdPoints = points.where((p) => p.isHold).toList();
-      _totalHolds = holdPoints.length;
-      _totalHoldMinutes = holdPoints.fold<int>(
-          0, (sum, p) => sum + (p.holdDurationSeconds ~/ 60));
+      _totalHolds = consolidatedStops.length;
+      _totalHoldMinutes = consolidatedStops.fold<int>(
+          0, (sum, s) => sum + s.durationMinutes);
       if (_totalHoldMinutes == 0 && _totalHolds > 0) {
         _totalHoldMinutes = _totalHolds * 15;
       }
@@ -336,8 +499,6 @@ class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
     final coveredPoints = _timeline.isNotEmpty
         ? _timeline.sublist(0, _currentIndex + 1).map((p) => p.position).toList()
         : <LatLng>[];
-
-    final holdPoints = _timeline.where((p) => p.isHold).toList();
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
@@ -586,34 +747,71 @@ class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
                                       size: 30,
                                     ),
                                   ),
-                                // Hold / pause points
-                                for (final h in holdPoints)
+                                // Categorized Stoppage & Hold markers along the route (Hotel, Petrol, Traffic, etc.)
+                                for (final s in _consolidatedStops)
                                   Marker(
-                                    point: h.position,
-                                    width: 44,
-                                    height: 44,
+                                    point: s.position,
+                                    width: 48,
+                                    height: 48,
                                     child: Tooltip(
                                       message:
-                                          'Hold: ${h.holdDurationSeconds ~/ 60} min at ${_formatTime(h.timestamp)}',
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFEF4444),
-                                          shape: BoxShape.circle,
-                                          border: Border.all(
-                                              color: Colors.white, width: 2),
-                                          boxShadow: const [
-                                            BoxShadow(
-                                              color: Color(0x33000000),
-                                              blurRadius: 6,
+                                          '${s.name} (${s.durationMinutes} min) at ${_formatTime(s.time)}',
+                                      child: GestureDetector(
+                                        onTap: () {
+                                          _pausePlayback();
+                                          _seekTo((s.timelineIndex / math.max(1, _timeline.length - 1)).clamp(0.0, 1.0));
+                                        },
+                                        child: Stack(
+                                          alignment: Alignment.center,
+                                          children: [
+                                            Container(
+                                              width: 38,
+                                              height: 38,
+                                              decoration: BoxDecoration(
+                                                color: s.color,
+                                                shape: BoxShape.circle,
+                                                border: Border.all(
+                                                    color: Colors.white, width: 2.2),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: s.color.withValues(alpha: 0.5),
+                                                    blurRadius: 8,
+                                                    offset: const Offset(0, 3),
+                                                  ),
+                                                ],
+                                              ),
+                                              child: Center(
+                                                child: Icon(
+                                                  s.icon,
+                                                  color: Colors.white,
+                                                  size: 19,
+                                                ),
+                                              ),
+                                            ),
+                                            Positioned(
+                                              bottom: 0,
+                                              child: Container(
+                                                padding: const EdgeInsets.symmetric(
+                                                    horizontal: 4, vertical: 1),
+                                                decoration: BoxDecoration(
+                                                  color: const Color(0xFF0F172A),
+                                                  borderRadius:
+                                                      BorderRadius.circular(6),
+                                                  border: Border.all(
+                                                      color: Colors.white,
+                                                      width: 0.8),
+                                                ),
+                                                child: Text(
+                                                  '${s.durationMinutes}m',
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 8.5,
+                                                    fontWeight: FontWeight.w900,
+                                                  ),
+                                                ),
+                                              ),
                                             ),
                                           ],
-                                        ),
-                                        child: const Center(
-                                          child: Icon(
-                                            Icons.pause_rounded,
-                                            color: Colors.white,
-                                            size: 16,
-                                          ),
                                         ),
                                       ),
                                     ),
@@ -728,13 +926,44 @@ class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
                               ),
                             ),
                             if (currentPoint.label.isNotEmpty) ...[
-                              const SizedBox(height: 2),
-                              Text(
-                                currentPoint.label,
-                                style: const TextStyle(
-                                  color: Color(0xFFF87171),
-                                  fontSize: 10.5,
-                                  fontWeight: FontWeight.w700,
+                              const SizedBox(height: 4),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: currentPoint.stop != null
+                                      ? currentPoint.stop!.color.withValues(alpha: 0.25)
+                                      : const Color(0x33EF4444),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                    color: currentPoint.stop != null
+                                        ? currentPoint.stop!.color
+                                        : const Color(0xFFEF4444),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (currentPoint.stop != null) ...[
+                                      Icon(
+                                        currentPoint.stop!.icon,
+                                        size: 13,
+                                        color: currentPoint.stop!.color,
+                                      ),
+                                      const SizedBox(width: 4),
+                                    ],
+                                    Text(
+                                      currentPoint.label,
+                                      style: TextStyle(
+                                        color: currentPoint.stop != null
+                                            ? Colors.white
+                                            : const Color(0xFFF87171),
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
@@ -755,6 +984,45 @@ class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
                       child: const Icon(Icons.fullscreen_rounded),
                     ),
                   ),
+
+                  // Stop legend overlay (Hotel, Petrol, Traffic)
+                  if (_consolidatedStops.isNotEmpty)
+                    Positioned(
+                      bottom: 12,
+                      left: 12,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xEE0F172A),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                              color: const Color(0xFF334155), width: 1),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _buildLegendItem(
+                              icon: Icons.restaurant_rounded,
+                              color: const Color(0xFFEA580C),
+                              label: 'Hotel / Dhaba',
+                            ),
+                            const SizedBox(width: 8),
+                            _buildLegendItem(
+                              icon: Icons.local_gas_station_rounded,
+                              color: const Color(0xFF7C3AED),
+                              label: 'Petrol / Fuel',
+                            ),
+                            const SizedBox(width: 8),
+                            _buildLegendItem(
+                              icon: Icons.traffic_rounded,
+                              color: const Color(0xFFDC2626),
+                              label: 'Traffic / Toll',
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -819,17 +1087,18 @@ class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Hold count indicator
+                      // Categorized stops indicator
                       Row(
                         children: [
-                          const Icon(Icons.pause_circle_outline_rounded,
-                              size: 15, color: Color(0xFFF472B6)),
+                          const Icon(Icons.place_rounded,
+                              size: 15, color: Color(0xFF38BDF8)),
                           const SizedBox(width: 4),
                           Text(
-                            '$_totalHolds Hold Points Detected',
+                            '$_totalHolds Stops (${_totalHoldMinutes}m total)',
                             style: const TextStyle(
                               color: Color(0xFFCBD5E1),
                               fontSize: 11,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ],
@@ -956,6 +1225,35 @@ class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
       width: 1,
       height: 20,
       color: const Color(0xFF334155),
+    );
+  }
+
+  Widget _buildLegendItem({
+    required IconData icon,
+    required Color color,
+    required String label,
+  }) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(3),
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, size: 10, color: Colors.white),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: const TextStyle(
+            color: Color(0xFFE2E8F0),
+            fontSize: 9.5,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
     );
   }
 
