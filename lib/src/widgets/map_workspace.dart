@@ -1498,20 +1498,22 @@ class _MapWorkspaceState extends State<MapWorkspace> {
 
     // Real Speed Calculation:
     // Instantaneous response from hardware GPS chip (pos.speed in m/s converted to km/h)
-    // Directly starts from 1 km/h as requested!
+    // Physical movement check: If stationary or moved < 1.0m, speed MUST strictly be 0.0!
     double realSpeed = 0.0;
-    if (pos.speed > 0.15) { // pos.speed > 0.15 m/s is ~0.54 km/h -> rounds to 1 km/h
-      realSpeed = pos.speed * 3.6; // convert m/s to km/h directly
-    } else if (movedMeters >= 0.3 && _lastGpsTime != null) {
+    if (pos.speed > 0.45 && movedMeters >= 0.8) {
+      // 0.45 m/s = 1.62 km/h (displays 1 or 2 km/h when genuine movement occurs)
+      realSpeed = pos.speed * 3.6;
+    } else if (movedMeters >= 1.2 && _lastGpsTime != null) {
       final elapsedSec = now.difference(_lastGpsTime!).inMilliseconds / 1000.0;
-      if (elapsedSec > 0.15) {
+      if (elapsedSec > 0.25) {
         realSpeed = (movedMeters / elapsedSec) * 3.6;
       }
     }
 
-    // Only filter when completely motionless (< 0.6 km/h)
-    if (realSpeed < 0.6 || (pos.speed <= 0.1 && movedMeters < 0.25)) {
-      realSpeed = 0.0; // 0 km/h when strictly motionless
+    // Zero-drift lock: When stationary, stopped, or jitter < 1.4 km/h or movement < 0.8m,
+    // lock strictly to 0 km/h (so '1 km/h' is never falsely shown while sitting/stopped)
+    if (realSpeed < 1.4 || movedMeters < 0.8 || pos.speed < 0.35) {
+      realSpeed = 0.0;
     } else if (realSpeed > 160) {
       realSpeed = 0.0; // Filter unreasonable GPS teleport glitch
     }
