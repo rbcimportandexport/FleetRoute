@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_compass/flutter_compass.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:battery_plus/battery_plus.dart';
 import 'package:geolocator/geolocator.dart';
@@ -86,6 +87,8 @@ class _MapWorkspaceState extends State<MapWorkspace> {
   NavigationTurnInfo? _currentTurnInfo;
   Timer? _navTimer;
   StreamSubscription<Position>? _gpsSubscription;
+  StreamSubscription<CompassEvent>? _compassSubscription;
+  double _compassHeading = 0.0;
   Position? _lastGpsPosition;
   DateTime? _lastGpsTime;
   DateTime? _lastTrackerFixTime;
@@ -358,6 +361,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
     _intentSubscription?.cancel();
     _navTimer?.cancel();
     _gpsSubscription?.cancel();
+    _compassSubscription?.cancel();
     widget.controller.removeListener(_onControllerChanged);
     _mapController.dispose();
     super.dispose();
@@ -1292,6 +1296,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
 
   void _startRealGpsTracking() {
     _gpsSubscription?.cancel();
+    _compassSubscription?.cancel();
     _navTimer?.cancel();
 
     try {
@@ -1306,6 +1311,30 @@ class _MapWorkspaceState extends State<MapWorkspace> {
           _showMessage('GPS Signal error: $err');
         },
       );
+
+      // Real-time phone orientation / magnetic compass heading listener
+      // Rotates nav arrow and camera instantly when the driver rotates/turns the phone
+      try {
+        _compassSubscription = FlutterCompass.events?.listen((event) {
+          final heading = event.heading;
+          if (heading == null || !mounted || !_isNavigating) return;
+          final normalizedHeading = (heading % 360.0 + 360.0) % 360.0;
+          _compassHeading = normalizedHeading;
+
+          // When stopped or moving slowly (< 12 km/h), compass heading takes immediate priority!
+          if (_currentSpeed < 12.0) {
+            setState(() {
+              _currentNavBearing = normalizedHeading;
+            });
+            if (_cameraFollowLocked && _currentNavPosition != null) {
+              _animateCameraToNavVehicle(_currentNavPosition!, normalizedHeading);
+            }
+          }
+        });
+      } catch (compassErr) {
+        debugPrint('[MapWorkspace] Compass error: $compassErr');
+      }
+
       _showMessage('Real GPS Navigation Active (Real movement tracking)');
     } catch (e) {
       _showMessage('GPS error: $e');
@@ -1316,6 +1345,8 @@ class _MapWorkspaceState extends State<MapWorkspace> {
     _navTimer?.cancel();
     _gpsSubscription?.cancel();
     _gpsSubscription = null;
+    _compassSubscription?.cancel();
+    _compassSubscription = null;
     _lastGpsPosition = null;
     _lastGpsTime = null;
     _lastTrackerFixTime = null;
@@ -1370,7 +1401,9 @@ class _MapWorkspaceState extends State<MapWorkspace> {
     final bearing = truck.course.isFinite
         ? (truck.course % 360.0 + 360.0) % 360.0
         : _currentNavBearing;
-    final speed = truck.currentSpeed.clamp(0.0, 180.0);
+    final rawSpeed = truck.currentSpeed;
+    // Suppress stationary GPS drift jitter (under 2.5 km/h is treated as 0 km/h)
+    final speed = (rawSpeed < 2.5) ? 0.0 : rawSpeed.clamp(0.0, 180.0);
 
     setState(() {
       _usingVehicleTracker = true;
@@ -1427,31 +1460,40 @@ class _MapWorkspaceState extends State<MapWorkspace> {
 
     // Real Speed Calculation:
     // Prefer sensor speed (pos.speed in m/s converted to km/h) if valid, or fallback to displacement / time.
+    // Enforce deadband filtering: Any speed < 2.5 km/h or movement < 2.0m is strictly 0 km/h (sitting / stationary).
     double realSpeed = 0.0;
-    if (pos.speed > 0.3) {
+    if (pos.speed > 0.7 && movedMeters >= 1.5) {
       realSpeed = pos.speed * 3.6; // convert m/s to km/h
     } else if (_lastGpsPosition != null &&
         _lastGpsTime != null &&
-        movedMeters > 1.5) {
+        movedMeters >= 2.5) {
       final elapsedSec = now.difference(_lastGpsTime!).inMilliseconds / 1000.0;
-      if (elapsedSec > 0.3) {
+      if (elapsedSec > 0.4) {
         realSpeed = (movedMeters / elapsedSec) * 3.6;
       }
     }
 
-    if (realSpeed > 160) {
+    if (realSpeed < 2.5 || movedMeters < 1.5) {
+      realSpeed = 0.0; // Strictly 0 km/h when user is sitting or stationary
+    } else if (realSpeed > 160) {
       realSpeed = 0.0; // Filter unreasonable GPS teleport glitch
     }
 
     // Heading / Bearing Calculation:
+    // When moving (> 12 km/h), prefer GPS course or route direction.
+    // When stopped or moving slowly (<= 12 km/h), compass heading takes precedence so arrow turns with phone!
     double bearing = _currentNavBearing;
-    if (pos.heading > 0 && (movedMeters > 1.2 || pos.speed > 0.4)) {
-      bearing = pos.heading;
-    } else if (_lastGpsPosition != null && movedMeters > 1.5) {
-      bearing = RouteTrafficService.calculateBearing(
-        LatLng(_lastGpsPosition!.latitude, _lastGpsPosition!.longitude),
-        newLatLng,
-      );
+    if (realSpeed > 12.0) {
+      if (pos.heading > 0 && (movedMeters > 2.0 || pos.speed > 0.7)) {
+        bearing = pos.heading;
+      } else if (_lastGpsPosition != null && movedMeters > 2.0) {
+        bearing = RouteTrafficService.calculateBearing(
+          LatLng(_lastGpsPosition!.latitude, _lastGpsPosition!.longitude),
+          newLatLng,
+        );
+      }
+    } else if (_compassHeading > 0.0) {
+      bearing = _compassHeading;
     }
 
     _lastGpsPosition = pos;
