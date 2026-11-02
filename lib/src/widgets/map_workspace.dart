@@ -1298,7 +1298,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
       _gpsSubscription = Geolocator.getPositionStream(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.bestForNavigation,
-          distanceFilter: 2, // minimum 2 meters physical movement
+          distanceFilter: 0, // Instantaneous movement tracking without wait
         ),
       ).listen(
         _updateGpsLocation,
@@ -1411,13 +1411,6 @@ class _MapWorkspaceState extends State<MapWorkspace> {
   void _updateGpsLocation(Position pos) {
     if (!mounted || !_isNavigating) return;
 
-    final selectedTruck = _selectedLiveTruck;
-    // On Admin view with a selected truck: admin's phone location shouldn't override truck position,
-    // unless the user is driver mode or tracking this handset.
-    if (widget.controller.isAdmin && selectedTruck != null) {
-      return;
-    }
-
     final newLatLng = LatLng(pos.latitude, pos.longitude);
     final now = DateTime.now();
 
@@ -1490,7 +1483,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
     }
 
     // Real driver phone GPS telemetry sync to Firestore
-    final activeVehicleCode = selectedTruck?.code ??
+    final activeVehicleCode = _selectedLiveTruck?.code ??
         widget.controller.selectedDriver?.assignedVehicle ??
         '';
     if (activeVehicleCode.isNotEmpty) {
