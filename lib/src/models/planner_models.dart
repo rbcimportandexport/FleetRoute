@@ -1226,6 +1226,7 @@ class TripRecord {
 
 class OperationsAlert {
   const OperationsAlert({
+    this.id = '',
     required this.title,
     required this.details,
     this.severity = 'info',
@@ -1240,6 +1241,7 @@ class OperationsAlert {
     this.driverPhoto = '',
   });
 
+  final String id;
   final String title;
   final String details;
   final String severity;
@@ -1259,6 +1261,7 @@ class OperationsAlert {
   bool get isSeatbelt => category == 'seatbelt';
 
   OperationsAlert copyWith({
+    String? id,
     String? title,
     String? details,
     String? severity,
@@ -1273,6 +1276,7 @@ class OperationsAlert {
     String? driverPhoto,
   }) =>
       OperationsAlert(
+        id: id ?? this.id,
         title: title ?? this.title,
         details: details ?? this.details,
         severity: severity ?? this.severity,
@@ -1288,6 +1292,7 @@ class OperationsAlert {
       );
 
   Map<String, Object> toJson() => {
+        if (id.isNotEmpty) 'id': id,
         'title': title,
         'details': details,
         'severity': severity,
@@ -1325,13 +1330,16 @@ class OperationsAlert {
         cat = 'general';
       }
     }
+    final isResolved = _jsonBool(json['isResolved']);
+    final isReadRaw = _jsonBool(json['isRead']);
     return OperationsAlert(
+      id: _jsonString(json['id']),
       title: title,
       details: details,
       severity: _jsonString(json['severity'], 'info'),
       createdAt: _jsonString(json['createdAt']),
-      isRead: _jsonBool(json['isRead']),
-      isResolved: _jsonBool(json['isResolved']),
+      isRead: isReadRaw || isResolved,
+      isResolved: isResolved,
       category: cat,
       vehicleNumber: _jsonString(json['vehicleNumber']),
       challanNumber: _jsonString(json['challanNumber']),

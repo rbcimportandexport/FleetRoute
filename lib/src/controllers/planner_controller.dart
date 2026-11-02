@@ -3771,6 +3771,9 @@ class PlannerController extends ChangeNotifier {
     final removed = alerts[index];
     alerts.removeAt(index);
     notifyListeners();
+    if (removed.id.isNotEmpty) {
+      unawaited(FirebaseBackendService.instance.deleteOperationsAlert(removed.id));
+    }
     await _saveAlerts();
     await logActivity(
       title: 'Alert Dismissed',
@@ -3783,6 +3786,11 @@ class PlannerController extends ChangeNotifier {
   Future<void> clearAllAlerts() async {
     if (alerts.isEmpty) return;
     final removedCount = alerts.length;
+    for (final alert in alerts) {
+      if (alert.id.isNotEmpty) {
+        unawaited(FirebaseBackendService.instance.deleteOperationsAlert(alert.id));
+      }
+    }
     alerts.clear();
     notifyListeners();
     await _saveAlerts();
@@ -3804,8 +3812,11 @@ class PlannerController extends ChangeNotifier {
   Future<void> markAllAlertsRead() async {
     var changed = false;
     for (var index = 0; index < alerts.length; index++) {
-      if (!alerts[index].isRead) {
-        alerts[index] = alerts[index].copyWith(isRead: true);
+      if (!alerts[index].isRead || !alerts[index].isResolved) {
+        alerts[index] = alerts[index].copyWith(
+          isRead: true,
+          isResolved: true,
+        );
         changed = true;
       }
     }

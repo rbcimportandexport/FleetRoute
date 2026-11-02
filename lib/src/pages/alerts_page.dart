@@ -545,7 +545,9 @@ class _AlertsPageState extends State<AlertsPage> {
     final visibleAlerts = widget.controller.alerts
         .where((alert) => alert.category != 'compliance')
         .toList();
-    final unreadCount = visibleAlerts.where((alert) => !alert.isRead).length;
+    final unreadCount = visibleAlerts
+        .where((alert) => !alert.isRead && !alert.isResolved)
+        .length;
     final totalCount = visibleAlerts.length;
 
     return Container(

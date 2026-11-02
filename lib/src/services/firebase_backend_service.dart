@@ -342,8 +342,28 @@ class FirebaseBackendService {
     required OperationsAlert alert,
     http.Client? client,
   }) {
-    final alertId = '${alert.category}_${alert.createdAt.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_')}_${alert.title.hashCode.abs()}';
+    final alertId = alert.id.isNotEmpty
+        ? alert.id
+        : '${alert.category}_${alert.createdAt.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_')}_${alert.title.hashCode.abs()}';
     return _put('operations_alerts', alertId, alert.toJson(), client: client);
+  }
+
+  Future<bool> deleteOperationsAlert(String rawAlertId) async {
+    if (!isConfigured) return true;
+    final documentId =
+        rawAlertId.trim().replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
+    if (documentId.isEmpty) return false;
+    try {
+      await FirebaseFirestore.instance
+          .collection('operations_alerts')
+          .doc(documentId)
+          .delete()
+          .timeout(const Duration(seconds: 12));
+      return true;
+    } catch (e) {
+      debugPrint('[FirebaseSync] Failed to delete operations_alert: $e');
+      return false;
+    }
   }
 
   Stream<List<OperationsAlert>> watchOperationsAlerts() {

@@ -574,6 +574,7 @@ class _SeatbeltVerificationDialogState extends State<SeatbeltVerificationDialog>
           driverPhoto:
               '', // Avoid duplicate multi-megabyte photo payload in info alerts
           createdAt: DateTime.now().toIso8601String(),
+          isRead: true,
           isResolved: true,
         ),
       );
