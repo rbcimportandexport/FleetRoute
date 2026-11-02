@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'trip_playback_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -295,6 +296,31 @@ class TripDetailReportDialog extends StatelessWidget {
                       ],
                     ),
                   ),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      TripPlaybackDialog.show(
+                        context,
+                        trip: trip,
+                        controller: controller,
+                      );
+                    },
+                    icon: const Icon(Icons.play_circle_fill_rounded, size: 14),
+                    label: const Text('ROUTE PLAYBACK (वीडियो)'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0F172A),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      textStyle: const TextStyle(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w800,
+                        fontFamily: 'sans-serif',
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
                     icon:

@@ -7,6 +7,7 @@ import '../controllers/planner_controller.dart';
 import '../models/planner_models.dart';
 import '../theme/app_theme.dart';
 import 'trip_detail_report_dialog.dart';
+import 'trip_playback_dialog.dart';
 
 /// Interactive Driver Daily Activity & Cleaning Calendar Dialog
 /// Lets admin and drivers click any date/day to inspect everything that occurred on that date:
@@ -897,17 +898,33 @@ class _DriverCalendarDialogState extends State<DriverCalendarDialog> {
               ],
             ),
           ),
-          TextButton(
-            onPressed: () {
-              showDialog<void>(
-                context: context,
-                builder: (_) => TripDetailReportDialog(
-                  trip: trip,
-                  controller: widget.controller,
-                ),
-              );
-            },
-            child: const Text('VIEW', style: TextStyle(fontSize: 11)),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                tooltip: 'Live Video Playback',
+                icon: const Icon(Icons.play_circle_fill_rounded, color: AppColors.primary, size: 22),
+                onPressed: () {
+                  TripPlaybackDialog.show(
+                    context,
+                    trip: trip,
+                    controller: widget.controller,
+                  );
+                },
+              ),
+              TextButton(
+                onPressed: () {
+                  showDialog<void>(
+                    context: context,
+                    builder: (_) => TripDetailReportDialog(
+                      trip: trip,
+                      controller: widget.controller,
+                    ),
+                  );
+                },
+                child: const Text('VIEW', style: TextStyle(fontSize: 11)),
+              ),
+            ],
           ),
         ],
       ),
