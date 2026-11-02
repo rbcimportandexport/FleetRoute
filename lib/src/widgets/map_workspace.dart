@@ -1301,9 +1301,10 @@ class _MapWorkspaceState extends State<MapWorkspace> {
 
     try {
       _gpsSubscription = Geolocator.getPositionStream(
-        locationSettings: const LocationSettings(
+        locationSettings: AndroidSettings(
           accuracy: LocationAccuracy.bestForNavigation,
           distanceFilter: 0, // Instantaneous movement tracking without wait
+          intervalDuration: const Duration(milliseconds: 300), // Fast 300ms real-time updates
         ),
       ).listen(
         _updateGpsLocation,
@@ -1313,7 +1314,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
       );
 
       // Real-time phone orientation / magnetic compass heading listener
-      // Rotates nav arrow and camera instantly when the driver rotates/turns the phone
+      // Rotates nav arrow instantly when the driver rotates/turns the phone
       try {
         _compassSubscription = FlutterCompass.events?.listen((event) {
           final heading = event.heading;
@@ -1323,11 +1324,18 @@ class _MapWorkspaceState extends State<MapWorkspace> {
 
           // When stopped or moving slowly (< 12 km/h), compass heading takes immediate priority!
           if (_currentSpeed < 12.0) {
-            setState(() {
-              _currentNavBearing = normalizedHeading;
-            });
-            if (_cameraFollowLocked && _currentNavPosition != null) {
-              _animateCameraToNavVehicle(_currentNavPosition!, normalizedHeading);
+            final diff = (normalizedHeading - _currentNavBearing).abs();
+            // Update smoothly on changes > 1 degree without lag
+            if (diff > 1.0) {
+              setState(() {
+                _currentNavBearing = normalizedHeading;
+              });
+              // Rotate map camera only if user has locked camera on vehicle
+              if (_cameraFollowLocked && _currentNavPosition != null) {
+                try {
+                  _mapController.rotate(normalizedHeading);
+                } catch (_) {}
+              }
             }
           }
         });
