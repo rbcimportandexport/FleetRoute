@@ -1418,8 +1418,8 @@ class _MapWorkspaceState extends State<MapWorkspace> {
         ? (truck.course % 360.0 + 360.0) % 360.0
         : _currentNavBearing;
     final rawSpeed = truck.currentSpeed;
-    // Suppress stationary GPS drift jitter (under 2.5 km/h is treated as 0 km/h)
-    final speed = (rawSpeed < 2.5) ? 0.0 : rawSpeed.clamp(0.0, 180.0);
+    // Show real speed from 1 km/h onwards directly without jumping
+    final speed = (rawSpeed < 0.6) ? 0.0 : rawSpeed.clamp(0.0, 180.0);
 
     setState(() {
       _usingVehicleTracker = true;
@@ -1476,20 +1476,20 @@ class _MapWorkspaceState extends State<MapWorkspace> {
 
     // Real Speed Calculation:
     // Instantaneous response from hardware GPS chip (pos.speed in m/s converted to km/h)
-    // Sensor hardware provides instant speed without waiting for multi-meter displacement!
+    // Directly starts from 1 km/h as requested!
     double realSpeed = 0.0;
-    if (pos.speed >= 0.5) { // pos.speed >= 0.5 m/s is ~1.8 km/h
+    if (pos.speed > 0.15) { // pos.speed > 0.15 m/s is ~0.54 km/h -> rounds to 1 km/h
       realSpeed = pos.speed * 3.6; // convert m/s to km/h directly
-    } else if (movedMeters >= 0.8 && _lastGpsTime != null) {
+    } else if (movedMeters >= 0.3 && _lastGpsTime != null) {
       final elapsedSec = now.difference(_lastGpsTime!).inMilliseconds / 1000.0;
-      if (elapsedSec > 0.2) {
+      if (elapsedSec > 0.15) {
         realSpeed = (movedMeters / elapsedSec) * 3.6;
       }
     }
 
-    // Suppress tiny jitter when standing completely still (< 1.2 km/h)
-    if (realSpeed < 1.2 || (pos.speed < 0.3 && movedMeters < 0.6)) {
-      realSpeed = 0.0; // Strictly 0 km/h when user is sitting or stationary
+    // Only filter when completely motionless (< 0.6 km/h)
+    if (realSpeed < 0.6 || (pos.speed <= 0.1 && movedMeters < 0.25)) {
+      realSpeed = 0.0; // 0 km/h when strictly motionless
     } else if (realSpeed > 160) {
       realSpeed = 0.0; // Filter unreasonable GPS teleport glitch
     }
