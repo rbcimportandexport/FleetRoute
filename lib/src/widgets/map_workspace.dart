@@ -367,9 +367,12 @@ class _MapWorkspaceState extends State<MapWorkspace> {
     super.dispose();
   }
 
-    LatLng? get _liveVehiclePosition {
+  LatLng? get _liveVehiclePosition {
     final truck = _selectedLiveTruck;
-    if (truck != null && truck.hasCoordinates && truck.latitude != null && truck.longitude != null) {
+    if (truck != null &&
+        truck.hasCoordinates &&
+        truck.latitude != null &&
+        truck.longitude != null) {
       return LatLng(truck.latitude!, truck.longitude!);
     }
     if (_userLocation != null) return _userLocation;
@@ -645,9 +648,12 @@ class _MapWorkspaceState extends State<MapWorkspace> {
 
   void _fitRoute() {
     final points = <LatLng>[
-      if (_approachPoints.isNotEmpty) ..._approachPoints
-      else if (_liveVehiclePosition != null) _liveVehiclePosition!,
-      if (_routePoints.isNotEmpty) ..._routePoints
+      if (_approachPoints.isNotEmpty)
+        ..._approachPoints
+      else if (_liveVehiclePosition != null)
+        _liveVehiclePosition!,
+      if (_routePoints.isNotEmpty)
+        ..._routePoints
       else ...[
         if (_effectiveOrigin != null) _effectiveOrigin!,
         ..._effectiveStops,
@@ -1204,7 +1210,9 @@ class _MapWorkspaceState extends State<MapWorkspace> {
     // Prefer the vehicle's position (Protrack or Driver phone telemetry).
     final liveTruck = _selectedLiveTruck;
     final hasVehicleFix = liveTruck != null && liveTruck.hasCoordinates;
-    final mayUsePhoneGps = widget.controller.isDriver || liveTruck == null || !liveTruck.hasCoordinates;
+    final mayUsePhoneGps = widget.controller.isDriver ||
+        liveTruck == null ||
+        !liveTruck.hasCoordinates;
     if (hasVehicleFix) {
       initialPos = LatLng(liveTruck.latitude!, liveTruck.longitude!);
       initialBearing = liveTruck.course;
@@ -1304,7 +1312,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
         locationSettings: AndroidSettings(
           accuracy: LocationAccuracy.bestForNavigation,
           distanceFilter: 0, // Instantaneous movement tracking without wait
-          intervalDuration: const Duration(milliseconds: 300), // Fast 300ms real-time updates
+          intervalDuration: const Duration(milliseconds: 250), // Ultra-fast 250ms stream
         ),
       ).listen(
         _updateGpsLocation,
@@ -1467,34 +1475,33 @@ class _MapWorkspaceState extends State<MapWorkspace> {
     }
 
     // Real Speed Calculation:
-    // Prefer sensor speed (pos.speed in m/s converted to km/h) if valid, or fallback to displacement / time.
-    // Enforce deadband filtering: Any speed < 2.5 km/h or movement < 2.0m is strictly 0 km/h (sitting / stationary).
+    // Instantaneous response from hardware GPS chip (pos.speed in m/s converted to km/h)
+    // Sensor hardware provides instant speed without waiting for multi-meter displacement!
     double realSpeed = 0.0;
-    if (pos.speed > 0.7 && movedMeters >= 1.5) {
-      realSpeed = pos.speed * 3.6; // convert m/s to km/h
-    } else if (_lastGpsPosition != null &&
-        _lastGpsTime != null &&
-        movedMeters >= 2.5) {
+    if (pos.speed >= 0.5) { // pos.speed >= 0.5 m/s is ~1.8 km/h
+      realSpeed = pos.speed * 3.6; // convert m/s to km/h directly
+    } else if (movedMeters >= 0.8 && _lastGpsTime != null) {
       final elapsedSec = now.difference(_lastGpsTime!).inMilliseconds / 1000.0;
-      if (elapsedSec > 0.4) {
+      if (elapsedSec > 0.2) {
         realSpeed = (movedMeters / elapsedSec) * 3.6;
       }
     }
 
-    if (realSpeed < 2.5 || movedMeters < 1.5) {
+    // Suppress tiny jitter when standing completely still (< 1.2 km/h)
+    if (realSpeed < 1.2 || (pos.speed < 0.3 && movedMeters < 0.6)) {
       realSpeed = 0.0; // Strictly 0 km/h when user is sitting or stationary
     } else if (realSpeed > 160) {
       realSpeed = 0.0; // Filter unreasonable GPS teleport glitch
     }
 
     // Heading / Bearing Calculation:
-    // When moving (> 12 km/h), prefer GPS course or route direction.
-    // When stopped or moving slowly (<= 12 km/h), compass heading takes precedence so arrow turns with phone!
+    // When moving (> 8 km/h), prefer GPS course.
+    // When stopped or moving slowly (<= 8 km/h), compass heading takes immediate priority so arrow turns with phone!
     double bearing = _currentNavBearing;
-    if (realSpeed > 12.0) {
-      if (pos.heading > 0 && (movedMeters > 2.0 || pos.speed > 0.7)) {
+    if (realSpeed > 8.0) {
+      if (pos.heading > 0) {
         bearing = pos.heading;
-      } else if (_lastGpsPosition != null && movedMeters > 2.0) {
+      } else if (_lastGpsPosition != null && movedMeters > 0.8) {
         bearing = RouteTrafficService.calculateBearing(
           LatLng(_lastGpsPosition!.latitude, _lastGpsPosition!.longitude),
           newLatLng,
@@ -2362,7 +2369,8 @@ class _MapWorkspaceState extends State<MapWorkspace> {
       polylines.add(
         Polyline(
           points: _approachPoints,
-          color: const Color(0xFF0284C7), // Blue approach route from truck to pickup
+          color: const Color(
+              0xFF0284C7), // Blue approach route from truck to pickup
           strokeWidth: 5.5,
         ),
       );
@@ -4506,7 +4514,9 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                           ),
                           const SizedBox(height: 1),
                           Text(
-                            truck.isPhoneCharging ? '⚡ Charging' : 'Not Charging',
+                            truck.isPhoneCharging
+                                ? '⚡ Charging'
+                                : 'Not Charging',
                             style: TextStyle(
                               fontSize: 9.5,
                               fontWeight: FontWeight.w700,
@@ -5602,7 +5612,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
 
   double get _remainingDistanceKm {
     if (_routePoints.length < 2) return 0.0;
-    
+
     // Determine closest route point to the vehicle's current position
     int startIndex = _navIndex;
     if (_currentNavPosition != null) {
@@ -5615,7 +5625,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
     startIndex = startIndex.clamp(0, _routePoints.length - 1);
 
     double remainingMeters = 0.0;
-    
+
     // Add distance from current live vehicle position to the next route point
     if (_currentNavPosition != null && startIndex < _routePoints.length - 1) {
       remainingMeters += Geolocator.distanceBetween(
@@ -5625,7 +5635,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
         _routePoints[startIndex + 1].longitude,
       );
     }
-    
+
     // Sum remaining path segments to destination
     for (int i = startIndex + 1; i < _routePoints.length - 1; i++) {
       remainingMeters += Geolocator.distanceBetween(
@@ -5635,7 +5645,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
         _routePoints[i + 1].longitude,
       );
     }
-    
+
     final realKm = remainingMeters / 1000.0;
     if (_routeDistanceKm > 0) {
       return realKm.clamp(0.0, _routeDistanceKm);
@@ -5912,9 +5922,7 @@ class _NavigationTopHud extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          isOverspeeding
-                              ? 'OVERSPEED'
-                              : 'km/h',
+                          isOverspeeding ? 'OVERSPEED' : 'km/h',
                           style: TextStyle(
                             color: isOverspeeding
                                 ? const Color(0xFFEF4444)
