@@ -14,6 +14,7 @@ import 'fleet_workspace.dart';
 import 'route_planner_page.dart';
 import '../widgets/cargo_workflow_dialogs.dart';
 import '../widgets/delivery_proof_dialog.dart';
+import '../widgets/driver_calendar_dialog.dart';
 import '../widgets/driver_trip_history_dialog.dart';
 import '../widgets/location_search_dialog.dart';
 import '../widgets/seatbelt_records_dialog.dart';
@@ -1244,6 +1245,37 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                     side: const BorderSide(color: AppColors.primaryBorder),
                     padding:
                         const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                flex: 2,
+                child: FilledButton.icon(
+                  onPressed: () {
+                    DriverCalendarDialog.show(
+                      context,
+                      driverId: driverId,
+                      driverName: driverName,
+                      controller: widget.controller,
+                    );
+                  },
+                  icon: const Icon(Icons.calendar_month_rounded, size: 14),
+                  label: const Text(
+                    'CALENDAR',
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w800,
+                      fontFamily: 'sans-serif',
+                    ),
+                  ),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10)),
                   ),
