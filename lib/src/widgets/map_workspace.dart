@@ -5844,11 +5844,13 @@ class _NavigationTopHud extends StatelessWidget {
                                     ? '$gpsSource · STOPPED'
                                     : '$gpsSource · LIVE',
                                 style: TextStyle(
+                                  fontFamily: 'sans-serif',
                                   color: speed < 1.0
                                       ? const Color(0xFFB45309)
                                       : const Color(0xFF047857),
-                                  fontSize: compact ? 7.5 : 8.5,
+                                  fontSize: compact ? 8.5 : 9.5,
                                   fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.3,
                                 ),
                               ),
                             ),
@@ -6177,38 +6179,46 @@ class _NavigationBottomControls extends StatelessWidget {
                 ),
 
               // Real GPS Status Indicator Badge
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFDCFCE7),
-                  borderRadius: BorderRadius.circular(8),
-                  border:
-                      Border.all(color: const Color(0xFF10B981), width: 0.8),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 7,
-                      height: 7,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF10B981),
-                        shape: BoxShape.circle,
+              Flexible(
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFDCFCE7),
+                    borderRadius: BorderRadius.circular(8),
+                    border:
+                        Border.all(color: const Color(0xFF10B981), width: 0.8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 7,
+                        height: 7,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF10B981),
+                          shape: BoxShape.circle,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      speed < 1.0
-                          ? '$gpsSource · STOPPED'
-                          : '$gpsSource · ${speed.toStringAsFixed(0)} km/h',
-                      style: const TextStyle(
-                        fontSize: 9.5,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF047857),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          speed < 1.0
+                              ? '$gpsSource · STOPPED'
+                              : '$gpsSource · ${speed.toStringAsFixed(0)} km/h',
+                          style: const TextStyle(
+                            fontFamily: 'sans-serif',
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.3,
+                            color: Color(0xFF047857),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
 
