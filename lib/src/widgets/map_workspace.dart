@@ -457,15 +457,8 @@ class _MapWorkspaceState extends State<MapWorkspace> {
 
   String get _navigationGpsSource {
     final truck = _selectedLiveTruck;
-    if (_usingVehicleTracker) {
-      if (_hasFreshTrackerFix(truck)) {
-        return 'VEHICLE GPS${truck!.code.isEmpty ? '' : ' · ${truck.code}'}';
-      } else if (truck != null && truck.hasCoordinates) {
-        final timeStr = truck.lastGpsTime != null
-            ? '${truck.lastGpsTime!.hour.toString().padLeft(2, '0')}:${truck.lastGpsTime!.minute.toString().padLeft(2, '0')}'
-            : '';
-        return 'VEHICLE STALE (${truck.code}${(timeStr.isNotEmpty ? ' $timeStr' : '')})';
-      }
+    if (_usingVehicleTracker && truck != null && truck.hasCoordinates) {
+      return 'VEHICLE GPS${truck.code.isEmpty ? '' : ' · ${truck.code}'}';
     }
     if (_lastGpsPosition != null) {
       return 'PHONE GPS';
@@ -1204,14 +1197,12 @@ class _MapWorkspaceState extends State<MapWorkspace> {
     double initialSpeed = 0.0;
     int initialNavIndex = 0;
 
-    // Prefer the vehicle's own Protrack position. Previously navigation
-    // always used this phone's GPS, so an admin could not follow the truck.
+    // Prefer the vehicle's position (Protrack or Driver phone telemetry).
     final liveTruck = _selectedLiveTruck;
-    final hasVehicleFix = _hasFreshTrackerFix(liveTruck);
-    // Allow phone GPS tracking directly for both driver and admin without blocking on Protrack
-    final mayUsePhoneGps = true;
+    final hasVehicleFix = liveTruck != null && liveTruck.hasCoordinates;
+    final mayUsePhoneGps = widget.controller.isDriver || liveTruck == null || !liveTruck.hasCoordinates;
     if (hasVehicleFix) {
-      initialPos = LatLng(liveTruck!.latitude!, liveTruck.longitude!);
+      initialPos = LatLng(liveTruck.latitude!, liveTruck.longitude!);
       initialBearing = liveTruck.course;
       initialSpeed = liveTruck.currentSpeed.clamp(0.0, 180.0);
       initialNavIndex = RouteTrafficService.findClosestPointIndex(
@@ -1354,14 +1345,14 @@ class _MapWorkspaceState extends State<MapWorkspace> {
   void _applySelectedTruckFix() {
     if (!mounted || !_isNavigating) return;
     final truck = _selectedLiveTruck;
-    if (!_hasFreshTrackerFix(truck)) {
+    if (truck == null || !truck.hasCoordinates) {
       if (_usingVehicleTracker) {
         setState(() => _usingVehicleTracker = false);
       }
       return;
     }
 
-    final position = LatLng(truck!.latitude!, truck.longitude!);
+    final position = LatLng(truck.latitude!, truck.longitude!);
     final fixTime = truck.lastGpsTime;
     final unchanged =
         _lastTrackerPosition == position && _lastTrackerFixTime == fixTime;
@@ -5577,19 +5568,31 @@ class _MapWorkspaceState extends State<MapWorkspace> {
   double get _remainingDistanceKm {
     if (_routePoints.length < 2) return 0.0;
     
-    final startIndex = _navIndex.clamp(0, _routePoints.length - 1);
+    // Determine closest route point to the vehicle's current position
+    int startIndex = _navIndex;
+    if (_currentNavPosition != null) {
+      startIndex = RouteTrafficService.findClosestPointIndex(
+        _routePoints,
+        _currentNavPosition!,
+        currentIndex: _navIndex,
+      );
+    }
+    startIndex = startIndex.clamp(0, _routePoints.length - 1);
+
     double remainingMeters = 0.0;
     
-    if (_currentNavPosition != null && startIndex < _routePoints.length) {
+    // Add distance from current live vehicle position to the next route point
+    if (_currentNavPosition != null && startIndex < _routePoints.length - 1) {
       remainingMeters += Geolocator.distanceBetween(
         _currentNavPosition!.latitude,
         _currentNavPosition!.longitude,
-        _routePoints[startIndex].latitude,
-        _routePoints[startIndex].longitude,
+        _routePoints[startIndex + 1].latitude,
+        _routePoints[startIndex + 1].longitude,
       );
     }
     
-    for (int i = startIndex; i < _routePoints.length - 1; i++) {
+    // Sum remaining path segments to destination
+    for (int i = startIndex + 1; i < _routePoints.length - 1; i++) {
       remainingMeters += Geolocator.distanceBetween(
         _routePoints[i].latitude,
         _routePoints[i].longitude,
@@ -5599,7 +5602,10 @@ class _MapWorkspaceState extends State<MapWorkspace> {
     }
     
     final realKm = remainingMeters / 1000.0;
-    return realKm.clamp(0.0, _routeDistanceKm > 0 ? _routeDistanceKm : realKm);
+    if (_routeDistanceKm > 0) {
+      return realKm.clamp(0.0, _routeDistanceKm);
+    }
+    return realKm.clamp(0.0, double.infinity);
   }
 
   String get _remainingTimeStr {

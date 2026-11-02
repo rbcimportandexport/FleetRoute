@@ -835,13 +835,14 @@ class RouteTrafficService {
   }
 
   /// Finds the index of the point in [points] that is closest to [location].
-  /// When [currentIndex] is provided, bounds search to a localized neighborhood around current
-  /// progress to prevent navigation jumps on self-intersecting or looping routes.
+  /// When [currentIndex] is provided, bounds search to a localized forward neighborhood
+  /// around current progress, but if off-track (> 150m) falls back to global search
+  /// so the vehicle snaps immediately to its real position along the route.
   static int findClosestPointIndex(
     List<LatLng> points,
     LatLng location, {
     int? currentIndex,
-    int searchWindow = 35,
+    int searchWindow = 60,
   }) {
     if (points.isEmpty) return 0;
     int start = 0;
@@ -866,6 +867,25 @@ class RouteTrafficService {
         closestIdx = i;
       }
     }
+
+    // If local window search was used but closest point is more than 120 meters away,
+    // perform a full global search across all route points so navigation doesn't get
+    // permanently stuck at index 0 or an old checkpoint.
+    if (currentIndex != null && minDistance > 120.0 && points.length > end) {
+      for (var i = 0; i < points.length; i++) {
+        final d = Geolocator.distanceBetween(
+          location.latitude,
+          location.longitude,
+          points[i].latitude,
+          points[i].longitude,
+        );
+        if (d < minDistance) {
+          minDistance = d;
+          closestIdx = i;
+        }
+      }
+    }
+
     return closestIdx;
   }
 
