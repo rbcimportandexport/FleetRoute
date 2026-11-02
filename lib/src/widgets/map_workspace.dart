@@ -6131,7 +6131,6 @@ class _NavigationBottomControls extends StatelessWidget {
             ],
           ),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               // Stop Navigation Button
               FilledButton.icon(
@@ -6139,7 +6138,7 @@ class _NavigationBottomControls extends StatelessWidget {
                 style: FilledButton.styleFrom(
                   backgroundColor: const Color(0xFFEF4444),
                   padding: EdgeInsets.symmetric(
-                    horizontal: compact ? 8 : 12,
+                    horizontal: compact ? 10 : 14,
                     vertical: 9,
                   ),
                   shape: RoundedRectangleBorder(
@@ -6152,9 +6151,10 @@ class _NavigationBottomControls extends StatelessWidget {
                   style: TextStyle(fontWeight: FontWeight.w800, fontSize: 10.5),
                 ),
               ),
+              const SizedBox(width: 8),
 
               // Add Stop Button in Navigation
-              if (onAddStop != null)
+              if (onAddStop != null) ...[
                 FilledButton.icon(
                   onPressed: onAddStop,
                   style: FilledButton.styleFrom(
@@ -6162,7 +6162,7 @@ class _NavigationBottomControls extends StatelessWidget {
                     foregroundColor: const Color(0xFFB45309),
                     side: const BorderSide(color: Color(0xFFFDE68A)),
                     padding: EdgeInsets.symmetric(
-                      horizontal: compact ? 8 : 12,
+                      horizontal: compact ? 10 : 14,
                       vertical: 9,
                     ),
                     shape: RoundedRectangleBorder(
@@ -6177,12 +6177,14 @@ class _NavigationBottomControls extends StatelessWidget {
                         TextStyle(fontWeight: FontWeight.w800, fontSize: 10.5),
                   ),
                 ),
+                const SizedBox(width: 8),
+              ],
 
               // Real GPS Status Indicator Badge
-              Flexible(
+              Expanded(
                 child: Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                   decoration: BoxDecoration(
                     color: const Color(0xFFDCFCE7),
                     borderRadius: BorderRadius.circular(8),
@@ -6190,6 +6192,7 @@ class _NavigationBottomControls extends StatelessWidget {
                         Border.all(color: const Color(0xFF10B981), width: 0.8),
                   ),
                   child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Container(
@@ -6221,6 +6224,7 @@ class _NavigationBottomControls extends StatelessWidget {
                   ),
                 ),
               ),
+              const SizedBox(width: 8),
 
               // Recenter Button
               IconButton(
