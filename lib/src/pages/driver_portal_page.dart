@@ -5269,15 +5269,44 @@ class _CleaningMultiAngleBottomSheetState
     );
   }
 
-  Future<void> _submitCleaningPhotos() async {
-    if (_beforeCapturedCount == 0 && _afterCapturedCount == 0) {
+  void _trySwitchToAfterStage() {
+    if (_beforeCapturedCount < _angles.length) {
+      final missingCount = _angles.length - _beforeCapturedCount;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(
-              'Kripya kam se kam ek angle ki photo lein (Before ya After).'),
-          backgroundColor: AppColors.primary,
+              'Pehle SAFALTA SE DHONE SE PEHLE (BEFORE) ki saari ${_angles.length} photo daalein! Abhi $missingCount photo baaki hain.'),
+          backgroundColor: Colors.amber.shade900,
+          duration: const Duration(seconds: 3),
         ),
       );
+      return;
+    }
+    setState(() => _currentStage = 1);
+  }
+
+  Future<void> _submitCleaningPhotos() async {
+    if (_beforeCapturedCount < _angles.length) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              'Pehle Dhone se Pehle (BEFORE) ki sabhi ${_angles.length} photos upload karein! ($_beforeCapturedCount/${_angles.length} li gayi hain)'),
+          backgroundColor: Colors.amber.shade900,
+        ),
+      );
+      setState(() => _currentStage = 0);
+      return;
+    }
+
+    if (_afterCapturedCount < _angles.length) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              'Ab Dhone ke Baad (AFTER) ki sabhi ${_angles.length} photos upload karein! ($_afterCapturedCount/${_angles.length} li gayi hain)'),
+          backgroundColor: Colors.amber.shade900,
+        ),
+      );
+      setState(() => _currentStage = 1);
       return;
     }
 
@@ -5513,7 +5542,7 @@ class _CleaningMultiAngleBottomSheetState
                 Expanded(
                   child: InkWell(
                     borderRadius: BorderRadius.circular(9),
-                    onTap: () => setState(() => _currentStage = 1),
+                    onTap: _trySwitchToAfterStage,
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 9),
                       decoration: BoxDecoration(
@@ -5758,19 +5787,23 @@ class _CleaningMultiAngleBottomSheetState
             children: [
               if (_currentStage == 0) ...[
                 Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => setState(() => _currentStage = 1),
+                  child: FilledButton.icon(
+                    onPressed: _trySwitchToAfterStage,
                     icon: const Icon(Icons.arrow_forward_rounded, size: 16),
-                    label: const Text(
-                      'NEXT: AFTER PHOTOS (धोने के बाद)',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
+                    label: Text(
+                      _beforeCapturedCount == _angles.length
+                          ? 'SABHI BEFORE HO GAYI -> NEXT: AFTER (धोने के बाद)'
+                          : 'BEFORE KI SAARI PHOTO DAALEIN ($_beforeCapturedCount/${_angles.length})',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
                         fontSize: 11.5,
                       ),
                     ),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.primary,
-                      side: const BorderSide(color: AppColors.primary, width: 1.2),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: _beforeCapturedCount == _angles.length
+                          ? AppColors.primary
+                          : Colors.amber.shade800,
+                      foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 13),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10)),
