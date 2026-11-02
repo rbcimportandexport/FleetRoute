@@ -5874,9 +5874,10 @@ class _NavigationTopHud extends StatelessWidget {
                                       : const Color(0xFF047857),
                                   fontSize: compact ? 8.5 : 9.5,
                                   fontWeight: FontWeight.w800,
-                                  letterSpacing: 0.5,
-                                  wordSpacing: 1.0,
+                                  letterSpacing: 0.3,
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ],
@@ -5912,6 +5913,7 @@ class _NavigationTopHud extends StatelessWidget {
                       ],
                     ),
                   ),
+                  const SizedBox(width: 12),
 
                   // Live Speedometer
                   Container(
