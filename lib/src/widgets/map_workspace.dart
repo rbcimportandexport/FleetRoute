@@ -5801,13 +5801,14 @@ class _NavigationTopHud extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Wrap(
-                          spacing: 5,
-                          runSpacing: 3,
+                          spacing: 8,
+                          runSpacing: 4,
+                          crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
+                                horizontal: 7,
+                                vertical: 2.5,
                               ),
                               decoration: BoxDecoration(
                                 color: const Color(0xFF2563EB),
@@ -5816,6 +5817,7 @@ class _NavigationTopHud extends StatelessWidget {
                               child: Text(
                                 maneuver.directionSide,
                                 style: const TextStyle(
+                                  fontFamily: 'sans-serif',
                                   color: Colors.white,
                                   fontSize: 9.5,
                                   fontWeight: FontWeight.w800,
@@ -5824,8 +5826,8 @@ class _NavigationTopHud extends StatelessWidget {
                             ),
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
+                                horizontal: 8,
+                                vertical: 2.5,
                               ),
                               decoration: BoxDecoration(
                                 color: speed < 1.0
@@ -5850,7 +5852,8 @@ class _NavigationTopHud extends StatelessWidget {
                                       : const Color(0xFF047857),
                                   fontSize: compact ? 8.5 : 9.5,
                                   fontWeight: FontWeight.w800,
-                                  letterSpacing: 0.3,
+                                  letterSpacing: 0.5,
+                                  wordSpacing: 1.0,
                                 ),
                               ),
                             ),
