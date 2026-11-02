@@ -15,6 +15,7 @@ import 'route_planner_page.dart';
 import '../widgets/cargo_workflow_dialogs.dart';
 import '../widgets/delivery_proof_dialog.dart';
 import '../widgets/driver_calendar_dialog.dart';
+import 'driver_calendar_screen.dart';
 import '../widgets/driver_trip_history_dialog.dart';
 import '../widgets/location_search_dialog.dart';
 import '../widgets/seatbelt_records_dialog.dart';
@@ -1255,7 +1256,7 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                 flex: 2,
                 child: FilledButton.icon(
                   onPressed: () {
-                    DriverCalendarDialog.show(
+                    DriverCalendarScreen.open(
                       context,
                       driverId: driverId,
                       driverName: driverName,

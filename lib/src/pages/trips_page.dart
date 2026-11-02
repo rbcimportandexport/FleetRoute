@@ -22,6 +22,7 @@ import '../widgets/cargo_workflow_dialogs.dart';
 import '../widgets/delivery_proof_dialog.dart';
 import '../widgets/location_search_dialog.dart';
 import '../widgets/driver_calendar_dialog.dart';
+import 'driver_calendar_screen.dart';
 import '../widgets/trip_detail_report_dialog.dart';
 
 class TripsPage extends StatefulWidget {
@@ -1618,7 +1619,7 @@ class _TripsPageState extends State<TripsPage> {
           const SizedBox(width: 8),
           FilledButton.icon(
             onPressed: () {
-              DriverCalendarDialog.show(
+              DriverCalendarScreen.open(
                 context,
                 driverId: widget.controller.selectedDriver?.email ?? '',
                 driverName: widget.controller.selectedDriver?.name ?? 'Driver',
