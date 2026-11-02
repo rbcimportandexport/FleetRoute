@@ -28,10 +28,11 @@ class TripPlaybackDialog extends StatefulWidget {
     required TripRecord trip,
     PlannerController? controller,
   }) {
-    return showDialog<void>(
-      context: context,
-      barrierDismissible: true,
-      builder: (_) => TripPlaybackDialog(trip: trip, controller: controller),
+    return Navigator.push<void>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => TripPlaybackDialog(trip: trip, controller: controller),
+      ),
     );
   }
 
@@ -500,12 +501,9 @@ class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
         ? _timeline.sublist(0, _currentIndex + 1).map((p) => p.position).toList()
         : <LatLng>[];
 
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-      backgroundColor: Colors.white,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 18),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 820, maxHeight: 860),
+    return Scaffold(
+      backgroundColor: const Color(0xFF0F172A),
+      body: SafeArea(
         child: Column(
           children: [
             // ================= HEADER =================
@@ -513,12 +511,17 @@ class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
               padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
               decoration: const BoxDecoration(
                 color: Color(0xFF0F172A), // Dark modern theme for video player
-                borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
               ),
               child: Row(
                 children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+                    tooltip: 'Back',
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                  const SizedBox(width: 4),
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(7),
                     decoration: BoxDecoration(
                       color: AppColors.primary,
                       borderRadius: BorderRadius.circular(10),
@@ -529,25 +532,29 @@ class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
                       size: 20,
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
                           children: [
-                            Text(
-                              'Live Route Playback · #${widget.trip.effectiveTripNumber}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 14.5,
-                                fontWeight: FontWeight.w800,
+                            Flexible(
+                              child: Text(
+                                'Playback #${widget.trip.effectiveTripNumber}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 6),
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 6, vertical: 2),
+                                  horizontal: 5, vertical: 1.5),
                               decoration: BoxDecoration(
                                 color: const Color(0xFF22C55E).withValues(alpha: 0.2),
                                 borderRadius: BorderRadius.circular(4),
@@ -558,14 +565,14 @@ class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
                                 'VIDEO HISTORY',
                                 style: TextStyle(
                                   color: Color(0xFF4ADE80),
-                                  fontSize: 9,
+                                  fontSize: 8.5,
                                   fontWeight: FontWeight.w800,
                                 ),
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 2),
+                        const SizedBox(height: 1),
                         Text(
                           '${widget.trip.origin} → ${widget.trip.destination}',
                           style: const TextStyle(
@@ -594,10 +601,6 @@ class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
                             : MapViewStyle.satellite;
                       });
                     },
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close_rounded, color: Colors.white70),
-                    onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
               ),
