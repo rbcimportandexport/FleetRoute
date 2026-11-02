@@ -132,7 +132,8 @@ void main() {
       );
 
       expect(result['success'], isFalse);
-      expect(result['message'], contains('Direct tracker credentials are disabled'));
+      expect(result['message'],
+          contains('Direct tracker credentials are disabled'));
       expect(service.debugAccessToken, isNull);
     });
 
@@ -150,7 +151,8 @@ void main() {
       expect(service.debugAccessToken, isNull);
     });
 
-    test('credential update does not store vendor credentials on the client', () async {
+    test('credential update does not store vendor credentials on the client',
+        () async {
       final service = ProtrackGpsService.instance;
       service.configureCredentials(
           account: 'initial_account', password: 'initial_password');
@@ -169,11 +171,11 @@ void main() {
       );
 
       expect(result.success, isFalse);
-      expect(result.errorMessage, contains('Protrack credentials not configured'));
+      expect(
+          result.errorMessage, contains('Protrack credentials not configured'));
     });
 
-    test('fetchLiveTrackingResult handles empty IMEIs gracefully',
-        () async {
+    test('fetchLiveTrackingResult handles empty IMEIs gracefully', () async {
       final service = ProtrackGpsService.instance;
 
       final result = await service.fetchLiveTrackingResult(

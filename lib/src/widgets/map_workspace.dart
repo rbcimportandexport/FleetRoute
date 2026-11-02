@@ -5864,9 +5864,7 @@ class _NavigationTopHud extends StatelessWidget {
                         Text(
                           isOverspeeding
                               ? 'OVERSPEED'
-                              : speed < 1.0
-                                  ? 'km/h · 0'
-                                  : 'km/h',
+                              : 'km/h',
                           style: TextStyle(
                             color: isOverspeeding
                                 ? const Color(0xFFEF4444)
