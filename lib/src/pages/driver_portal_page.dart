@@ -5100,6 +5100,13 @@ class _CleaningMultiAngleBottomSheetState
     extends State<_CleaningMultiAngleBottomSheet> {
   static const List<_CleaningAngleConfig> _angles = [
     _CleaningAngleConfig(
+      id: 'cabin',
+      labelHindi: 'ड्राइवर केबिन (अंदर)',
+      labelEnglish: 'Driver Cabin / Interior',
+      icon: Icons.airline_seat_recline_normal_rounded,
+      description: 'Driver seat, Steering, Dashboard, Mats & Cabin cleanliness',
+    ),
+    _CleaningAngleConfig(
       id: 'front',
       labelHindi: 'आगे का हिस्सा',
       labelEnglish: 'Front Angle',
@@ -5126,13 +5133,6 @@ class _CleaningMultiAngleBottomSheetState
       labelEnglish: 'Right Side',
       icon: Icons.align_horizontal_right_rounded,
       description: 'Right tyres, Fuel tank & Side body',
-    ),
-    _CleaningAngleConfig(
-      id: 'cabin',
-      labelHindi: 'अंदर केबिन',
-      labelEnglish: 'Cabin / Interior',
-      icon: Icons.airline_seat_recline_normal_rounded,
-      description: 'Dashboard, Floor mats, Seat & Clean windshield',
     ),
   ];
 

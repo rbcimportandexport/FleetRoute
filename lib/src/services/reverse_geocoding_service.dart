@@ -228,42 +228,126 @@ class ReverseGeocodingService {
       );
     }
 
-    // 5. Online Nominatim geocoding for addresses, markets, towns, landmarks
-    try {
-      final uri = Uri.https('nominatim.openstreetmap.org', '/search', {
-        'format': 'jsonv2',
-        'q': clean,
-        'limit': '1',
-        'addressdetails': '1',
-      });
-      final response = await http.get(uri, headers: const {
-        'User-Agent': 'TransportOne/1.2 (support@rbcsalonfurniture.com)',
-        'Accept-Language': 'en-IN,en;q=0.9,hi;q=0.8',
-      }).timeout(const Duration(seconds: 8));
+    // Helper: Progressive candidate generation for messy/multi-line Indian addresses
+    // e.g. "Matsya Kamdar\n6-5-11/1, Kattedan\nHyderabad\nAndhra Pradesh\n500077\n402436118"
+    final candidates = _generateIndianAddressCandidates(clean);
 
-      if (response.statusCode == 200) {
-        final json = jsonDecode(response.body);
-        if (json is List && json.isNotEmpty) {
-          final first = json.first;
-          if (first is Map) {
-            final lat = double.tryParse(first['lat']?.toString() ?? '');
-            final lon = double.tryParse(first['lon']?.toString() ?? '');
-            if (lat != null && lon != null) {
-              final displayName = first['display_name']?.toString() ?? clean;
-              final shortName = first['name']?.toString() ??
-                  displayName.split(',').first.trim();
-              return GeocodedPlace(
-                coordinates: LatLng(lat, lon),
-                displayName: displayName,
-                shortName: shortName,
-              );
+    // 5. Online Nominatim geocoding with candidate fallback
+    for (final candidate in candidates) {
+      try {
+        final uri = Uri.https('nominatim.openstreetmap.org', '/search', {
+          'format': 'jsonv2',
+          'q': candidate,
+          'limit': '1',
+          'countrycodes': 'in',
+          'addressdetails': '1',
+        });
+        final response = await http.get(uri, headers: const {
+          'User-Agent': 'TransportOne/1.2 (support@rbcsalonfurniture.com)',
+          'Accept-Language': 'en-IN,en;q=0.9,hi;q=0.8',
+        }).timeout(const Duration(seconds: 4));
+
+        if (response.statusCode == 200) {
+          final json = jsonDecode(response.body);
+          if (json is List && json.isNotEmpty) {
+            final first = json.first;
+            if (first is Map) {
+              final lat = double.tryParse(first['lat']?.toString() ?? '');
+              final lon = double.tryParse(first['lon']?.toString() ?? '');
+              if (lat != null && lon != null) {
+                final displayName = first['display_name']?.toString() ?? clean;
+                final shortName = first['name']?.toString() ??
+                    displayName.split(',').first.trim();
+                return GeocodedPlace(
+                  coordinates: LatLng(lat, lon),
+                  displayName: displayName,
+                  shortName: shortName,
+                );
+              }
             }
           }
         }
-      }
-    } catch (_) {}
+      } catch (_) {}
+    }
 
     return null;
+  }
+
+  /// Extracts multiple search queries from multi-line or noisy Indian addresses
+  static List<String> _generateIndianAddressCandidates(String raw) {
+    final candidates = <String>[];
+    final pinMatch = RegExp(r'\b([1-9][0-9]{5})\b').firstMatch(raw);
+    final pincode = pinMatch != null ? pinMatch.group(1)! : '';
+
+    // Remove phone numbers (7 to 12 digits)
+    var text = raw.replaceAll(
+        RegExp(r'(?:\+91[\-\s]?)?[6-9]\d{9}|\b\d{7,12}\b'), ' ');
+    text = text.replaceAll(RegExp(r'[\r\n\t]+'), ', ');
+    // Common Indian spelling corrections
+    text = text.replaceAll(RegExp(r'\bkattedan\b', caseSensitive: false), 'Katedan');
+
+    final rawTokens = text
+        .split(RegExp(r'[,;\/]+'))
+        .map((s) => s.trim())
+        .where((s) => s.length > 1)
+        .toList();
+
+    final isDoorNo = RegExp(r'^[\d\-]+(?:\/\d+)?$');
+    final isPin = RegExp(r'^[1-9][0-9]{5}$');
+
+    final cleanTokens = <String>[];
+    for (final token in rawTokens) {
+      final subTokens = token.split(RegExp(r'\s+'));
+      for (final sub in subTokens) {
+        if (sub.length > 1 && !isDoorNo.hasMatch(sub) && !isPin.hasMatch(sub)) {
+          if (!cleanTokens.contains(sub)) {
+            cleanTokens.add(sub);
+          }
+        }
+      }
+    }
+
+    // 1. Original clean string
+    candidates.add(raw.trim());
+
+    // 2. Clean tokens joined
+    if (cleanTokens.isNotEmpty) {
+      candidates.add(cleanTokens.join(' '));
+    }
+
+    // 3. Meaningful parts: Look for known locality/city/PIN
+    final suburb = cleanTokens.firstWhere(
+      (t) => t.toLowerCase().contains('katedan'),
+      orElse: () => '',
+    );
+    final city = cleanTokens.firstWhere(
+      (t) => t.toLowerCase().contains('hyderabad') ||
+          t.toLowerCase().contains('surat') ||
+          t.toLowerCase().contains('mumbai') ||
+          t.toLowerCase().contains('delhi') ||
+          t.toLowerCase().contains('bangalore') ||
+          t.toLowerCase().contains('ahmedabad') ||
+          t.toLowerCase().contains('pune'),
+      orElse: () => '',
+    );
+
+    if (suburb.isNotEmpty && city.isNotEmpty) {
+      if (pincode.isNotEmpty) {
+        candidates.add('$suburb $city $pincode');
+      }
+      candidates.add('$suburb $city');
+    }
+    if (suburb.isNotEmpty && pincode.isNotEmpty) {
+      candidates.add('$suburb $pincode');
+    }
+    if (city.isNotEmpty && pincode.isNotEmpty) {
+      candidates.add('$city $pincode');
+    }
+    if (pincode.isNotEmpty) {
+      candidates.add(pincode);
+    }
+
+    return candidates.toSet().toList();
   }
 
   /// Searches for multiple matching places for autocomplete and suggestions
@@ -379,7 +463,8 @@ class ReverseGeocodingService {
 
     // 3. Check predefined cities & local transport hubs
     for (final entry in RouteTrafficService.cityCoordinates.entries) {
-      if (entry.key.toLowerCase().contains(clean.toLowerCase())) {
+      if (entry.key.toLowerCase().contains(clean.toLowerCase()) ||
+          clean.toLowerCase().contains(entry.key.toLowerCase())) {
         final stateName = RouteTrafficService.cityStates[entry.key.toLowerCase()] ?? 'India';
         final stateSuffix = stateName == 'India' ? 'India' : '$stateName, India';
         final exists = results.any((r) =>
@@ -397,6 +482,59 @@ class ReverseGeocodingService {
           );
         }
         if (results.length >= limit) return results;
+      }
+    }
+
+    // 4. Candidate fallback search for multi-line or messy addresses
+    if (results.isEmpty) {
+      final candidates = _generateIndianAddressCandidates(clean);
+      for (final candidate in candidates) {
+        if (candidate.toLowerCase() == clean.toLowerCase()) continue;
+        try {
+          final uri = Uri.https('nominatim.openstreetmap.org', '/search', {
+            'format': 'jsonv2',
+            'q': candidate,
+            'limit': '$limit',
+            'countrycodes': 'in',
+            'addressdetails': '1',
+          });
+          final response = await http.get(uri, headers: const {
+            'User-Agent': 'TransportOne/1.2 (support@rbcsalonfurniture.com)',
+            'Accept-Language': 'en-IN,en;q=0.9,hi;q=0.8',
+          }).timeout(const Duration(seconds: 4));
+
+          if (response.statusCode == 200) {
+            final json = jsonDecode(response.body);
+            if (json is List && json.isNotEmpty) {
+              for (final item in json) {
+                if (item is Map) {
+                  final lat = double.tryParse(item['lat']?.toString() ?? '');
+                  final lon = double.tryParse(item['lon']?.toString() ?? '');
+                  if (lat != null && lon != null) {
+                    final displayName =
+                        item['display_name']?.toString() ?? candidate;
+                    final shortName = item['name']?.toString() ??
+                        displayName.split(',').first.trim();
+                    final exists = results.any((r) =>
+                        (r.coordinates.latitude - lat).abs() < 0.01 &&
+                        (r.coordinates.longitude - lon).abs() < 0.01);
+                    if (!exists) {
+                      results.add(
+                        GeocodedPlace(
+                          coordinates: LatLng(lat, lon),
+                          displayName: displayName,
+                          shortName: shortName,
+                        ),
+                      );
+                    }
+                    if (results.length >= limit) return results;
+                  }
+                }
+              }
+              if (results.isNotEmpty) return results;
+            }
+          }
+        } catch (_) {}
       }
     }
 

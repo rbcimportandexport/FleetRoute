@@ -269,6 +269,10 @@ class RouteTrafficService {
     'songadh': 'Gujarat',
     'dahej': 'Gujarat',
     'zaghadia': 'Gujarat',
+    'kattedan': 'Telangana',
+    'katedan': 'Telangana',
+    'kattedan industrial area': 'Telangana',
+    '500077': 'Telangana',
   };
 
   static const Map<String, LatLng> _cityCoordinates = {
@@ -281,6 +285,10 @@ class RouteTrafficService {
     'kolkata': LatLng(22.5726, 88.3639),
     'calcutta': LatLng(22.5726, 88.3639),
     'hyderabad': LatLng(17.3850, 78.4867),
+    'kattedan': LatLng(17.3027, 78.4398),
+    'katedan': LatLng(17.3027, 78.4398),
+    'kattedan industrial area': LatLng(17.3126, 78.4331),
+    '500077': LatLng(17.3028, 78.4398),
     'chennai': LatLng(13.0827, 80.2707),
     'madras': LatLng(13.0827, 80.2707),
     'ahmedabad': LatLng(23.0225, 72.5714),
