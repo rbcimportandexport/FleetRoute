@@ -97,6 +97,8 @@ class _MapWorkspaceState extends State<MapWorkspace> {
   bool _cameraFollowLocked = true;
   bool _isVerifyingSeatbelt = false;
   bool _arrivalPromptShown = false;
+  bool _isDynamicRerouting = false;
+  DateTime? _lastRerouteTime;
   StreamSubscription<IncomingLocationData>? _intentSubscription;
 
   @override
@@ -1563,6 +1565,52 @@ class _MapWorkspaceState extends State<MapWorkspace> {
       _animateCameraToNavVehicle(newLatLng, bearing);
     }
 
+    // Dynamic Live Re-routing: If driver deviates off route (> 65m) or takes a different turn,
+    // immediately re-fetch the route from their live position to the destination!
+    // And if they return or back up to original path, it smoothly snaps back.
+    final destination = _effectiveDestination;
+    if (_routePoints.length >= 2 &&
+        destination != null &&
+        !_isDynamicRerouting &&
+        !_arrivalPromptShown) {
+      final nowTime = DateTime.now();
+      final canReroute = _lastRerouteTime == null ||
+          nowTime.difference(_lastRerouteTime!).inSeconds >= 4;
+
+      if (canReroute) {
+        final distToRouteMeters =
+            RouteTrafficService.distanceToRoute(_routePoints, newLatLng);
+        // If driver is more than 65 meters away from the planned line, compute fresh route from current spot!
+        if (distToRouteMeters > 65.0) {
+          _isDynamicRerouting = true;
+          _lastRerouteTime = nowTime;
+          unawaited(() async {
+            try {
+              final newRouteResult = await RouteTrafficService.fetchRoute(
+                origin: newLatLng,
+                destination: destination,
+                stops: _effectiveStops,
+              );
+              if (mounted &&
+                  _isNavigating &&
+                  newRouteResult.points.length >= 2) {
+                setState(() {
+                  _routePoints = newRouteResult.points;
+                  _routeDistanceKm = newRouteResult.distanceKm;
+                  _navIndex = 0;
+                  _currentTurnInfo = RouteTrafficService.findNextTurn(
+                      newRouteResult.points, 0);
+                });
+              }
+            } catch (_) {
+            } finally {
+              if (mounted) _isDynamicRerouting = false;
+            }
+          }());
+        }
+      }
+    }
+
     // Real driver phone GPS telemetry sync to Firestore
     final activeVehicleCode = _selectedLiveTruck?.code ??
         widget.controller.selectedDriver?.assignedVehicle ??
@@ -1593,7 +1641,6 @@ class _MapWorkspaceState extends State<MapWorkspace> {
       }());
     }
 
-    final destination = _effectiveDestination;
     if (destination != null &&
         !_arrivalPromptShown &&
         RouteTrafficService.hasArrived(

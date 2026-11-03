@@ -853,6 +853,22 @@ class RouteTrafficService {
     return 'North-West (Upper-Left)';
   }
 
+  /// Returns the shortest distance in meters from [location] to the polyline [points].
+  static double distanceToRoute(List<LatLng> points, LatLng location) {
+    if (points.isEmpty) return double.infinity;
+    double minDistance = double.infinity;
+    for (int i = 0; i < points.length; i++) {
+      final d = Geolocator.distanceBetween(
+        location.latitude,
+        location.longitude,
+        points[i].latitude,
+        points[i].longitude,
+      );
+      if (d < minDistance) minDistance = d;
+    }
+    return minDistance;
+  }
+
   /// Finds the index of the point in [points] that is closest to [location].
   /// When [currentIndex] is provided, bounds search to a localized forward neighborhood
   /// around current progress, but if off-track (> 150m) falls back to global search
