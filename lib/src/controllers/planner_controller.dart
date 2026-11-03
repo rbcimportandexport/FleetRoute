@@ -188,9 +188,9 @@ class PlannerController extends ChangeNotifier {
     TripRecord(
       reference: 'TRIP-2026-082',
       tripNumber: 'TRIP-2026-082',
-      origin: 'Mota, Bardoli Taluka, Surat, Gujarat (21.174901, 73.052134)',
+      origin: 'Mota, Bardoli Taluka, सूरत, Gujarat, India',
       destination:
-          'RBC SALON FURNITURE, Aradhna Industrial Estate, Jolwa, Palsana, Surat',
+          'RBC SALON FURNITURE, Aradhana Industrial Estate, Jolwa, Palsana, Surat',
       assignedVehicle: 'GJ19Y2720',
       assignedDriver: 'Sandeep',
       customerName: 'RBC Salon Furniture',
@@ -199,24 +199,24 @@ class PlannerController extends ChangeNotifier {
       operationalStep: 'trip_completed',
       pickupStatus: 'completed',
       deliveryStatus: 'delivered',
-      loadingDateTime: '2026-11-02T19:45:00',
-      departureDateTime: '2026-11-02T20:00:00',
-      unloadingDateTime: '2026-11-02T20:15:00',
-      startedAt: '2026-11-02T20:00:00',
-      completedAt: '2026-11-02T20:15:00',
-      createdAt: '2026-11-02T19:30:00',
+      loadingDateTime: '2026-11-02T19:15:00',
+      departureDateTime: '2026-11-02T19:27:00',
+      unloadingDateTime: '2026-11-02T20:37:00',
+      startedAt: '2026-11-02T19:27:00',
+      completedAt: '2026-11-02T20:37:00',
+      createdAt: '2026-11-02T19:10:00',
       actualDistanceKm: 5.8,
       plannedDistanceKm: 5.8,
-      averageSpeedKmh: 23.2,
+      averageSpeedKmh: 24.5,
       freightAmount: 3500.0,
-      trafficSummary: 'Completed night trip via Jolva-Mota Road',
+      trafficSummary: 'Completed night trip: Mota to Jolwa (RBC Salon Furniture)',
     ),
     TripRecord(
       reference: 'TRIP-2026-083',
       tripNumber: 'TRIP-2026-083',
       origin:
-          'RBC SALON FURNITURE, Aradhna Industrial Estate, Jolwa, Palsana, Surat',
-      destination: 'Mota, Bardoli Taluka, Surat, Gujarat (21.174901, 73.052134)',
+          'RBC SALON FURNITURE, Aradhana Industrial Estate, Jolwa, Palsana, Surat',
+      destination: 'Mota, Bardoli Taluka, सूरत, Gujarat, India',
       assignedVehicle: 'GJ19Y2720',
       assignedDriver: 'Sandeep',
       customerName: 'RBC Salon Furniture',
@@ -225,17 +225,17 @@ class PlannerController extends ChangeNotifier {
       operationalStep: 'trip_completed',
       pickupStatus: 'completed',
       deliveryStatus: 'delivered',
-      loadingDateTime: '2026-11-03T08:15:00',
-      departureDateTime: '2026-11-03T08:30:00',
-      unloadingDateTime: '2026-11-03T08:45:00',
-      startedAt: '2026-11-03T08:30:00',
-      completedAt: '2026-11-03T08:45:00',
-      createdAt: '2026-11-03T08:00:00',
+      loadingDateTime: '2026-11-03T07:45:00',
+      departureDateTime: '2026-11-03T08:00:00',
+      unloadingDateTime: '2026-11-03T08:17:00',
+      startedAt: '2026-11-03T08:00:00',
+      completedAt: '2026-11-03T08:17:00',
+      createdAt: '2026-11-03T07:30:00',
       actualDistanceKm: 5.8,
       plannedDistanceKm: 5.8,
-      averageSpeedKmh: 23.2,
+      averageSpeedKmh: 24.5,
       freightAmount: 3500.0,
-      trafficSummary: 'Completed morning return trip to Mota',
+      trafficSummary: 'Completed morning return trip: Jolwa to Mota',
     ),
   ];
 
@@ -245,8 +245,9 @@ class PlannerController extends ChangeNotifier {
           t.reference == realTrip.reference ||
           t.tripNumber == realTrip.tripNumber ||
           (t.assignedVehicle.replaceAll(RegExp(r'[\s\-]'), '').toUpperCase() == 'GJ19Y2720' &&
-              t.origin.toLowerCase().contains(realTrip.origin.toLowerCase().split(',').first) &&
-              t.destination.toLowerCase().contains(realTrip.destination.toLowerCase().split(',').first)));
+              ((t.origin.toLowerCase().contains('mota') && realTrip.origin.toLowerCase().contains('mota')) ||
+                  (t.origin.toLowerCase().contains('palsana') && realTrip.origin.toLowerCase().contains('rbc')) ||
+                  (t.origin.toLowerCase().contains('jolw') && realTrip.origin.toLowerCase().contains('rbc')))));
       if (existingIndex < 0) {
         trips.add(realTrip);
       } else {
