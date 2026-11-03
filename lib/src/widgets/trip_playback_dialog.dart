@@ -277,110 +277,141 @@ class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
         );
       }
     } else if (routePoints.isNotEmpty) {
-      // Synthesize realistic highway driving profile with 2-3 specific distinct stops:
-      // Stop 1 (~32%): Hotel / Dhaba Food Break (35 mins)
-      // Stop 2 (~68%): Petrol Pump / Diesel Station (12 mins)
-      // (Optionally at ~88%: Traffic / Toll Plaza (8 mins))
+      // Determine if this is a short direct local trip (< 25 km or <= 30 mins) like Mota <-> Jolwa (5.8 km, 15 min non-stop)
+      final bool isShortDirectTrip = widget.trip.actualDistanceKm > 0
+          ? widget.trip.actualDistanceKm < 25.0
+          : (widget.trip.plannedDistanceKm > 0
+              ? widget.trip.plannedDistanceKm < 25.0
+              : widget.trip.plannedDurationMinutes <= 30);
+
       final totalSteps = math.max(60, routePoints.length);
-      final stepDurationSec =
-          ((widget.trip.plannedDurationMinutes > 0
-                          ? widget.trip.plannedDurationMinutes
-                          : 240) *
-                      60) ~/
-                  totalSteps;
+      final tripDurationMinutes = widget.trip.plannedDurationMinutes > 0
+          ? widget.trip.plannedDurationMinutes
+          : 15;
+      final stepDurationSec = (tripDurationMinutes * 60) ~/ totalSteps;
 
-      final hotelIdx = (routePoints.length * 0.33).round().clamp(1, routePoints.length - 2);
-      final fuelIdx = (routePoints.length * 0.68).round().clamp(1, routePoints.length - 2);
-      final trafficIdx = routePoints.length > 25
-          ? (routePoints.length * 0.86).round().clamp(1, routePoints.length - 2)
-          : -1;
+      if (!isShortDirectTrip) {
+        // Only for genuine long-haul interstate/highway journeys (>25 km), add optional highway stops:
+        final hotelIdx = (routePoints.length * 0.33).round().clamp(1, routePoints.length - 2);
+        final fuelIdx = (routePoints.length * 0.68).round().clamp(1, routePoints.length - 2);
+        final trafficIdx = routePoints.length > 25
+            ? (routePoints.length * 0.86).round().clamp(1, routePoints.length - 2)
+            : -1;
 
-      // 1. Hotel / Dhaba Stop
-      final hotelStop = _ConsolidatedStop(
-        position: routePoints[hotelIdx],
-        category: StopCategory.foodHotel,
-        name: 'Dhaba / Highway Restaurant Break',
-        durationMinutes: 35,
-        time: baseTime.add(Duration(seconds: hotelIdx * stepDurationSec)),
-        timelineIndex: hotelIdx,
-      );
-      consolidatedStops.add(hotelStop);
-
-      // 2. Petrol Pump / Fuel Station Stop
-      final fuelStop = _ConsolidatedStop(
-        position: routePoints[fuelIdx],
-        category: StopCategory.petrolPump,
-        name: 'Fuel / Diesel Station Stop',
-        durationMinutes: 12,
-        time: baseTime.add(Duration(seconds: fuelIdx * stepDurationSec)),
-        timelineIndex: fuelIdx,
-      );
-      consolidatedStops.add(fuelStop);
-
-      // 3. Traffic / Toll Halt
-      _ConsolidatedStop? tollStop;
-      if (trafficIdx > 0 && trafficIdx != hotelIdx && trafficIdx != fuelIdx) {
-        tollStop = _ConsolidatedStop(
-          position: routePoints[trafficIdx],
-          category: StopCategory.trafficToll,
-          name: 'Toll Plaza / Traffic Halt',
-          durationMinutes: 8,
-          time: baseTime.add(Duration(seconds: trafficIdx * stepDurationSec)),
-          timelineIndex: trafficIdx,
+        final hotelStop = _ConsolidatedStop(
+          position: routePoints[hotelIdx],
+          category: StopCategory.foodHotel,
+          name: 'Dhaba / Highway Restaurant Break',
+          durationMinutes: 35,
+          time: baseTime.add(Duration(seconds: hotelIdx * stepDurationSec)),
+          timelineIndex: hotelIdx,
         );
-        consolidatedStops.add(tollStop);
-      }
+        consolidatedStops.add(hotelStop);
 
-      for (int i = 0; i < routePoints.length; i++) {
-        final p = routePoints[i];
-        final bool isAtHotel = (i == hotelIdx);
-        final bool isAtFuel = (i == fuelIdx);
-        final bool isAtToll = (i == trafficIdx);
-        final bool isHoldPoint = isAtHotel || isAtFuel || isAtToll;
+        final fuelStop = _ConsolidatedStop(
+          position: routePoints[fuelIdx],
+          category: StopCategory.petrolPump,
+          name: 'Fuel / Diesel Station Stop',
+          durationMinutes: 12,
+          time: baseTime.add(Duration(seconds: fuelIdx * stepDurationSec)),
+          timelineIndex: fuelIdx,
+        );
+        consolidatedStops.add(fuelStop);
 
-        double speed = 0.0;
-        int holdSec = 0;
-        String label = '';
-        _ConsolidatedStop? stopRef;
-
-        if (isAtHotel) {
-          speed = 0.0;
-          holdSec = 35 * 60;
-          label = '🍽️ Hotel / Dhaba Break (35m)';
-          stopRef = hotelStop;
-        } else if (isAtFuel) {
-          speed = 0.0;
-          holdSec = 12 * 60;
-          label = '⛽ Petrol Pump / Fuel Stop (12m)';
-          stopRef = fuelStop;
-        } else if (isAtToll) {
-          speed = 0.0;
-          holdSec = 8 * 60;
-          label = '🚦 Toll Plaza / Traffic Halt (8m)';
-          stopRef = tollStop;
-        } else {
-          // Highway cruise speed with natural variation
-          final jitter = (math.sin(i * 0.4) * 8.0);
-          speed = (62.0 + jitter).clamp(35.0, 78.0);
+        _ConsolidatedStop? tollStop;
+        if (trafficIdx > 0 && trafficIdx != hotelIdx && trafficIdx != fuelIdx) {
+          tollStop = _ConsolidatedStop(
+            position: routePoints[trafficIdx],
+            category: StopCategory.trafficToll,
+            name: 'Toll Plaza / Traffic Halt',
+            durationMinutes: 8,
+            time: baseTime.add(Duration(seconds: trafficIdx * stepDurationSec)),
+            timelineIndex: trafficIdx,
+          );
+          consolidatedStops.add(tollStop);
         }
 
-        double course = 0.0;
-        if (i < routePoints.length - 1) {
-          course = RouteTrafficService.calculateBearing(p, routePoints[i + 1]);
-        }
+        for (int i = 0; i < routePoints.length; i++) {
+          final p = routePoints[i];
+          final bool isAtHotel = (i == hotelIdx);
+          final bool isAtFuel = (i == fuelIdx);
+          final bool isAtToll = (i == trafficIdx);
+          final bool isHoldPoint = isAtHotel || isAtFuel || isAtToll;
 
-        points.add(
-          _PlaybackPoint(
-            position: p,
-            speed: speed,
-            course: course,
-            timestamp: baseTime.add(Duration(seconds: i * stepDurationSec)),
-            isHold: isHoldPoint,
-            holdDurationSeconds: holdSec,
-            label: label,
-            stop: stopRef,
-          ),
-        );
+          double speed = 0.0;
+          int holdSec = 0;
+          String label = '';
+          _ConsolidatedStop? stopRef;
+
+          if (isAtHotel) {
+            speed = 0.0;
+            holdSec = 35 * 60;
+            label = '🍽️ Hotel / Dhaba Break (35m)';
+            stopRef = hotelStop;
+          } else if (isAtFuel) {
+            speed = 0.0;
+            holdSec = 12 * 60;
+            label = '⛽ Petrol Pump / Fuel Stop (12m)';
+            stopRef = fuelStop;
+          } else if (isAtToll) {
+            speed = 0.0;
+            holdSec = 8 * 60;
+            label = '🚦 Toll Plaza / Traffic Halt (8m)';
+            stopRef = tollStop;
+          } else {
+            final jitter = (math.sin(i * 0.4) * 8.0);
+            speed = (55.0 + jitter).clamp(30.0, 70.0);
+          }
+
+          double course = 0.0;
+          if (i < routePoints.length - 1) {
+            course = RouteTrafficService.calculateBearing(p, routePoints[i + 1]);
+          }
+
+          points.add(
+            _PlaybackPoint(
+              position: p,
+              speed: speed,
+              course: course,
+              timestamp: baseTime.add(Duration(seconds: i * stepDurationSec)),
+              isHold: isHoldPoint,
+              holdDurationSeconds: holdSec,
+              label: label,
+              stop: stopRef,
+            ),
+          );
+        }
+      } else {
+        // Direct Non-Stop Driving (NO FAKE HOTELS, NO FAKE PETROL PUMP, 0 STOPS)
+        // Perfectly matches real driver journey: pure continuous driving from pickup to drop
+        final targetAvgSpeed = widget.trip.averageSpeedKmh > 0
+            ? widget.trip.averageSpeedKmh
+            : 24.0;
+
+        for (int i = 0; i < routePoints.length; i++) {
+          final p = routePoints[i];
+          final jitter = (math.sin(i * 0.5) * 5.0);
+          // Realistic smooth village/town driving speed (18 to 35 km/h)
+          final speed = (targetAvgSpeed + jitter).clamp(15.0, 45.0);
+
+          double course = 0.0;
+          if (i < routePoints.length - 1) {
+            course = RouteTrafficService.calculateBearing(p, routePoints[i + 1]);
+          }
+
+          points.add(
+            _PlaybackPoint(
+              position: p,
+              speed: speed,
+              course: course,
+              timestamp: baseTime.add(Duration(seconds: i * stepDurationSec)),
+              isHold: false,
+              holdDurationSeconds: 0,
+              label: '',
+              stop: null,
+            ),
+          );
+        }
       }
     }
 
