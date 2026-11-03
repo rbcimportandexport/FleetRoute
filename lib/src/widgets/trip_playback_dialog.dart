@@ -140,7 +140,7 @@ class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
   int _currentIndex = 0;
   double _playbackSpeed = 2.0; // 1x, 2x, 5x, 10x
   Timer? _playbackTimer;
-  MapViewStyle _mapStyle = MapViewStyle.street;
+  MapViewStyle _mapStyle = MapViewStyle.satellite;
 
   // Summary telemetry metrics
   double _maxSpeed = 0.0;
