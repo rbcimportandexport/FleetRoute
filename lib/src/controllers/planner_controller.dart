@@ -184,6 +184,94 @@ class PlannerController extends ChangeNotifier {
     }
   }
 
+  static const List<TripRecord> _realDriverTrips = [
+    TripRecord(
+      reference: 'TRIP-2026-082',
+      tripNumber: 'TRIP-2026-082',
+      origin: 'Mota, Bardoli Taluka, Surat, Gujarat (21.174901, 73.052134)',
+      destination:
+          'RBC SALON FURNITURE, Aradhna Industrial Estate, Jolwa, Palsana, Surat',
+      assignedVehicle: 'GJ19Y2720',
+      assignedDriver: 'Sandeep',
+      customerName: 'RBC Salon Furniture',
+      cargoDescription: 'Salon Chairs & Beauty Furniture Units',
+      status: 'completed',
+      operationalStep: 'trip_completed',
+      pickupStatus: 'completed',
+      deliveryStatus: 'delivered',
+      loadingDateTime: '2026-11-02T19:45:00',
+      departureDateTime: '2026-11-02T20:00:00',
+      unloadingDateTime: '2026-11-02T20:45:00',
+      startedAt: '2026-11-02T20:00:00',
+      completedAt: '2026-11-02T20:45:00',
+      createdAt: '2026-11-02T19:30:00',
+      actualDistanceKm: 26.1,
+      plannedDistanceKm: 26.1,
+      averageSpeedKmh: 34.8,
+      freightAmount: 3500.0,
+      trafficSummary: 'Completed night trip via NH-53 / Palsana',
+    ),
+    TripRecord(
+      reference: 'TRIP-2026-083',
+      tripNumber: 'TRIP-2026-083',
+      origin:
+          'RBC SALON FURNITURE, Aradhna Industrial Estate, Jolwa, Palsana, Surat',
+      destination: 'Mota, Bardoli Taluka, Surat, Gujarat (21.174901, 73.052134)',
+      assignedVehicle: 'GJ19Y2720',
+      assignedDriver: 'Sandeep',
+      customerName: 'RBC Salon Furniture',
+      cargoDescription: 'Empty Return / Metal Frames & Materials',
+      status: 'completed',
+      operationalStep: 'trip_completed',
+      pickupStatus: 'completed',
+      deliveryStatus: 'delivered',
+      loadingDateTime: '2026-11-03T08:15:00',
+      departureDateTime: '2026-11-03T08:30:00',
+      unloadingDateTime: '2026-11-03T09:15:00',
+      startedAt: '2026-11-03T08:30:00',
+      completedAt: '2026-11-03T09:15:00',
+      createdAt: '2026-11-03T08:00:00',
+      actualDistanceKm: 26.1,
+      plannedDistanceKm: 26.1,
+      averageSpeedKmh: 34.8,
+      freightAmount: 3500.0,
+      trafficSummary: 'Completed morning return trip to Mota',
+    ),
+  ];
+
+  void _ensureRealDriverTrips() {
+    for (final realTrip in _realDriverTrips) {
+      final existingIndex = trips.indexWhere((t) =>
+          t.reference == realTrip.reference ||
+          t.tripNumber == realTrip.tripNumber ||
+          (t.assignedVehicle.replaceAll(RegExp(r'[\s\-]'), '').toUpperCase() == 'GJ19Y2720' &&
+              t.origin.toLowerCase().contains(realTrip.origin.toLowerCase().split(',').first) &&
+              t.destination.toLowerCase().contains(realTrip.destination.toLowerCase().split(',').first)));
+      if (existingIndex < 0) {
+        trips.add(realTrip);
+      } else {
+        // Ensure status is marked completed with accurate coordinates & timestamps
+        final current = trips[existingIndex];
+        if (current.status != 'completed' || current.completedAt.isEmpty) {
+          trips[existingIndex] = current.copyWith(
+            status: 'completed',
+            operationalStep: 'trip_completed',
+            startedAt: current.startedAt.isNotEmpty ? current.startedAt : realTrip.startedAt,
+            completedAt: current.completedAt.isNotEmpty ? current.completedAt : realTrip.completedAt,
+            actualDistanceKm: current.actualDistanceKm > 0 ? current.actualDistanceKm : realTrip.actualDistanceKm,
+            plannedDistanceKm: current.plannedDistanceKm > 0 ? current.plannedDistanceKm : realTrip.plannedDistanceKm,
+          );
+        }
+      }
+    }
+    // Keep sorted by most recent first
+    trips.sort((a, b) {
+      final aDate = DateTime.tryParse(a.completedAt.isNotEmpty ? a.completedAt : (a.startedAt.isNotEmpty ? a.startedAt : a.createdAt)) ?? DateTime(1970);
+      final bDate = DateTime.tryParse(b.completedAt.isNotEmpty ? b.completedAt : (b.startedAt.isNotEmpty ? b.startedAt : b.createdAt)) ?? DateTime(1970);
+      return bDate.compareTo(aDate);
+    });
+  }
+
   static List<TripRecord> get defaultFleetTrips => const [];
   static List<CustomerRecord> get defaultCustomers => const [];
   static List<AttendanceRecord> get defaultAttendance => const [];
@@ -768,7 +856,18 @@ class PlannerController extends ChangeNotifier {
             t.customerName == 'Tata Steel Tubes Ltd.' ||
             t.customerName == 'Reliance Logistics Hazira');
       }
+
+      // Ensure completed real trips for Sandeep (GJ19Y2720) exist:
+      // 1. Kal (2 Nov 2026): Mota -> Jolva (completed evening trip)
+      // 2. Aaj (3 Nov 2026): Jolva -> Mota (completed morning trip)
+      _ensureRealDriverTrips();
+
       await _saveTrips();
+      for (final realTrip in _realDriverTrips) {
+        unawaited(
+          FirebaseBackendService.instance.syncTripRecord(record: realTrip),
+        );
+      }
       for (final reference in legacyTripReferences) {
         unawaited(
           FirebaseBackendService.instance.deleteTripRecord(reference),
@@ -1488,6 +1587,7 @@ class PlannerController extends ChangeNotifier {
       }
     }
     if (changed) {
+      _ensureRealDriverTrips();
       unawaited(_saveTrips());
       notifyListeners();
     }
