@@ -1322,7 +1322,134 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
               ),
             ],
           ),
+          if (isOnDuty) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.near_me_rounded, size: 13, color: AppColors.primary),
+                      SizedBox(width: 5),
+                      Text(
+                        'Trip Halt / Stoppage (रस्ते का ठहराव)',
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.navy,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 7),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildHaltButton(
+                          icon: Icons.local_gas_station_rounded,
+                          label: 'Petrol Pump',
+                          color: const Color(0xFF7C3AED),
+                          onTap: () => _logHalt(driverId, 'petrol_pump', '⛽ Refueling at Petrol Pump'),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: _buildHaltButton(
+                          icon: Icons.restaurant_rounded,
+                          label: 'Dhaba / Food',
+                          color: const Color(0xFFEA580C),
+                          onTap: () => _logHalt(driverId, 'hotel_dhaba', '🍽️ Hotel / Dhaba Meal Break'),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: _buildHaltButton(
+                          icon: Icons.traffic_rounded,
+                          label: 'Traffic / Toll',
+                          color: const Color(0xFFDC2626),
+                          onTap: () => _logHalt(driverId, 'traffic_toll', '🚦 Traffic Jam / Toll Halt'),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: _buildHaltButton(
+                          icon: Icons.play_arrow_rounded,
+                          label: 'Resume Run',
+                          color: const Color(0xFF16A34A),
+                          onTap: () => _logHalt(driverId, 'resume', '🟢 Gadi Chali (Trip Resumed)'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
+      ),
+    );
+  }
+
+  Widget _buildHaltButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: color.withValues(alpha: 0.3)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 15, color: color),
+              const SizedBox(height: 2),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800,
+                    color: color,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _logHalt(String driverId, String type, String label) async {
+    await widget.controller.logDriverHalt(
+      driverId: driverId,
+      haltType: type,
+      label: label,
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('$label update save ho gaya!'),
+        backgroundColor: AppColors.primary,
+        duration: const Duration(seconds: 2),
       ),
     );
   }

@@ -3325,6 +3325,39 @@ class PlannerController extends ChangeNotifier {
     return null;
   }
 
+  Future<String?> logDriverHalt({
+    required String driverId,
+    required String haltType,
+    required String label,
+  }) async {
+    final now = DateTime.now();
+    final timeStr =
+        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+
+    final index = attendanceRecords.indexWhere(
+      (a) => a.driverId == driverId && a.endTime.isEmpty,
+    );
+    if (index >= 0) {
+      final active = attendanceRecords[index];
+      final prefix = active.notes.isNotEmpty ? '${active.notes} | ' : '';
+      final updated = active.copyWith(
+        notes: '$prefix$label at $timeStr',
+      );
+      attendanceRecords[index] = updated;
+      notifyListeners();
+      await _saveAttendance();
+      await FirebaseBackendService.instance.syncAttendanceRecord(record: updated);
+    }
+
+    await logActivity(
+      title: 'Driver Halt: $label',
+      details: 'Driver marked "$label" at $timeStr.',
+      category: ActivityCategory.driver,
+      action: 'updated',
+    );
+    return null;
+  }
+
   Future<void> addOrUpdateAttendance(AttendanceRecord record) async {
     final idx = attendanceRecords.indexWhere((a) => a.id == record.id);
     if (idx >= 0) {
