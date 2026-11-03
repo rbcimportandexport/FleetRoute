@@ -355,6 +355,9 @@ class RouteTrafficService {
     'songadh': LatLng(21.1685, 73.5593),
     'dahej': LatLng(21.7107, 72.5857),
     'zaghadia': LatLng(21.7142, 73.1534),
+    'mota': LatLng(21.174901, 73.052134),
+    'rbc salon': LatLng(21.17065, 73.00425),
+    'rbc salon furniture': LatLng(21.17065, 73.00425),
   };
 
   /// Popular quick routes across India for instant planning
@@ -447,7 +450,15 @@ class RouteTrafficService {
     );
 
     // 2. Exact city name or a complete city-name token inside an address.
-    for (final entry in _cityCoordinates.entries) {
+    // Prioritize specific local places (like mota, jolva, rbc salon, bardoli) before large generic districts (like surat)
+    final sortedEntries = _cityCoordinates.entries.toList()
+      ..sort((a, b) {
+        if (a.key == 'surat') return 1;
+        if (b.key == 'surat') return -1;
+        return b.key.length.compareTo(a.key.length);
+      });
+
+    for (final entry in sortedEntries) {
       final cityPattern = RegExp(
         '(^|[^a-z0-9])${RegExp.escape(entry.key)}([^a-z0-9]|\$)',
       );

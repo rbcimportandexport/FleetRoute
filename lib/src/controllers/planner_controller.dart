@@ -188,9 +188,9 @@ class PlannerController extends ChangeNotifier {
     TripRecord(
       reference: 'TRIP-2026-082',
       tripNumber: 'TRIP-2026-082',
-      origin: 'Mota, Bardoli Taluka, सूरत, Gujarat, India',
+      origin: 'Mota, Bardoli Taluka (21.174901, 73.052134)',
       destination:
-          'RBC SALON FURNITURE, Aradhana Industrial Estate, Jolwa, Palsana, Surat',
+          'RBC SALON FURNITURE, Jolwa (21.17065, 73.00425)',
       assignedVehicle: 'GJ19Y2720',
       assignedDriver: 'Sandeep',
       customerName: 'RBC Salon Furniture',
@@ -216,8 +216,8 @@ class PlannerController extends ChangeNotifier {
       reference: 'TRIP-2026-083',
       tripNumber: 'TRIP-2026-083',
       origin:
-          'RBC SALON FURNITURE, Aradhana Industrial Estate, Jolwa, Palsana, Surat',
-      destination: 'Mota, Bardoli Taluka, सूरत, Gujarat, India',
+          'RBC SALON FURNITURE, Jolwa (21.17065, 73.00425)',
+      destination: 'Mota, Bardoli Taluka (21.174901, 73.052134)',
       assignedVehicle: 'GJ19Y2720',
       assignedDriver: 'Sandeep',
       customerName: 'RBC Salon Furniture',
