@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import 'src/app.dart';
@@ -6,8 +8,25 @@ import 'src/services/firebase_bootstrap_service.dart';
 import 'src/widgets/animated_truck_splash.dart';
 
 void main() {
-  WidgetsFlutterBinding.ensureInitialized();
-  runApp(const _TransportLauncher());
+  runZonedGuarded(() {
+    WidgetsFlutterBinding.ensureInitialized();
+
+    // Catch any synchronous Flutter widget/rendering error and prevent app crash
+    FlutterError.onError = (FlutterErrorDetails details) {
+      FlutterError.presentError(details);
+      debugPrint('[CRASH_GUARD] FlutterError caught: ${details.exceptionAsString()}');
+    };
+
+    // Catch any platform/engine level asynchronous exception and prevent app crash/auto-cut
+    PlatformDispatcher.instance.onError = (error, stack) {
+      debugPrint('[CRASH_GUARD] PlatformDispatcher caught error: $error\n$stack');
+      return true; // Returns true to mark error as handled so Android OS does not kill/close app!
+    };
+
+    runApp(const _TransportLauncher());
+  }, (error, stack) {
+    debugPrint('[CRASH_GUARD] Root Zone error caught: $error\n$stack');
+  });
 }
 
 class _TransportLauncher extends StatefulWidget {
