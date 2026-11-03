@@ -1147,7 +1147,6 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
           Row(
             children: [
               Expanded(
-                flex: 3,
                 child: FilledButton.icon(
                   onPressed: () async {
                     if (isOnDuty) {
@@ -1194,33 +1193,34 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                     isOnDuty
                         ? Icons.stop_circle_outlined
                         : Icons.play_circle_outline_rounded,
-                    size: 16,
+                    size: 15,
                   ),
-                  label: Text(
-                    isOnDuty
-                        ? AppLocalizationService.instance.tr('end_duty')
-                        : AppLocalizationService.instance.tr('start_duty'),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 11.5,
-                      fontFamily: 'sans-serif',
+                  label: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      isOnDuty
+                          ? AppLocalizationService.instance.tr('end_duty')
+                          : AppLocalizationService.instance.tr('start_duty'),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 11,
+                        fontFamily: 'sans-serif',
+                      ),
                     ),
-                    overflow: TextOverflow.ellipsis,
                   ),
                   style: FilledButton.styleFrom(
                     backgroundColor:
                         isOnDuty ? const Color(0xFFD97706) : AppColors.primary,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(
-                        vertical: 12, horizontal: 10),
+                        vertical: 10, horizontal: 4),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10)),
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               Expanded(
-                flex: 2,
                 child: OutlinedButton.icon(
                   onPressed: () {
                     showDialog<void>(
@@ -1233,27 +1233,29 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                     );
                   },
                   icon: const Icon(Icons.history_rounded, size: 14),
-                  label: Text(
-                    AppLocalizationService.instance.tr('attendance_history'),
-                    style: const TextStyle(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w700,
-                      fontFamily: 'sans-serif',
+                  label: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      AppLocalizationService.instance.tr('attendance_history'),
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        fontFamily: 'sans-serif',
+                      ),
                     ),
                   ),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.navy,
                     side: const BorderSide(color: AppColors.border),
                     padding:
-                        const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                        const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10)),
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               Expanded(
-                flex: 2,
                 child: OutlinedButton.icon(
                   onPressed: () {
                     showDialog<void>(
@@ -1266,27 +1268,29 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                     );
                   },
                   icon: const Icon(Icons.local_shipping_outlined, size: 14),
-                  label: Text(
-                    AppLocalizationService.instance.tr('trip_history'),
-                    style: const TextStyle(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w700,
-                      fontFamily: 'sans-serif',
+                  label: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      AppLocalizationService.instance.tr('trip_history'),
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        fontFamily: 'sans-serif',
+                      ),
                     ),
                   ),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.primaryDark,
                     side: const BorderSide(color: AppColors.primaryBorder),
                     padding:
-                        const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                        const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10)),
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               Expanded(
-                flex: 2,
                 child: FilledButton.icon(
                   onPressed: () {
                     DriverCalendarScreen.open(
@@ -1297,19 +1301,22 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                     );
                   },
                   icon: const Icon(Icons.calendar_month_rounded, size: 14),
-                  label: const Text(
-                    'CALENDAR',
-                    style: TextStyle(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w800,
-                      fontFamily: 'sans-serif',
+                  label: const FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      'Calendar',
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w800,
+                        fontFamily: 'sans-serif',
+                      ),
                     ),
                   ),
                   style: FilledButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
                     padding:
-                        const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
+                        const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10)),
                   ),

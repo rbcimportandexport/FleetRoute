@@ -223,14 +223,14 @@ class AppLocalizationService {
       AppLanguage.gu: 'ડ્યુટી બંધ',
     },
     'start_duty': {
-      AppLanguage.en: 'Start Duty (हाजिरी लगाएं)',
-      AppLanguage.hi: 'ड्यूटी शुरू करें (हाजिरी लगाएं)',
-      AppLanguage.gu: 'ડ્યુટી શરૂ કરો (હાજરી પૂરો)',
+      AppLanguage.en: 'Start Duty',
+      AppLanguage.hi: 'ड्यूटी शुरू',
+      AppLanguage.gu: 'ડ્યુટી શરૂ',
     },
     'end_duty': {
-      AppLanguage.en: 'End Duty (ड्यूटी समाप्त)',
-      AppLanguage.hi: 'ड्यूटी समाप्त करें',
-      AppLanguage.gu: 'ડ્યુટી પૂર્ણ કરો',
+      AppLanguage.en: 'End Duty',
+      AppLanguage.hi: 'ड्यूटी समाप्त',
+      AppLanguage.gu: 'ડ્યુટી પૂર્ણ',
     },
     'assigned_vehicle': {
       AppLanguage.en: 'Assigned Vehicle',
