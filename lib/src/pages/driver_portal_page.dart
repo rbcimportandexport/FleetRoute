@@ -1327,40 +1327,6 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
     );
   }
 
-  Future<void> _deleteActiveTrip(TripRecord trip) async {
-    final index = widget.controller.trips.indexOf(trip);
-    if (index < 0) return;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Delete this trip?'),
-        content: Text(
-          'Trip ${trip.effectiveTripNumber} permanently remove ho jayegi.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton.icon(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            icon: const Icon(Icons.delete_outline_rounded, size: 18),
-            label: const Text('Delete'),
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFFDC2626),
-            ),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
-    await widget.controller.removeTrip(index);
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Trip ${trip.effectiveTripNumber} deleted.')),
-    );
-  }
-
   Widget _buildCompletedTripsSection(
     List<TripRecord> completedTrips,
     String driverId,
@@ -1689,19 +1655,6 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                         : const Color(0xFFB45309),
                     fontFamily: 'sans-serif',
                   ),
-                ),
-              ),
-              const SizedBox(width: 4),
-              IconButton(
-                onPressed: () => _deleteActiveTrip(trip),
-                tooltip: 'Delete trip',
-                visualDensity: VisualDensity.compact,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
-                icon: const Icon(
-                  Icons.delete_outline_rounded,
-                  size: 18,
-                  color: Color(0xFFDC2626),
                 ),
               ),
             ],
