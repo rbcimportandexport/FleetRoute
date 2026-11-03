@@ -1452,6 +1452,16 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
         duration: const Duration(seconds: 2),
       ),
     );
+
+    // If it's Petrol Pump, automatically prompt driver to capture Diesel Dispenser Meter & Slip photo
+    if (type == 'petrol_pump') {
+      _openPhotoCapture(context, category: 'Bilty & Fuel Receipts');
+    } else if (type == 'hotel_dhaba') {
+      HotelStayMealExpenseSheet.show(
+        context,
+        controller: widget.controller,
+      );
+    }
   }
 
   Widget _buildCompletedTripsSection(
