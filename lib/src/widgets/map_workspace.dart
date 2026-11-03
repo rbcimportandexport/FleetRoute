@@ -22,6 +22,7 @@ import '../services/reverse_geocoding_service.dart';
 import '../services/route_traffic_service.dart';
 import '../services/safety_notification_service.dart';
 import '../theme/app_theme.dart';
+import 'delivery_proof_dialog.dart';
 import 'pre_trip_customer_details_dialog.dart';
 import 'location_search_dialog.dart';
 import 'seatbelt_verification_dialog.dart';
@@ -1707,7 +1708,72 @@ class _MapWorkspaceState extends State<MapWorkspace> {
       _continueFromCurrentDrop();
     } else {
       _stopLiveNavigation();
-      _showMessage('Trip complete ho gaya.');
+
+      // Find the corresponding active or current trip to mark it completed and record POD
+      final origKey = widget.controller.origin.trim().toLowerCase();
+      final destKey = widget.controller.destination.trim().toLowerCase();
+      TripRecord? activeTrip;
+      int activeTripIndex = -1;
+      for (int i = 0; i < widget.controller.trips.length; i++) {
+        final t = widget.controller.trips[i];
+        if (t.status != 'completed' && t.status != 'cancelled') {
+          final tOrig = t.origin.trim().toLowerCase();
+          final tDest = t.destination.trim().toLowerCase();
+          final matchOrigin = tOrig.isNotEmpty &&
+              (tOrig.contains(origKey) || origKey.contains(tOrig));
+          final matchDest = tDest.isNotEmpty &&
+              (tDest.contains(destKey) || destKey.contains(tDest));
+          if (matchOrigin || matchDest) {
+            activeTrip = t;
+            activeTripIndex = i;
+            break;
+          }
+        }
+      }
+
+      // If no active trip matched by origin/destination, take active trip for current driver
+      if (activeTrip == null && widget.controller.trips.isNotEmpty) {
+        final idx = widget.controller.trips.indexWhere(
+            (t) => t.status != 'completed' && t.status != 'cancelled');
+        if (idx >= 0) {
+          activeTrip = widget.controller.trips[idx];
+          activeTripIndex = idx;
+        }
+      }
+
+      if (activeTrip != null && activeTripIndex >= 0) {
+        // Mark trip completed with real distance and completion timestamp
+        final nowIso = DateTime.now().toIso8601String();
+        final actualDist = _routeDistanceKm > 0
+            ? _routeDistanceKm
+            : (activeTrip.actualDistanceKm > 0
+                ? activeTrip.actualDistanceKm
+                : activeTrip.plannedDistanceKm);
+
+        final updatedCompletedTrip = activeTrip.copyWith(
+          status: 'completed',
+          deliveryStatus: 'delivered',
+          operationalStep: 'trip_completed',
+          completedAt: nowIso,
+          unloadingDateTime: nowIso,
+          actualDistanceKm: actualDist,
+        );
+
+        await widget.controller.updateTripRecord(updatedCompletedTrip);
+
+        if (!mounted) return;
+        // Prompt driver for Delivery Proof (POD / Signature / Photo)
+        await showDialog<void>(
+          context: context,
+          barrierDismissible: true,
+          builder: (_) => DeliveryProofDialog(
+            trip: updatedCompletedTrip,
+            controller: widget.controller,
+          ),
+        );
+      }
+
+      _showMessage('Trip safaltapoorvak khatam aur save ho gayi hai!');
     }
   }
 

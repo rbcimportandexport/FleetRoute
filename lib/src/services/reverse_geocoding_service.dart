@@ -31,7 +31,7 @@ class ReverseGeocodingService {
 
   static final Map<String, String> _labelCache = {};
 
-  /// Checks if point is within the RBC Salon Furniture factory compound in Jolwa/Palsana
+  /// Checks if point is within the RBC Salon Furniture factory compound in Jolwa
   static bool _isRbcFactoryLocation(LatLng point) {
     const factoryLat = 21.17065;
     const factoryLng = 73.00425;
@@ -41,10 +41,22 @@ class ReverseGeocodingService {
     return dLat < 0.0035 && dLng < 0.0035;
   }
 
+  /// Checks if point is in Mota village
+  static bool _isMotaLocation(LatLng point) {
+    const motaLat = 21.174901;
+    const motaLng = 73.052134;
+    final dLat = (point.latitude - motaLat).abs();
+    final dLng = (point.longitude - motaLng).abs();
+    return dLat < 0.008 && dLng < 0.008;
+  }
+
   static Future<String?> addressFor(LatLng point) async {
-    // 0. Exact Landmark Override for User's Factory & Depot
+    // 0. Exact Landmark Override for User's Factory & Depot & Mota
     if (_isRbcFactoryLocation(point)) {
       return 'RBC SALON FURNITURE, Aradhna Industrial Estate, Jolwa';
+    }
+    if (_isMotaLocation(point)) {
+      return 'Mota, Bardoli';
     }
 
     final key = '${point.latitude.toStringAsFixed(5)},${point.longitude.toStringAsFixed(5)}';
@@ -374,7 +386,7 @@ class ReverseGeocodingService {
       results.add(
         const GeocodedPlace(
           coordinates: LatLng(21.17065, 73.00425),
-          displayName: 'RBC SALON FURNITURE, Aradhna Industrial Estate, Jolwa, Palsana, Surat',
+          displayName: 'RBC SALON FURNITURE, Aradhna Industrial Estate, Jolwa',
           shortName: 'RBC SALON FURNITURE',
         ),
       );
