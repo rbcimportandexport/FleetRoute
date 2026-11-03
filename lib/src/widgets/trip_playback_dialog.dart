@@ -383,19 +383,40 @@ class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
         }
       } else {
         // Direct Non-Stop Driving (NO FAKE HOTELS, NO FAKE PETROL PUMP, 0 STOPS)
-        // Perfectly matches real driver journey: pure continuous driving from pickup to drop
+        // Perfectly matches real driver journey:
+        // - Starting: Starts from 0 km/h, slowly accelerates (8-16 km/h) out of pickup
+        // - Middle: Cruising smooth village/town road speed (28-38 km/h)
+        // - Ending/Arrival: Decelerates down (10-18 km/h -> 0 km/h) at destination
+        final n = routePoints.length;
         final targetAvgSpeed = widget.trip.averageSpeedKmh > 0
             ? widget.trip.averageSpeedKmh
             : 24.0;
 
-        for (int i = 0; i < routePoints.length; i++) {
+        for (int i = 0; i < n; i++) {
           final p = routePoints[i];
-          final jitter = (math.sin(i * 0.5) * 5.0);
-          // Realistic smooth village/town driving speed (18 to 35 km/h)
-          final speed = (targetAvgSpeed + jitter).clamp(15.0, 45.0);
+
+          // Calculate acceleration at start and deceleration at end:
+          double speed;
+          final double progress = n > 1 ? i / (n - 1) : 0.5;
+
+          if (i == 0 || i == n - 1) {
+            speed = 0.0;
+          } else if (progress < 0.15) {
+            // Starting ramp-up: slow speed pulling out from compound/origin
+            final factor = progress / 0.15; // 0.0 -> 1.0
+            speed = 6.0 + factor * 16.0 + (math.sin(i * 0.5) * 2.0); // 6 -> ~22 km/h
+          } else if (progress > 0.85) {
+            // Ending ramp-down: slow speed entering destination / parking
+            final factor = (1.0 - progress) / 0.15; // 1.0 -> 0.0
+            speed = 5.0 + factor * 16.0 + (math.sin(i * 0.5) * 2.0); // ~21 -> 5 km/h
+          } else {
+            // Middle section cruise: natural road speed variation around 26-36 km/h
+            final jitter = (math.sin(i * 0.45) * 4.5);
+            speed = (targetAvgSpeed + 5.0 + jitter).clamp(20.0, 38.0);
+          }
 
           double course = 0.0;
-          if (i < routePoints.length - 1) {
+          if (i < n - 1) {
             course = RouteTrafficService.calculateBearing(p, routePoints[i + 1]);
           }
 
@@ -407,7 +428,9 @@ class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
               timestamp: baseTime.add(Duration(seconds: i * stepDurationSec)),
               isHold: false,
               holdDurationSeconds: 0,
-              label: '',
+              label: i == 0
+                  ? 'Pickup Departure'
+                  : (i == n - 1 ? 'Destination Arrived' : ''),
               stop: null,
             ),
           );
