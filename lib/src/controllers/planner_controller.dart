@@ -201,15 +201,15 @@ class PlannerController extends ChangeNotifier {
       deliveryStatus: 'delivered',
       loadingDateTime: '2026-11-02T19:45:00',
       departureDateTime: '2026-11-02T20:00:00',
-      unloadingDateTime: '2026-11-02T20:45:00',
+      unloadingDateTime: '2026-11-02T20:15:00',
       startedAt: '2026-11-02T20:00:00',
-      completedAt: '2026-11-02T20:45:00',
+      completedAt: '2026-11-02T20:15:00',
       createdAt: '2026-11-02T19:30:00',
-      actualDistanceKm: 26.1,
-      plannedDistanceKm: 26.1,
-      averageSpeedKmh: 34.8,
+      actualDistanceKm: 5.8,
+      plannedDistanceKm: 5.8,
+      averageSpeedKmh: 23.2,
       freightAmount: 3500.0,
-      trafficSummary: 'Completed night trip via NH-53 / Palsana',
+      trafficSummary: 'Completed night trip via Jolva-Mota Road',
     ),
     TripRecord(
       reference: 'TRIP-2026-083',
@@ -227,13 +227,13 @@ class PlannerController extends ChangeNotifier {
       deliveryStatus: 'delivered',
       loadingDateTime: '2026-11-03T08:15:00',
       departureDateTime: '2026-11-03T08:30:00',
-      unloadingDateTime: '2026-11-03T09:15:00',
+      unloadingDateTime: '2026-11-03T08:45:00',
       startedAt: '2026-11-03T08:30:00',
-      completedAt: '2026-11-03T09:15:00',
+      completedAt: '2026-11-03T08:45:00',
       createdAt: '2026-11-03T08:00:00',
-      actualDistanceKm: 26.1,
-      plannedDistanceKm: 26.1,
-      averageSpeedKmh: 34.8,
+      actualDistanceKm: 5.8,
+      plannedDistanceKm: 5.8,
+      averageSpeedKmh: 23.2,
       freightAmount: 3500.0,
       trafficSummary: 'Completed morning return trip to Mota',
     ),
@@ -250,18 +250,23 @@ class PlannerController extends ChangeNotifier {
       if (existingIndex < 0) {
         trips.add(realTrip);
       } else {
-        // Ensure status is marked completed with accurate coordinates & timestamps
+        // Ensure status is marked completed with accurate real road distance (5.8 km) & timestamps
         final current = trips[existingIndex];
-        if (current.status != 'completed' || current.completedAt.isEmpty) {
-          trips[existingIndex] = current.copyWith(
-            status: 'completed',
-            operationalStep: 'trip_completed',
-            startedAt: current.startedAt.isNotEmpty ? current.startedAt : realTrip.startedAt,
-            completedAt: current.completedAt.isNotEmpty ? current.completedAt : realTrip.completedAt,
-            actualDistanceKm: current.actualDistanceKm > 0 ? current.actualDistanceKm : realTrip.actualDistanceKm,
-            plannedDistanceKm: current.plannedDistanceKm > 0 ? current.plannedDistanceKm : realTrip.plannedDistanceKm,
-          );
-        }
+        trips[existingIndex] = current.copyWith(
+          origin: realTrip.origin,
+          destination: realTrip.destination,
+          status: 'completed',
+          operationalStep: 'trip_completed',
+          startedAt: current.startedAt.isNotEmpty ? current.startedAt : realTrip.startedAt,
+          completedAt: current.completedAt.isNotEmpty ? current.completedAt : realTrip.completedAt,
+          actualDistanceKm: (current.actualDistanceKm > 0 && current.actualDistanceKm <= 10.0)
+              ? current.actualDistanceKm
+              : realTrip.actualDistanceKm,
+          plannedDistanceKm: (current.plannedDistanceKm > 0 && current.plannedDistanceKm <= 10.0)
+              ? current.plannedDistanceKm
+              : realTrip.plannedDistanceKm,
+          averageSpeedKmh: realTrip.averageSpeedKmh,
+        );
       }
     }
     // Keep sorted by most recent first
