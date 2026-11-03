@@ -201,15 +201,16 @@ class PlannerController extends ChangeNotifier {
       deliveryStatus: 'delivered',
       loadingDateTime: '2026-11-02T19:15:00',
       departureDateTime: '2026-11-02T19:27:00',
-      unloadingDateTime: '2026-11-02T20:37:00',
+      unloadingDateTime: '2026-11-02T19:42:00',
       startedAt: '2026-11-02T19:27:00',
-      completedAt: '2026-11-02T20:37:00',
+      completedAt: '2026-11-02T19:42:00',
       createdAt: '2026-11-02T19:10:00',
       actualDistanceKm: 5.8,
       plannedDistanceKm: 5.8,
-      averageSpeedKmh: 24.5,
+      plannedDurationMinutes: 15,
+      averageSpeedKmh: 23.2,
       freightAmount: 3500.0,
-      trafficSummary: 'Completed night trip: Mota to Jolwa (RBC Salon Furniture)',
+      trafficSummary: 'Completed night trip: Mota to Jolwa in 15 mins (non-stop)',
     ),
     TripRecord(
       reference: 'TRIP-2026-083',
@@ -226,16 +227,17 @@ class PlannerController extends ChangeNotifier {
       pickupStatus: 'completed',
       deliveryStatus: 'delivered',
       loadingDateTime: '2026-11-03T07:45:00',
-      departureDateTime: '2026-11-03T08:00:00',
+      departureDateTime: '2026-11-03T08:02:00',
       unloadingDateTime: '2026-11-03T08:17:00',
-      startedAt: '2026-11-03T08:00:00',
+      startedAt: '2026-11-03T08:02:00',
       completedAt: '2026-11-03T08:17:00',
       createdAt: '2026-11-03T07:30:00',
       actualDistanceKm: 5.8,
       plannedDistanceKm: 5.8,
-      averageSpeedKmh: 24.5,
+      plannedDurationMinutes: 15,
+      averageSpeedKmh: 23.2,
       freightAmount: 3500.0,
-      trafficSummary: 'Completed morning return trip: Jolwa to Mota',
+      trafficSummary: 'Completed morning return trip: Jolwa to Mota in 15 mins (non-stop)',
     ),
   ];
 
@@ -251,22 +253,20 @@ class PlannerController extends ChangeNotifier {
       if (existingIndex < 0) {
         trips.add(realTrip);
       } else {
-        // Ensure status is marked completed with accurate real road distance (5.8 km) & timestamps
+        // Ensure status is marked completed with accurate real road distance (5.8 km) & 15-min driving time
         final current = trips[existingIndex];
         trips[existingIndex] = current.copyWith(
           origin: realTrip.origin,
           destination: realTrip.destination,
           status: 'completed',
           operationalStep: 'trip_completed',
-          startedAt: current.startedAt.isNotEmpty ? current.startedAt : realTrip.startedAt,
-          completedAt: current.completedAt.isNotEmpty ? current.completedAt : realTrip.completedAt,
-          actualDistanceKm: (current.actualDistanceKm > 0 && current.actualDistanceKm <= 10.0)
-              ? current.actualDistanceKm
-              : realTrip.actualDistanceKm,
-          plannedDistanceKm: (current.plannedDistanceKm > 0 && current.plannedDistanceKm <= 10.0)
-              ? current.plannedDistanceKm
-              : realTrip.plannedDistanceKm,
+          startedAt: realTrip.startedAt,
+          completedAt: realTrip.completedAt,
+          actualDistanceKm: realTrip.actualDistanceKm,
+          plannedDistanceKm: realTrip.plannedDistanceKm,
+          plannedDurationMinutes: realTrip.plannedDurationMinutes,
           averageSpeedKmh: realTrip.averageSpeedKmh,
+          trafficSummary: realTrip.trafficSummary,
         );
       }
     }
