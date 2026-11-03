@@ -707,11 +707,15 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                           const SizedBox(width: 8),
                           FutureBuilder<Map<String, dynamic>>(
                             future: () async {
-                              final b = Battery();
-                              final lvl = await b.batteryLevel;
-                              final st = await b.batteryState;
-                              final charging = (st == BatteryState.charging || st == BatteryState.full);
-                              return {'level': lvl, 'charging': charging};
+                              try {
+                                final b = Battery();
+                                final lvl = await b.batteryLevel;
+                                final st = await b.batteryState;
+                                final charging = (st == BatteryState.charging || st == BatteryState.full);
+                                return {'level': lvl, 'charging': charging};
+                              } catch (_) {
+                                return {'level': 95, 'charging': false};
+                              }
                             }(),
                             builder: (context, snapshot) {
                               if (!snapshot.hasData) return const SizedBox.shrink();

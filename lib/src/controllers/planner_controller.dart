@@ -936,7 +936,17 @@ class PlannerController extends ChangeNotifier {
               d.phone.replaceAll(RegExp(r'\D'), '') == cleanDigits ||
               d.email.replaceAll(RegExp(r'\D'), '') == cleanDigits ||
               d.name.trim().toLowerCase() == a.driverName.trim().toLowerCase());
-          return !driverMatch;
+          if (!driverMatch) return true;
+
+          // Auto-close any unclosed shift from past dates (older than today) so it doesn't show 45+ hours
+          final now = DateTime.now();
+          final todayDateStr =
+              '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+          if (a.endTime.isEmpty && a.date != todayDateStr) {
+            // Remove old hanging test duties from previous dates
+            return true;
+          }
+          return false;
         });
       }
       await _saveAttendance();
@@ -3329,8 +3339,11 @@ class PlannerController extends ChangeNotifier {
 
   AttendanceRecord? getActiveDuty(String driverId) {
     try {
+      final now = DateTime.now();
+      final todayDateStr =
+          '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
       return attendanceRecords.firstWhere(
-        (a) => a.driverId == driverId && a.endTime.isEmpty,
+        (a) => a.driverId == driverId && a.endTime.isEmpty && a.date == todayDateStr,
       );
     } catch (_) {
       return null;
