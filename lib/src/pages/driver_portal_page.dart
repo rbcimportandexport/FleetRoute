@@ -21,6 +21,7 @@ import '../widgets/driver_trip_history_dialog.dart';
 import '../widgets/location_search_dialog.dart';
 import '../widgets/seatbelt_records_dialog.dart';
 import '../widgets/trip_detail_report_dialog.dart';
+import '../widgets/trip_playback_dialog.dart';
 
 class DriverPortalPage extends StatefulWidget {
   const DriverPortalPage({
@@ -430,6 +431,23 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                     ? widget.controller.trips.first
                     : null);
 
+            // Resolve completed trips for driver/vehicle
+            final completedTrips = widget.controller.trips.where((t) {
+              final isDone = t.status == 'completed' || t.status == 'delivered';
+              if (!isDone) return false;
+              final vMatch = t.assignedVehicle.isNotEmpty &&
+                  t.assignedVehicle
+                          .replaceAll(RegExp(r'[\s\-]'), '')
+                          .toUpperCase() ==
+                      vehicleNumber
+                          .replaceAll(RegExp(r'[\s\-]'), '')
+                          .toUpperCase();
+              final dMatch = t.assignedDriver.isNotEmpty &&
+                  t.assignedDriver.trim().toLowerCase() ==
+                      driverName.trim().toLowerCase();
+              return vMatch || dMatch;
+            }).toList();
+
             return Scaffold(
               backgroundColor: AppColors.canvas,
               body: SafeArea(
@@ -465,6 +483,16 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                       if (activeTrip != null) ...[
                         _buildActiveTripSheetCard(
                             activeTrip, vehicleNumber, driverName),
+                        const SizedBox(height: 14),
+                      ],
+
+                      // 2B. Completed Trips Section (Direct on Dashboard)
+                      if (completedTrips.isNotEmpty) ...[
+                        _buildCompletedTripsSection(
+                          completedTrips,
+                          dutyDriverId,
+                          driverName,
+                        ),
                         const SizedBox(height: 14),
                       ],
 
@@ -1321,6 +1349,207 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Trip ${trip.effectiveTripNumber} deleted.')),
+    );
+  }
+
+  Widget _buildCompletedTripsSection(
+    List<TripRecord> completedTrips,
+    String driverId,
+    String driverName,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFBBF7D0), width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF16A34A).withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFDCFCE7),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.task_alt_rounded,
+                      color: Color(0xFF16A34A),
+                      size: 18,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Completed Trips (${completedTrips.length})',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 14,
+                      color: AppColors.navy,
+                    ),
+                  ),
+                ],
+              ),
+              InkWell(
+                onTap: () {
+                  showDialog<void>(
+                    context: context,
+                    builder: (_) => DriverTripHistoryDialog(
+                      driverId: driverId,
+                      driverName: driverName,
+                      controller: widget.controller,
+                    ),
+                  );
+                },
+                child: const Text(
+                  'VIEW ALL',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF16A34A),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: completedTrips.take(3).length,
+            separatorBuilder: (_, __) => const SizedBox(height: 8),
+            itemBuilder: (context, i) {
+              final trip = completedTrips[i];
+              final distance = trip.actualDistanceKm > 0
+                  ? trip.actualDistanceKm
+                  : trip.plannedDistanceKm;
+              return Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFDCFCE7),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Icon(
+                        Icons.check_circle_outline_rounded,
+                        color: Color(0xFF16A34A),
+                        size: 16,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                'Trip #${trip.effectiveTripNumber}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 12.5,
+                                  color: AppColors.navy,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 5, vertical: 1.5),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFDCFCE7),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: const Text(
+                                  'COMPLETED',
+                                  style: TextStyle(
+                                    fontSize: 8.5,
+                                    fontWeight: FontWeight.w900,
+                                    color: Color(0xFF15803D),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${trip.origin} → ${trip.destination}',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppColors.slate,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          if (distance > 0)
+                            Text(
+                              'Distance: ${distance.toStringAsFixed(1)} km',
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF16A34A),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.play_circle_fill_rounded,
+                          color: Color(0xFF16A34A), size: 22),
+                      tooltip: 'Route Playback',
+                      onPressed: () {
+                        TripPlaybackDialog.show(
+                          context,
+                          trip: trip,
+                          controller: widget.controller,
+                        );
+                      },
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        showDialog<void>(
+                          context: context,
+                          builder: (_) => TripDetailReportDialog(
+                            trip: trip,
+                            controller: widget.controller,
+                          ),
+                        );
+                      },
+                      child: const Text(
+                        'REPORT',
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.navy,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
     );
   }
 

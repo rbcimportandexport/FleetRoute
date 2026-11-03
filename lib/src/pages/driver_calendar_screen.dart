@@ -63,16 +63,44 @@ class _DriverCalendarScreenState extends State<DriverCalendarScreen> {
 
   DateTime? _parseDate(String raw) {
     if (raw.trim().isEmpty) return null;
-    return DateTime.tryParse(raw);
+    return DateTime.tryParse(raw)?.toLocal();
   }
 
   List<TripRecord> _getTripsForDate(DateTime date, List<TripRecord> allTrips) {
+    final targetDriver = widget.driverName.trim().toLowerCase();
+    final targetId = widget.driverId.trim().toLowerCase();
+    final targetVehicle =
+        widget.controller.currentDriver?.assignedVehicle.replaceAll(RegExp(r'[\s\-]'), '').toUpperCase() ?? '';
+
     return allTrips.where((t) {
-      DateTime? tripDate = _parseDate(t.departureDateTime);
-      tripDate ??= _parseDate(t.loadingDateTime);
-      tripDate ??= _parseDate(t.createdAt);
-      if (tripDate == null) return false;
-      return _isSameDay(tripDate, date);
+      // Driver/Vehicle match check (if driver/vehicle specified, ensure it belongs to this driver)
+      if (targetDriver.isNotEmpty || targetVehicle.isNotEmpty) {
+        final tDriver = t.assignedDriver.trim().toLowerCase();
+        final tVehicle = t.assignedVehicle.replaceAll(RegExp(r'[\s\-]'), '').toUpperCase();
+        final matchesDriver = targetDriver.isNotEmpty &&
+            (tDriver.contains(targetDriver) || targetDriver.contains(tDriver) || tDriver.contains(targetId));
+        final matchesVehicle = targetVehicle.isNotEmpty && tVehicle.isNotEmpty && tVehicle == targetVehicle;
+        if (!matchesDriver && !matchesVehicle && targetDriver != 'driver') {
+          return false;
+        }
+      }
+
+      // Check all available date timestamps on the trip
+      final candidateDates = <DateTime?>[
+        _parseDate(t.completedAt),
+        _parseDate(t.startedAt),
+        _parseDate(t.unloadingDateTime),
+        _parseDate(t.departureDateTime),
+        _parseDate(t.loadingDateTime),
+        _parseDate(t.createdAt),
+      ];
+
+      for (final cd in candidateDates) {
+        if (cd != null && _isSameDay(cd, date)) {
+          return true;
+        }
+      }
+      return false;
     }).toList();
   }
 
