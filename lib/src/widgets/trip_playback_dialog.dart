@@ -719,7 +719,9 @@ class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
                             initialCenter: _routeGeometry.isNotEmpty
                                 ? _routeGeometry.first
                                 : const LatLng(22.5, 79.0),
-                            initialZoom: 12,
+                            initialZoom: 14,
+                            minZoom: 3.0,
+                            maxZoom: 21.0,
                           ),
                           children: [
                             TileLayer(
@@ -733,24 +735,24 @@ class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
                                 streetlight: false,
                               ),
                               fallbackUrl: MapTileService.fallbackTileUrl,
-                              maxNativeZoom: 19,
+                              maxNativeZoom: 18,
+                              maxZoom: 21.0,
                               userAgentPackageName: MapTileService.userAgent,
-                              maxZoom: 19,
                             ),
                             if (_mapStyle == MapViewStyle.satellite) ...[
                               TileLayer(
                                 key: const ValueKey('playback_satellite_roads'),
                                 urlTemplate: MapTileService.satelliteRoadsTileUrl,
-                                maxNativeZoom: 19,
+                                maxNativeZoom: 18,
+                                maxZoom: 21.0,
                                 userAgentPackageName: MapTileService.userAgent,
-                                maxZoom: 19,
                               ),
                               TileLayer(
                                 key: const ValueKey('playback_satellite_labels'),
                                 urlTemplate: MapTileService.satelliteLabelsTileUrl,
-                                maxNativeZoom: 19,
+                                maxNativeZoom: 18,
+                                maxZoom: 21.0,
                                 userAgentPackageName: MapTileService.userAgent,
-                                maxZoom: 19,
                               ),
                             ],
 

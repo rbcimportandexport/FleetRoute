@@ -4890,7 +4890,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                     initialCenter: _effectiveOrigin ?? _userLocation ?? _india,
                     initialZoom: initialZoom,
                     minZoom: 2.5,
-                    maxZoom: 19.0,
+                    maxZoom: 21.0,
                     onTap: (tapPosition, point) => _handleMapTap(point),
                     onPositionChanged: (camera, hasGesture) {
                       _zoom = camera.zoom;
@@ -4911,9 +4911,9 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                         streetlight: widget.controller.isStreetlight,
                       ),
                       fallbackUrl: MapTileService.fallbackTileUrl,
-                      maxNativeZoom: 19,
+                      maxNativeZoom: 18,
+                      maxZoom: 21.0,
                       userAgentPackageName: MapTileService.userAgent,
-                      maxZoom: 19,
                       errorTileCallback: (tile, error, stackTrace) =>
                           _handleMapTileError(),
                     ),
@@ -4921,16 +4921,16 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                       TileLayer(
                         key: const ValueKey('sat_roads'),
                         urlTemplate: MapTileService.satelliteRoadsTileUrl,
-                        maxNativeZoom: 19,
+                        maxNativeZoom: 18,
+                        maxZoom: 21.0,
                         userAgentPackageName: MapTileService.userAgent,
-                        maxZoom: 19,
                       ),
                       TileLayer(
                         key: const ValueKey('sat_labels'),
                         urlTemplate: MapTileService.satelliteLabelsTileUrl,
-                        maxNativeZoom: 19,
+                        maxNativeZoom: 18,
+                        maxZoom: 21.0,
                         userAgentPackageName: MapTileService.userAgent,
-                        maxZoom: 19,
                       ),
                     ],
                     PolylineLayer(polylines: _polylines),
