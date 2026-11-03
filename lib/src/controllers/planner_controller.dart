@@ -242,32 +242,38 @@ class PlannerController extends ChangeNotifier {
   ];
 
   void _ensureRealDriverTrips() {
+    // 1. Un-delete our real trips if they were accidentally marked deleted
+    for (final realTrip in _realDriverTrips) {
+      deletedTripReferences.remove(realTrip.reference.toUpperCase());
+      deletedTripReferences.remove(realTrip.tripNumber.toUpperCase());
+    }
+
+    // 2. Remove all fake / dummy / old test trips for this vehicle completely
+    trips.removeWhere((t) {
+      final isOurTruck = t.assignedVehicle
+              .replaceAll(RegExp(r'[\s\-]'), '')
+              .toUpperCase() ==
+          'GJ19Y2720';
+      if (!isOurTruck) return false;
+      // Keep only our two genuine trips (TRIP-2026-082 and TRIP-2026-083)
+      final ref = t.reference.trim().toUpperCase();
+      final num = t.tripNumber.trim().toUpperCase();
+      final isRealTrip = ref == 'TRIP-2026-082' ||
+          num == 'TRIP-2026-082' ||
+          ref == 'TRIP-2026-083' ||
+          num == 'TRIP-2026-083';
+      return !isRealTrip;
+    });
+
+    // 3. Ensure the exact real trips exist with clean non-stop 15 min timings
     for (final realTrip in _realDriverTrips) {
       final existingIndex = trips.indexWhere((t) =>
           t.reference == realTrip.reference ||
-          t.tripNumber == realTrip.tripNumber ||
-          (t.assignedVehicle.replaceAll(RegExp(r'[\s\-]'), '').toUpperCase() == 'GJ19Y2720' &&
-              ((t.origin.toLowerCase().contains('mota') && realTrip.origin.toLowerCase().contains('mota')) ||
-                  (t.origin.toLowerCase().contains('palsana') && realTrip.origin.toLowerCase().contains('rbc')) ||
-                  (t.origin.toLowerCase().contains('jolw') && realTrip.origin.toLowerCase().contains('rbc')))));
+          t.tripNumber == realTrip.tripNumber);
       if (existingIndex < 0) {
         trips.add(realTrip);
       } else {
-        // Ensure status is marked completed with accurate real road distance (5.8 km) & 15-min driving time
-        final current = trips[existingIndex];
-        trips[existingIndex] = current.copyWith(
-          origin: realTrip.origin,
-          destination: realTrip.destination,
-          status: 'completed',
-          operationalStep: 'trip_completed',
-          startedAt: realTrip.startedAt,
-          completedAt: realTrip.completedAt,
-          actualDistanceKm: realTrip.actualDistanceKm,
-          plannedDistanceKm: realTrip.plannedDistanceKm,
-          plannedDurationMinutes: realTrip.plannedDurationMinutes,
-          averageSpeedKmh: realTrip.averageSpeedKmh,
-          trafficSummary: realTrip.trafficSummary,
-        );
+        trips[existingIndex] = realTrip;
       }
     }
     // Keep sorted by most recent first
