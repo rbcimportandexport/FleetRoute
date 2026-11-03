@@ -33,7 +33,6 @@ enum WorkspaceSection {
   alerts,
   driverDocuments,
   vehicleDocuments,
-  fastag,
 }
 
 extension WorkspaceSectionView on WorkspaceSection {
@@ -58,7 +57,6 @@ extension WorkspaceSectionView on WorkspaceSection {
         WorkspaceSection.alerts => AppLocalizationService.instance.tr('alerts'),
         WorkspaceSection.driverDocuments => 'Driver Docs',
         WorkspaceSection.vehicleDocuments => 'Vehicle Docs',
-        WorkspaceSection.fastag => 'FASTag Wallet',
       };
 
   IconData get icon => switch (this) {
@@ -74,7 +72,6 @@ extension WorkspaceSectionView on WorkspaceSection {
         WorkspaceSection.alerts => Icons.notifications_none_rounded,
         WorkspaceSection.driverDocuments => Icons.badge_outlined,
         WorkspaceSection.vehicleDocuments => Icons.folder_copy_outlined,
-        WorkspaceSection.fastag => Icons.toll_rounded,
       };
 }
 
@@ -219,12 +216,6 @@ class _FleetWorkspaceState extends State<FleetWorkspace> {
       WorkspaceSection.vehicleDocuments => DocumentGalleryPage(
           controller: controller,
           mode: DocumentGalleryMode.vehicle,
-        ),
-      WorkspaceSection.fastag => FastagHistoryPage(
-          controller: controller,
-          vehicleCode: controller.truckModels.isNotEmpty
-              ? controller.truckModels.first.code
-              : '',
         ),
     };
   }

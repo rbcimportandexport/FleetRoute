@@ -921,8 +921,6 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                 _vehicleDetail('Odometer', '${truck.currentOdometerKm} km'),
                 _vehicleDetail('Next Service', '${truck.nextServiceKm} km'),
                 _vehicleDetail('Speed Limit', '${truck.maxSpeed} km/h'),
-                _vehicleDetail('FASTag Balance',
-                    'Rs ${truck.fastagBalance.toStringAsFixed(0)}'),
                 _vehicleDetail('GPS / Tracker',
                     truck.hasValidGpsFix ? 'Connected' : 'No live fix'),
                 _vehicleDetail('Last GPS Update', value(truck.lastGpsUpdate)),

@@ -4805,10 +4805,6 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                         _vehicleDetailCard(
                             'Speed Limit', '${truck.maxSpeed} km/h', width),
                         _vehicleDetailCard(
-                            'FASTag Balance',
-                            'Rs ${truck.fastagBalance.toStringAsFixed(0)}',
-                            width),
-                        _vehicleDetailCard(
                             'GPS / Tracker',
                             truck.hasValidGpsFix ? 'Connected' : 'No live fix',
                             width),
