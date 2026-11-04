@@ -1317,31 +1317,13 @@ class _LoginPageState extends State<LoginPage> {
                                         _selectedRole = 'driver';
                                       });
                                     },
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 12, vertical: 6),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFECFDF5),
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(
-                                            color: const Color(0xFF86EFAC)),
-                                      ),
-                                      child: const Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(Icons.person_add_outlined,
-                                              size: 14,
-                                              color: Color(0xFF16A34A)),
-                                          SizedBox(width: 5),
-                                          Text(
-                                            'Sign up',
-                                            style: TextStyle(
-                                              fontSize: 13,
-                                              color: Color(0xFF16A34A),
-                                              fontWeight: FontWeight.w700,
-                                            ),
-                                          ),
-                                        ],
+                                    child: const Text(
+                                      'Sign up',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Color(0xFF16A34A),
+                                        fontWeight: FontWeight.w800,
+                                        decoration: TextDecoration.underline,
                                       ),
                                     ),
                                   ),
@@ -1367,31 +1349,13 @@ class _LoginPageState extends State<LoginPage> {
                                         _infoMessage = null;
                                       });
                                     },
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 12, vertical: 6),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFEFF6FF),
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(
-                                            color: const Color(0xFF93C5FD)),
-                                      ),
-                                      child: const Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(Icons.login_rounded,
-                                              size: 14,
-                                              color: Color(0xFF2563EB)),
-                                          SizedBox(width: 5),
-                                          Text(
-                                            'Login Karein',
-                                            style: TextStyle(
-                                              fontSize: 13,
-                                              color: Color(0xFF2563EB),
-                                              fontWeight: FontWeight.w700,
-                                            ),
-                                          ),
-                                        ],
+                                    child: const Text(
+                                      'Sign in',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Color(0xFF2563EB),
+                                        fontWeight: FontWeight.w800,
+                                        decoration: TextDecoration.underline,
                                       ),
                                     ),
                                   ),
