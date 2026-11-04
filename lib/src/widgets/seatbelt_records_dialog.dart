@@ -63,6 +63,7 @@ class _SeatbeltRecordsDialogState extends State<SeatbeltRecordsDialog> {
   }
 
   String _formatDateTime(DateTime dt) {
+    final localDt = dt.toLocal();
     const months = [
       'Jan',
       'Feb',
@@ -77,11 +78,11 @@ class _SeatbeltRecordsDialogState extends State<SeatbeltRecordsDialog> {
       'Nov',
       'Dec'
     ];
-    final month = months[dt.month - 1];
-    final hour = dt.hour == 0 ? 12 : (dt.hour > 12 ? dt.hour - 12 : dt.hour);
-    final minute = dt.minute.toString().padLeft(2, '0');
-    final ampm = dt.hour >= 12 ? 'PM' : 'AM';
-    return '${dt.day} $month ${dt.year}, $hour:$minute $ampm';
+    final month = months[localDt.month - 1];
+    final hour = localDt.hour == 0 ? 12 : (localDt.hour > 12 ? localDt.hour - 12 : localDt.hour);
+    final minute = localDt.minute.toString().padLeft(2, '0');
+    final ampm = localDt.hour >= 12 ? 'PM' : 'AM';
+    return '${localDt.day} $month ${localDt.year}, $hour:$minute $ampm';
   }
 
   List<SeatbeltRecord> _getRecords() {

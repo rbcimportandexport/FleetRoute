@@ -21,8 +21,15 @@ int _jsonInt(Object? value, [int fallback = 0]) {
   return int.tryParse(value?.toString().trim() ?? '') ?? fallback;
 }
 
-DateTime _jsonDateTime(Object? value) =>
-    DateTime.tryParse(value?.toString() ?? '') ?? DateTime.now();
+DateTime _jsonDateTime(Object? value) {
+  final raw = value?.toString().trim() ?? '';
+  if (raw.isEmpty) return DateTime.now();
+  final parsed = DateTime.tryParse(raw);
+  if (parsed != null) {
+    return parsed.toLocal();
+  }
+  return DateTime.now();
+}
 
 double _jsonDouble(Object? value, [double fallback = 0.0]) {
   if (value is num) return value.toDouble();

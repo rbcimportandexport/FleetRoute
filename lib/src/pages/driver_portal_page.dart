@@ -135,6 +135,7 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
   }
 
   String _photoDayDateTime(DateTime timestamp) {
+    final t = timestamp.toLocal();
     const days = [
       'Monday',
       'Tuesday',
@@ -158,12 +159,12 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
       'Nov',
       'Dec'
     ];
-    final hour = timestamp.hour == 0
+    final hour = t.hour == 0
         ? 12
-        : (timestamp.hour > 12 ? timestamp.hour - 12 : timestamp.hour);
-    final minute = timestamp.minute.toString().padLeft(2, '0');
-    final period = timestamp.hour >= 12 ? 'PM' : 'AM';
-    return '${days[timestamp.weekday - 1]}, ${timestamp.day} ${months[timestamp.month - 1]} ${timestamp.year}  •  $hour:$minute $period';
+        : (t.hour > 12 ? t.hour - 12 : t.hour);
+    final minute = t.minute.toString().padLeft(2, '0');
+    final period = t.hour >= 12 ? 'PM' : 'AM';
+    return '${days[t.weekday - 1]}, ${t.day} ${months[t.month - 1]} ${t.year}  •  $hour:$minute $period';
   }
 
   void _showCategoryPhotos(
