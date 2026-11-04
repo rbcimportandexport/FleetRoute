@@ -336,6 +336,45 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                                       ],
                                     ),
                                   ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete_outline_rounded,
+                                        size: 19, color: Color(0xFFEF4444)),
+                                    tooltip: 'Delete Photo',
+                                    visualDensity: VisualDensity.compact,
+                                    onPressed: () async {
+                                      final confirm = await showDialog<bool>(
+                                        context: context,
+                                        builder: (c) => AlertDialog(
+                                          title: const Text('Delete Photo?'),
+                                          content: const Text(
+                                              'Kya aap is photo record ko delete karna chahte hain?'),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () =>
+                                                  Navigator.pop(c, false),
+                                              child: const Text('Cancel'),
+                                            ),
+                                            FilledButton(
+                                              style: FilledButton.styleFrom(
+                                                  backgroundColor:
+                                                      const Color(0xFFEF4444)),
+                                              onPressed: () =>
+                                                  Navigator.pop(c, true),
+                                              child: const Text('Delete'),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                      if (confirm == true) {
+                                        await widget.controller
+                                            .removeSeatbeltRecord(record.id);
+                                        if (sheetContext.mounted) {
+                                          Navigator.pop(sheetContext);
+                                        }
+                                      }
+                                    },
+                                  ),
+                                  const SizedBox(width: 4),
                                   const Icon(Icons.check_circle_rounded,
                                       size: 18, color: AppColors.primary),
                                 ],
