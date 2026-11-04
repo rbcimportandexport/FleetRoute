@@ -829,10 +829,10 @@ class _ReportsPageState extends State<ReportsPage> {
               ? '👑 1st (Gold)'
               : (rank == 2 ? '🥈 2nd (Silver)' : (rank == 3 ? '🥉 3rd (Bronze)' : '#'));
           final rewardTier = score >= 85
-              ? '🌟 Grade A+ (₹2,000 Reward Bonus)'
+              ? '🌟 Grade A+ (Excellent Performance)'
               : (score >= 70
-                  ? '⭐ Grade A (₹1,000 Reward Bonus)'
-                  : (score >= 50 ? '👍 Grade B (₹500 Reward Bonus)' : 'Needs Improvement'));
+                  ? '⭐ Grade A (Very Good Performance)'
+                  : (score >= 50 ? '👍 Grade B (Good Performance)' : 'Needs Improvement'));
 
           rows.add([
             rankBadge,
