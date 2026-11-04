@@ -5194,6 +5194,7 @@ class PlannerController extends ChangeNotifier {
     loggedInName = user.name;
     loggedInRole = user.role;
     currentRole = user.role;
+    unawaited(syncAllDataFromCloud());
     _currentSessionToken = await FirebaseAuthService.instance.idToken();
     // When Firebase rejected/unavailable accounts are authenticated through
     // the provisioned fleet list, issue a device-bound signed session so a
