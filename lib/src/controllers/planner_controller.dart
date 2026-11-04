@@ -5004,14 +5004,21 @@ class PlannerController extends ChangeNotifier {
         },
       );
       if (index < 0) {
-        drivers.add(DriverProfile(
+        final newDriver = DriverProfile(
           user.name,
           user.email,
           phone: cleanUserDigits.length >= 10 ? cleanUserDigits : '',
           assignedVehicle: user.assignedVehicle,
           role: 'driver',
-        ));
+        );
+        drivers.add(newDriver);
         index = drivers.length - 1;
+        await _saveDrivers();
+      } else if (user.assignedVehicle.isNotEmpty &&
+          drivers[index].assignedVehicle != user.assignedVehicle) {
+        drivers[index] = drivers[index].copyWith(
+          assignedVehicle: user.assignedVehicle,
+        );
         await _saveDrivers();
       }
       selectedDriverIndex = index;
