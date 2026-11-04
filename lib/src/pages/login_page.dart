@@ -116,21 +116,36 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<void> _handleRegister() async {
     final name = _nameController.text.trim();
-    final email = _phoneController.text.trim();
-    final password = _passwordController.text.trim();
     final phone = _regPhoneController.text.trim();
     final vehicle = _regVehicleController.text.trim().toUpperCase();
+    final email = _phoneController.text.trim();
+    final password = _passwordController.text.trim();
 
     if (name.isEmpty) {
       setState(() {
-        _errorMessage = 'Kripya apna Pura Naam (Full Name) enter karein.';
+        _errorMessage = 'Kripya Full Name (पूरा नाम) enter karein.';
+      });
+      return;
+    }
+
+    final digits = phone.replaceAll(RegExp(r'\D'), '');
+    if (digits.length < 10) {
+      setState(() {
+        _errorMessage = 'Kripya 10-digit Mobile Number enter karein.';
+      });
+      return;
+    }
+
+    if (_selectedRole == 'driver' && vehicle.isEmpty) {
+      setState(() {
+        _errorMessage = 'Kripya Assigned Vehicle / Truck Number enter karein.';
       });
       return;
     }
 
     if (email.isEmpty) {
       setState(() {
-        _errorMessage = 'Kripya apna Email ID ya Username enter karein.';
+        _errorMessage = 'Kripya Email ID / Account ID enter karein.';
       });
       return;
     }
@@ -168,24 +183,17 @@ class _LoginPageState extends State<LoginPage> {
       } else {
         setState(() {
           _isLoading = false;
-          _isSignUp = false;
-          _useOtpMode = false;
-          _selectedRole = 'driver';
-          _errorMessage = null;
-          _infoMessage = 'Account ban gaya! Kripya Login karein.';
         });
-        _phoneController.text = email;
-        _passwordController.text = password;
+        widget.onLoginSuccess?.call();
       }
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _isLoading = false;
-        _errorMessage = 'Registration failed: ${e.toString()}';
+        _errorMessage = 'Registration failed: ';
       });
     }
   }
-
   Future<void> _handleSendSmsOtp() async {
     final rawPhone = _phoneController.text.trim();
     final digits = rawPhone.replaceAll(RegExp(r'\D'), '');
@@ -819,7 +827,7 @@ class _LoginPageState extends State<LoginPage> {
                                     // Assigned Vehicle (for driver role)
                                     if (_selectedRole == 'driver') ...[
                                       const Text(
-                                        'Assigned Vehicle / Truck (गाड़ी नंबर - Optional)',
+                                        'Assigned Vehicle / Truck (गाड़ी नंबर - Required)',
                                         style: TextStyle(
                                           fontSize: 12,
                                           fontWeight: FontWeight.w700,
