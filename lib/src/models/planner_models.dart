@@ -852,6 +852,12 @@ class TripRecord {
     this.currentStopIndex = 0,
     this.operationalStep = 'not_started',
     this.deliveryProof,
+    this.hasReturnLoad = false,
+    this.returnGoodsDescription = '',
+    this.returnPartyName = '',
+    this.returnFreightAmount = 0.0,
+    this.driverIncentiveAmount = 0.0,
+    this.returnBiltyPhoto = '',
     this.plannedDistanceKm = 0,
     this.plannedDurationMinutes = 0,
     this.trafficSummary = '',
@@ -908,6 +914,12 @@ class TripRecord {
   final String
       operationalStep; // not_started, navigating, arrived_loading, loading_started, loading_completed, navigating_drop, arrived_drop, unloading_started, unloading_completed, trip_completed
   final DeliveryProofRecord? deliveryProof;
+  final bool hasReturnLoad;
+  final String returnGoodsDescription;
+  final String returnPartyName;
+  final double returnFreightAmount;
+  final double driverIncentiveAmount;
+  final String returnBiltyPhoto;
   final double plannedDistanceKm;
   final int plannedDurationMinutes;
   final String trafficSummary;
@@ -1003,6 +1015,12 @@ class TripRecord {
     int? currentStopIndex,
     String? operationalStep,
     DeliveryProofRecord? deliveryProof,
+    bool? hasReturnLoad,
+    String? returnGoodsDescription,
+    String? returnPartyName,
+    double? returnFreightAmount,
+    double? driverIncentiveAmount,
+    String? returnBiltyPhoto,
     double? plannedDistanceKm,
     int? plannedDurationMinutes,
     String? trafficSummary,
@@ -1056,6 +1074,12 @@ class TripRecord {
         currentStopIndex: currentStopIndex ?? this.currentStopIndex,
         operationalStep: operationalStep ?? this.operationalStep,
         deliveryProof: deliveryProof ?? this.deliveryProof,
+        hasReturnLoad: hasReturnLoad ?? this.hasReturnLoad,
+        returnGoodsDescription: returnGoodsDescription ?? this.returnGoodsDescription,
+        returnPartyName: returnPartyName ?? this.returnPartyName,
+        returnFreightAmount: returnFreightAmount ?? this.returnFreightAmount,
+        driverIncentiveAmount: driverIncentiveAmount ?? this.driverIncentiveAmount,
+        returnBiltyPhoto: returnBiltyPhoto ?? this.returnBiltyPhoto,
         plannedDistanceKm: plannedDistanceKm ?? this.plannedDistanceKm,
         plannedDurationMinutes:
             plannedDurationMinutes ?? this.plannedDurationMinutes,
@@ -1109,6 +1133,12 @@ class TripRecord {
         'currentStopIndex': currentStopIndex,
         'operationalStep': operationalStep,
         if (deliveryProof != null) 'deliveryProof': deliveryProof!.toJson(),
+        'hasReturnLoad': hasReturnLoad,
+        'returnGoodsDescription': returnGoodsDescription,
+        'returnPartyName': returnPartyName,
+        'returnFreightAmount': returnFreightAmount,
+        'driverIncentiveAmount': driverIncentiveAmount,
+        'returnBiltyPhoto': returnBiltyPhoto,
         'plannedDistanceKm': plannedDistanceKm,
         'plannedDurationMinutes': plannedDurationMinutes,
         'trafficSummary': trafficSummary,
@@ -1213,6 +1243,12 @@ class TripRecord {
       currentStopIndex: _jsonInt(json['currentStopIndex']),
       operationalStep: _jsonString(json['operationalStep'], 'not_started'),
       deliveryProof: singleProof,
+      hasReturnLoad: _jsonBool(json['hasReturnLoad']),
+      returnGoodsDescription: _jsonString(json['returnGoodsDescription']),
+      returnPartyName: _jsonString(json['returnPartyName']),
+      returnFreightAmount: _jsonDouble(json['returnFreightAmount']),
+      driverIncentiveAmount: _jsonDouble(json['driverIncentiveAmount']),
+      returnBiltyPhoto: _jsonString(json['returnBiltyPhoto']),
       plannedDistanceKm: _jsonDouble(json['plannedDistanceKm']),
       plannedDurationMinutes: _jsonInt(json['plannedDurationMinutes']),
       trafficSummary: _jsonString(json['trafficSummary']),

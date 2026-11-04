@@ -22,6 +22,7 @@ import '../widgets/location_search_dialog.dart';
 import '../widgets/seatbelt_records_dialog.dart';
 import '../widgets/trip_detail_report_dialog.dart';
 import '../widgets/trip_playback_dialog.dart';
+import '../widgets/return_load_declaration_dialog.dart';
 
 class DriverPortalPage extends StatefulWidget {
   const DriverPortalPage({
@@ -1999,6 +2000,9 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
           if (!isDelivered) ...[
             _buildNextLifecycleActionButton(trip, currentStep, tripIndex),
             const SizedBox(height: 10),
+          ] else ...[
+            _buildReturnLoadSection(trip),
+            const SizedBox(height: 10),
           ],
 
           // Quick Action Bar: POD Upload, Receiving Copy, Expense Logger
@@ -2097,6 +2101,129 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                 ),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReturnLoadSection(TripRecord trip) {
+    final hasReturn = trip.hasReturnLoad;
+    final goodsDesc = trip.returnGoodsDescription;
+    final incentive = trip.driverIncentiveAmount;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: hasReturn ? const Color(0xFFF0FDF4) : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: hasReturn ? const Color(0xFF86EFAC) : const Color(0xFFCBD5E1),
+          width: 1.4,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: hasReturn ? const Color(0xFFDCFCE7) : const Color(0xFFE2E8F0),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  hasReturn ? Icons.inventory_2_rounded : Icons.swap_calls_rounded,
+                  size: 18,
+                  color: hasReturn ? const Color(0xFF16A34A) : AppColors.navy,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      hasReturn
+                          ? 'WAPSI MAAL LOADED (Return Cargo)'
+                          : 'WAPSI SAFAR (Return Journey)',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: hasReturn ? const Color(0xFF15803D) : AppColors.navy,
+                      ),
+                    ),
+                    Text(
+                      hasReturn
+                          ? '$goodsDesc • Party: ${trip.returnPartyName}'
+                          : (goodsDesc.isNotEmpty
+                              ? goodsDesc
+                              : 'Surat se wapsi: Maal bhara hai ya khali gadi?'),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppColors.slate,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              if (hasReturn && incentive > 0)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEF3C7),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFFDE68A)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.stars_rounded, size: 14, color: Color(0xFFD97706)),
+                      const SizedBox(width: 3),
+                      Text(
+                        '+₹${incentive.toStringAsFixed(0)}',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFFB45309),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          FilledButton.icon(
+            onPressed: () {
+              ReturnLoadDeclarationDialog.show(
+                context,
+                trip: trip,
+                controller: widget.controller,
+              );
+            },
+            icon: Icon(
+              hasReturn ? Icons.edit_note_rounded : Icons.add_box_rounded,
+              size: 16,
+            ),
+            label: Text(
+              hasReturn
+                  ? 'Wapsi Maal & Incentive Dekhein / Edit Karein'
+                  : 'Wapsi Maal / Khali Gadi Darj Karein (+ Incentive)',
+              style: const TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 11.5,
+              ),
+            ),
+            style: FilledButton.styleFrom(
+              backgroundColor: hasReturn ? const Color(0xFF16A34A) : const Color(0xFF4F46E5),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
           ),
         ],
       ),

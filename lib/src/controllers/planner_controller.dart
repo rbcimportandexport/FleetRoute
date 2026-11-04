@@ -3140,6 +3140,41 @@ class PlannerController extends ChangeNotifier {
     );
   }
 
+  Future<void> recordReturnLoad({
+    required String tripReference,
+    required bool hasReturnLoad,
+    String? goodsDescription,
+    String? partyName,
+    double? returnFreight,
+    double? driverIncentive,
+    String? biltyPhoto,
+  }) async {
+    final tripIdx = trips.indexWhere(
+        (t) => t.reference == tripReference || t.tripNumber == tripReference);
+    if (tripIdx < 0) return;
+    final current = trips[tripIdx];
+    final updated = current.copyWith(
+      hasReturnLoad: hasReturnLoad,
+      returnGoodsDescription: goodsDescription ?? '',
+      returnPartyName: partyName ?? '',
+      returnFreightAmount: returnFreight ?? 0.0,
+      driverIncentiveAmount: driverIncentive ?? 0.0,
+      returnBiltyPhoto: biltyPhoto ?? '',
+    );
+    trips[tripIdx] = updated;
+    notifyListeners();
+    await _saveTrips();
+    await FirebaseBackendService.instance.syncTripRecord(record: updated);
+    await logActivity(
+      title: hasReturnLoad ? 'Wapsi Maal (Return Load) Logged' : 'Empty Return Logged',
+      details: hasReturnLoad
+          ? 'Trip ${updated.effectiveTripNumber}: Return load "$goodsDescription" from "$partyName". Freight: ₹$returnFreight, Driver Incentive: ₹$driverIncentive.'
+          : 'Trip ${updated.effectiveTripNumber}: Driver returning empty (Khali Gadi).',
+      category: ActivityCategory.trip,
+      action: 'updated',
+    );
+  }
+
   Future<void> acceptTrip(String tripReference) async {
     final tripIdx = trips.indexWhere(
         (t) => t.reference == tripReference || t.tripNumber == tripReference);
