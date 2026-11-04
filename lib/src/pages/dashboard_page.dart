@@ -607,11 +607,63 @@ class _DashboardPageState extends State<DashboardPage>
             child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(driver.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    fontWeight: FontWeight.w700, color: AppColors.navy)),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(driver.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w700, color: AppColors.navy)),
+                ),
+                Builder(
+                  builder: (context) {
+                    final vKey = driver.assignedVehicle.replaceAll(RegExp(r'[\s\-]'), '').toUpperCase();
+                    final truck = vKey.isEmpty
+                        ? null
+                        : widget.controller.truckModels.where((t) => t.code.replaceAll(RegExp(r'[\s\-]'), '').toUpperCase() == vKey).firstOrNull;
+                    if (truck != null && truck.phoneBatteryLevel != null) {
+                      final bLevel = truck.phoneBatteryLevel!;
+                      final isCharging = truck.isPhoneCharging;
+                      final bColor = isCharging
+                          ? const Color(0xFF16A34A)
+                          : (bLevel <= 20 ? const Color(0xFFDC2626) : const Color(0xFF0F766E));
+                      return Container(
+                        margin: const EdgeInsets.only(right: 6),
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: isCharging ? const Color(0xFFDCFCE7) : (bLevel <= 20 ? const Color(0xFFFEE2E2) : const Color(0xFFF1F5F9)),
+                          borderRadius: BorderRadius.circular(5),
+                          border: Border.all(
+                            color: isCharging ? const Color(0xFF86EFAC) : (bLevel <= 20 ? const Color(0xFFFCA5A5) : const Color(0xFFCBD5E1)),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              isCharging ? Icons.bolt_rounded : Icons.battery_std_rounded,
+                              size: 11,
+                              color: bColor,
+                            ),
+                            const SizedBox(width: 2),
+                            Text(
+                              '$bLevel%${isCharging ? " ⚡" : ""}',
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w800,
+                                color: bColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
+              ],
+            ),
             if (activeRoute != null) ...[
               const SizedBox(height: 2),
               Row(

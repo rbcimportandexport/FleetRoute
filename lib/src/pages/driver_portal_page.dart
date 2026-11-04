@@ -746,22 +746,15 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                         ),
                         if (!kIsWeb) ...[
                           const SizedBox(width: 8),
-                          FutureBuilder<Map<String, dynamic>>(
-                            future: () async {
-                              try {
-                                final b = Battery();
-                                final lvl = await b.batteryLevel;
-                                final st = await b.batteryState;
-                                final charging = (st == BatteryState.charging || st == BatteryState.full);
-                                return {'level': lvl, 'charging': charging};
-                              } catch (_) {
-                                return {'level': 95, 'charging': false};
-                              }
-                            }(),
-                            builder: (context, snapshot) {
-                              if (!snapshot.hasData) return const SizedBox.shrink();
-                              final level = (snapshot.data!['level'] as int?) ?? 100;
-                              final isCharging = snapshot.data!['charging'] == true;
+                          StreamBuilder<BatteryState>(
+                            stream: Battery().onBatteryStateChanged,
+                            builder: (context, stateSnap) {
+                              return FutureBuilder<int>(
+                                future: Battery().batteryLevel,
+                                builder: (context, levelSnap) {
+                                  final state = stateSnap.data;
+                                  final isCharging = state == BatteryState.charging || state == BatteryState.full;
+                                  final level = levelSnap.data ?? 95;
                               return Container(
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 6, vertical: 1.5),
@@ -811,6 +804,8 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                                     ),
                                   ],
                                 ),
+                              );
+                            },
                               );
                             },
                           ),

@@ -998,6 +998,52 @@ class _RecordCard extends StatelessWidget {
                                 ),
                               ),
                             ),
+                            Builder(
+                              builder: (context) {
+                                final vKey = driver.assignedVehicle.replaceAll(RegExp(r'[\s\-]'), '').toUpperCase();
+                                final truck = vKey.isEmpty
+                                    ? null
+                                    : controller.truckModels.where((t) => t.code.replaceAll(RegExp(r'[\s\-]'), '').toUpperCase() == vKey).firstOrNull;
+                                if (truck != null && truck.phoneBatteryLevel != null) {
+                                  final bLevel = truck.phoneBatteryLevel!;
+                                  final isCharging = truck.isPhoneCharging;
+                                  final bColor = isCharging
+                                      ? const Color(0xFF16A34A)
+                                      : (bLevel <= 20 ? const Color(0xFFDC2626) : const Color(0xFF0F766E));
+                                  return Container(
+                                    margin: const EdgeInsets.only(right: 6),
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: isCharging ? const Color(0xFFDCFCE7) : (bLevel <= 20 ? const Color(0xFFFEE2E2) : const Color(0xFFF1F5F9)),
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(
+                                        color: isCharging ? const Color(0xFF86EFAC) : (bLevel <= 20 ? const Color(0xFFFCA5A5) : const Color(0xFFCBD5E1)),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          isCharging ? Icons.bolt_rounded : Icons.battery_std_rounded,
+                                          size: 13,
+                                          color: bColor,
+                                        ),
+                                        const SizedBox(width: 2),
+                                        Text(
+                                          '$bLevel%${isCharging ? " ⚡" : ""}',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w800,
+                                            color: bColor,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }
+                                return const SizedBox.shrink();
+                              },
+                            ),
                             Container(
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 6, vertical: 2),

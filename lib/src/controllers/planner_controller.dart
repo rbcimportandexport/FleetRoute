@@ -1351,6 +1351,7 @@ class PlannerController extends ChangeNotifier {
   DateTime? lastGpsSyncTime;
   Timer? _gpsAutoPollTimer;
   Timer? _driverBatteryPollTimer;
+  StreamSubscription<BatteryState>? _driverBatteryStateSubscription;
   final Map<String, DateTime> _lastOverspeedAlerts = {};
   StreamSubscription<Position>? _foregroundLocationSubscription;
   Position? _lastPublishedDriverPosition;
@@ -1774,11 +1775,19 @@ class PlannerController extends ChangeNotifier {
 
   void _startDriverBatteryPeriodicSync() {
     _driverBatteryPollTimer?.cancel();
+    _driverBatteryStateSubscription?.cancel();
     if (kIsWeb) return;
     // Initial immediate sync
     unawaited(syncDriverPhoneBattery());
-    // Periodic poll every 20 seconds
-    _driverBatteryPollTimer = Timer.periodic(const Duration(seconds: 20), (_) {
+    // Listen to real-time hardware battery charging events (plug in / unplug)
+    try {
+      final battery = Battery();
+      _driverBatteryStateSubscription = battery.onBatteryStateChanged.listen((_) {
+        unawaited(syncDriverPhoneBattery());
+      });
+    } catch (_) {}
+    // Periodic poll every 10 seconds for battery percentage updates
+    _driverBatteryPollTimer = Timer.periodic(const Duration(seconds: 10), (_) {
       unawaited(syncDriverPhoneBattery());
     });
   }
@@ -1859,6 +1868,8 @@ class PlannerController extends ChangeNotifier {
   void stopGpsAutoPolling() {
     _driverBatteryPollTimer?.cancel();
     _driverBatteryPollTimer = null;
+    _driverBatteryStateSubscription?.cancel();
+    _driverBatteryStateSubscription = null;
     _gpsAutoPollTimer?.cancel();
     _gpsAutoPollTimer = null;
     _foregroundLocationSubscription?.cancel();
