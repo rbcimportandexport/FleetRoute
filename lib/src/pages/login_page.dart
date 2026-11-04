@@ -517,6 +517,24 @@ class _LoginPageState extends State<LoginPage> {
                                         ],
                                       ),
                                     ),
+                                    if (!_isSignUp) ...[
+                                      const SizedBox(height: 10),
+                                      Align(
+                                        alignment: Alignment.centerRight,
+                                        child: GestureDetector(
+                                          onTap: _enterForgotPasswordMode,
+                                          child: const Text(
+                                            'Forgot password?',
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w600,
+                                              color: Color(0xFF2563EB),
+                                              decoration: TextDecoration.underline,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                     const SizedBox(height: 16),
                                   ],
 
@@ -553,6 +571,24 @@ class _LoginPageState extends State<LoginPage> {
                                         ],
                                       ),
                                     ),
+                                    if (!_isSignUp) ...[
+                                      const SizedBox(height: 10),
+                                      Align(
+                                        alignment: Alignment.centerRight,
+                                        child: GestureDetector(
+                                          onTap: _enterForgotPasswordMode,
+                                          child: const Text(
+                                            'Forgot password?',
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w600,
+                                              color: Color(0xFF2563EB),
+                                              decoration: TextDecoration.underline,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                     const SizedBox(height: 16),
                                   ],
 
@@ -609,6 +645,24 @@ class _LoginPageState extends State<LoginPage> {
                                         ],
                                       ),
                                     ),
+                                    if (!_isSignUp) ...[
+                                      const SizedBox(height: 10),
+                                      Align(
+                                        alignment: Alignment.centerRight,
+                                        child: GestureDetector(
+                                          onTap: _enterForgotPasswordMode,
+                                          child: const Text(
+                                            'Forgot password?',
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w600,
+                                              color: Color(0xFF2563EB),
+                                              decoration: TextDecoration.underline,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                     const SizedBox(height: 16),
                                   ],
 
@@ -980,41 +1034,39 @@ class _LoginPageState extends State<LoginPage> {
                                         ),
                                       ),
                                     ),
+                                    if (!_isSignUp) ...[
+                                      const SizedBox(height: 10),
+                                      Align(
+                                        alignment: Alignment.centerRight,
+                                        child: GestureDetector(
+                                          onTap: _enterForgotPasswordMode,
+                                          child: const Text(
+                                            'Forgot password?',
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w600,
+                                              color: Color(0xFF2563EB),
+                                              decoration: TextDecoration.underline,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                     const SizedBox(height: 16),
                                   ],
 
                                   // Firebase password input
                                   if (_isSignUp || !_useOtpMode) ...[
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          _isSignUp
-                                              ? 'Create Password (नया पासवर्ड)'
-                                              : AppLocalizationService.instance
-                                                  .tr('password_label'),
-                                          style: const TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w700,
-                                            color: AppColors.navy,
-                                          ),
-                                        ),
-                                        if (!_isSignUp)
-                                          GestureDetector(
-                                            onTap: _enterForgotPasswordMode,
-                                            child: const Text(
-                                              'Forgot Password?',
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w700,
-                                                color: Color(0xFF2563EB),
-                                                decoration:
-                                                    TextDecoration.underline,
-                                              ),
-                                            ),
-                                          ),
-                                      ],
+                                    Text(
+                                      _isSignUp
+                                          ? 'Create Password (नया पासवर्ड)'
+                                          : AppLocalizationService.instance
+                                              .tr('password_label'),
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.navy,
+                                      ),
                                     ),
                                     const SizedBox(height: 6),
                                     TextField(
@@ -1084,6 +1136,24 @@ class _LoginPageState extends State<LoginPage> {
                                         ),
                                       ),
                                     ),
+                                    if (!_isSignUp) ...[
+                                      const SizedBox(height: 10),
+                                      Align(
+                                        alignment: Alignment.centerRight,
+                                        child: GestureDetector(
+                                          onTap: _enterForgotPasswordMode,
+                                          child: const Text(
+                                            'Forgot password?',
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w600,
+                                              color: Color(0xFF2563EB),
+                                              decoration: TextDecoration.underline,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                     const SizedBox(height: 16),
                                   ],
 
