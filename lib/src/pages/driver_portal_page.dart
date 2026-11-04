@@ -5189,6 +5189,7 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
       return Image.memory(
         bytes,
         fit: fit,
+        cacheWidth: 200,
         errorBuilder: (_, __, ___) =>
             const Icon(Icons.image_outlined, size: 24, color: AppColors.slate),
       );
@@ -6174,7 +6175,7 @@ class _CleaningMultiAngleBottomSheetState
                                   ? Stack(
                                       fit: StackFit.expand,
                                       children: [
-                                        Image.memory(bytes, fit: BoxFit.cover),
+                                        Image.memory(bytes, fit: BoxFit.cover, cacheWidth: 150),
                                         Positioned(
                                           bottom: 2,
                                           right: 2,

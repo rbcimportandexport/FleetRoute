@@ -1057,7 +1057,7 @@ class _DriverCalendarScreenState extends State<DriverCalendarScreen> {
                 borderRadius:
                     const BorderRadius.vertical(top: Radius.circular(9)),
                 child: bytes != null
-                    ? Image.memory(bytes, fit: BoxFit.cover)
+                    ? Image.memory(bytes, fit: BoxFit.cover, cacheWidth: 220)
                     : Container(
                         color: Colors.grey.shade100,
                         child: const Icon(Icons.broken_image_rounded, size: 24),
