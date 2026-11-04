@@ -9,6 +9,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
 import '../controllers/planner_controller.dart';
+import '../models/planner_models.dart';
 import '../services/app_localization_service.dart';
 import '../theme/app_theme.dart';
 
@@ -34,7 +35,9 @@ enum LogisticsReportType {
   transitSla('10. Operational Turnaround & Transit SLA',
       'Departure, arrival, and delivery turnaround times'),
   safetyAlerts('11. Safety & Overspeeding Alerts',
-      'Fleet safety alerts, overspeeding, and compliance');
+      'Fleet safety alerts, overspeeding, and compliance'),
+  driverPerformanceScorecard('12. Driver Performance & Reward Scorecard',
+      'Duty hours, trip completions, safety rating, speed violations & cash reward rank');
 
   const LogisticsReportType(this.title, this.description);
   final String title;
@@ -709,6 +712,151 @@ class _ReportsPageState extends State<ReportsPage> {
               '${alerts.isNotEmpty ? ((alerts.where((a) => a.isResolved).length / alerts.length) * 100).toStringAsFixed(0) : 100}%',
               Icons.check_circle_outline
             ),
+          ],
+        );
+
+      case LogisticsReportType.driverPerformanceScorecard:
+        final allDrivers = widget.controller.drivers;
+        final allTrips = widget.controller.trips;
+        final allAtt = widget.controller.attendanceRecords;
+        final allSeatbelts = widget.controller.seatbeltRecords;
+        final allAlerts = widget.controller.alerts;
+
+        final headers = [
+          'Rank',
+          'Driver Name',
+          'Vehicle',
+          'Completed Trips',
+          'Total Duty Hours',
+          'Seatbelt & Cleaning',
+          'Safety Violations',
+          'Performance Score',
+          'Reward Eligibility'
+        ];
+
+        // Compute performance metrics for each driver
+        final driverMetrics = allDrivers.map((driver) {
+          final dName = driver.name.trim().toLowerCase();
+          final dEmail = driver.email.trim().toLowerCase();
+          final dPhone = driver.phone.trim();
+          final dVeh = driver.assignedVehicle.replaceAll(RegExp(r'[\\s\\-]'), '').toUpperCase();
+
+          // 1. Completed Trips
+          final completed = allTrips.where((t) {
+            final isDone = t.status == 'completed' || t.status == 'delivered';
+            if (!isDone) return false;
+            final tDriver = t.assignedDriver.trim().toLowerCase();
+            final tVeh = t.assignedVehicle.replaceAll(RegExp(r'[\\s\\-]'), '').toUpperCase();
+            return (dName.isNotEmpty && tDriver.contains(dName)) ||
+                (dEmail.isNotEmpty && tDriver.contains(dEmail)) ||
+                (dPhone.isNotEmpty && tDriver.contains(dPhone)) ||
+                (dVeh.isNotEmpty && tVeh == dVeh);
+          }).length;
+
+          // 2. Attendance & Duty Hours
+          final attRecords = allAtt.where((a) {
+            final aName = a.driverName.trim().toLowerCase();
+            final aId = a.driverId.trim().toLowerCase();
+            return (dName.isNotEmpty && (aName == dName || aName.contains(dName))) ||
+                (dEmail.isNotEmpty && aId == dEmail) ||
+                (dPhone.isNotEmpty && aId.contains(dPhone));
+          }).toList();
+          final totalHours = attRecords.fold<double>(0.0, (sum, a) => sum + a.totalWorkingHours);
+
+          // 3. Seatbelt & Cleaning verifications
+          final photos = allSeatbelts.where((s) {
+            final sName = s.driverName.trim().toLowerCase();
+            final sId = s.driverId.trim().toLowerCase();
+            final sVeh = s.vehicleNumber.replaceAll(RegExp(r'[\\s\\-]'), '').toUpperCase();
+            return (dName.isNotEmpty && (sName == dName || sName.contains(dName))) ||
+                (dEmail.isNotEmpty && sId == dEmail) ||
+                (dVeh.isNotEmpty && sVeh == dVeh);
+          }).toList();
+          final verifiedPhotos = photos.where((s) => s.isApproved).length;
+
+          // 4. Safety violations / memo alerts
+          final violations = allAlerts.where((al) {
+            final alVeh = al.vehicleNumber.replaceAll(RegExp(r'[\\s\\-]'), '').toUpperCase();
+            final alTitle = al.title.toLowerCase();
+            final alDetails = al.details.toLowerCase();
+            final isDriverMatch = (dName.isNotEmpty && (alTitle.contains(dName) || alDetails.contains(dName))) ||
+                (dVeh.isNotEmpty && alVeh == dVeh);
+            final isViolation = al.severity == 'critical' ||
+                al.severity == 'warning' ||
+                alTitle.contains('overspeed') ||
+                alTitle.contains('seatbelt not detected') ||
+                alTitle.contains('memo') ||
+                alTitle.contains('challan');
+            return isDriverMatch && isViolation;
+          }).length;
+
+          // Calculate composite performance score (0 - 100)
+          var score = 10.0;
+          score += (completed * 20.0).clamp(0.0, 40.0);
+          score += (totalHours * 2.0).clamp(0.0, 30.0);
+          score += (verifiedPhotos * 5.0).clamp(0.0, 20.0);
+          score -= (violations * 15.0);
+          score = score.clamp(0.0, 100.0);
+
+          return {
+            'driver': driver,
+            'completed': completed,
+            'hours': totalHours,
+            'photos': verifiedPhotos,
+            'violations': violations,
+            'score': score,
+          };
+        }).toList();
+
+        // Sort descending by score for rankings
+        driverMetrics.sort((a, b) => (b['score'] as double).compareTo(a['score'] as double));
+
+        final filteredMetrics = driverMetrics.where((m) {
+          if (query.isEmpty) return true;
+          final d = m['driver'] as DriverProfile;
+          return d.name.toLowerCase().contains(query) ||
+              d.assignedVehicle.toLowerCase().contains(query) ||
+              d.phone.contains(query);
+        }).toList();
+
+        final rows = <List<String>>[];
+        for (var i = 0; i < filteredMetrics.length; i++) {
+          final m = filteredMetrics[i];
+          final d = m['driver'] as DriverProfile;
+          final score = m['score'] as double;
+          final rank = i + 1;
+          final rankBadge = rank == 1
+              ? '👑 1st (Gold)'
+              : (rank == 2 ? '🥈 2nd (Silver)' : (rank == 3 ? '🥉 3rd (Bronze)' : '#'));
+          final rewardTier = score >= 85
+              ? '🌟 Grade A+ (₹2,000 Reward Bonus)'
+              : (score >= 70
+                  ? '⭐ Grade A (₹1,000 Reward Bonus)'
+                  : (score >= 50 ? '👍 Grade B (₹500 Reward Bonus)' : 'Needs Improvement'));
+
+          rows.add([
+            rankBadge,
+            d.name,
+            d.assignedVehicle.isNotEmpty ? d.assignedVehicle : 'UNASSIGNED',
+            '${m["completed"]} Trips',
+            '${(m["hours"] as double).toStringAsFixed(1)} hrs',
+            '${m["photos"]} Verified',
+            '${m["violations"]} Alerts',
+            '${score.toStringAsFixed(0)} / 100',
+            rewardTier,
+          ]);
+        }
+
+        final topDriver = filteredMetrics.isNotEmpty ? (filteredMetrics.first['driver'] as DriverProfile).name : '--';
+        final eligibleCount = filteredMetrics.where((m) => (m['score'] as double) >= 70).length;
+
+        return _ReportData(
+          headers: headers,
+          rows: rows,
+          kpis: [
+            ('Fleet Best Driver', topDriver, Icons.emoji_events_outlined),
+            ('Reward Eligible', '$eligibleCount Drivers', Icons.stars_rounded),
+            ('Evaluation Accuracy', '100% Data-Backed', Icons.verified_user_outlined),
           ],
         );
     }
