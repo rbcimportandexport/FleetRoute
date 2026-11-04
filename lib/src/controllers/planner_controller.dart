@@ -1242,10 +1242,12 @@ class PlannerController extends ChangeNotifier {
   Future<void> removeTruckModel(int index) async {
     if (index < 0 || index >= truckModels.length) return;
     final removed = truckModels[index];
+    final codeToDelete = removed.code;
     truckModels.removeAt(index);
     truckIndex = truckModels.isEmpty ? null : 0;
     _syncGpsImeiMappings();
     notifyListeners();
+    unawaited(FirebaseBackendService.instance.deleteFleetVehicle(codeToDelete));
     await _saveTruckModels();
     await logActivity(
       title: 'Vehicle Removed',
@@ -1363,6 +1365,11 @@ class PlannerController extends ChangeNotifier {
   StreamSubscription<List<TruckModel>>? _vehiclesSubscription;
   StreamSubscription<List<OperationsAlert>>? _alertsSubscription;
   StreamSubscription<List<DriverProfile>>? _driversSubscription;
+  StreamSubscription<List<ExpenseRecord>>? _expensesSubscription;
+  StreamSubscription<List<BillingRecord>>? _billingSubscription;
+  StreamSubscription<List<DeliveryProofRecord>>? _proofsSubscription;
+  StreamSubscription<Map<String, dynamic>>? _deletedTripsSettingSub;
+  StreamSubscription<Map<String, dynamic>>? _deletedDriversSettingSub;
   bool _driverReminderCheckInProgress = false;
 
   void startGpsAutoPolling({Duration interval = const Duration(seconds: 15)}) {
@@ -1376,6 +1383,11 @@ class PlannerController extends ChangeNotifier {
     _vehiclesSubscription?.cancel();
     _alertsSubscription?.cancel();
     _driversSubscription?.cancel();
+    _expensesSubscription?.cancel();
+    _billingSubscription?.cancel();
+    _proofsSubscription?.cancel();
+    _deletedTripsSettingSub?.cancel();
+    _deletedDriversSettingSub?.cancel();
     // Do not launch background periodic timers in unit/widget test environments
     if (const bool.fromEnvironment('FLUTTER_TEST') ||
         (kDebugMode && Zone.current[#test.declarer] != null)) {
@@ -1444,6 +1456,88 @@ class PlannerController extends ChangeNotifier {
           ..clear()
           ..addAll(remoteAlerts);
         notifyListeners();
+      }
+    }, onError: (_) {});
+
+    _expensesSubscription = FirebaseBackendService.instance
+        .watchExpenses()
+        .listen((remoteExpenses) {
+      if (remoteExpenses.isNotEmpty) {
+        for (final re in remoteExpenses) {
+          final idx = expenses.indexWhere((e) => e.id == re.id);
+          if (idx < 0) {
+            expenses.add(re);
+          } else {
+            expenses[idx] = re;
+          }
+        }
+        notifyListeners();
+      }
+    }, onError: (_) {});
+
+    _billingSubscription = FirebaseBackendService.instance
+        .watchBillingRecords()
+        .listen((remoteBilling) {
+      if (remoteBilling.isNotEmpty) {
+        for (final rb in remoteBilling) {
+          final idx = billingRecords.indexWhere((b) => b.id == rb.id);
+          if (idx < 0) {
+            billingRecords.add(rb);
+          } else {
+            billingRecords[idx] = rb;
+          }
+        }
+        notifyListeners();
+      }
+    }, onError: (_) {});
+
+    _proofsSubscription = FirebaseBackendService.instance
+        .watchDeliveryProofs()
+        .listen((remoteProofs) {
+      if (remoteProofs.isNotEmpty) {
+        for (final rp in remoteProofs) {
+          final idx = deliveryProofs.indexWhere((p) => p.id == rp.id);
+          if (idx < 0) {
+            deliveryProofs.add(rp);
+          } else {
+            deliveryProofs[idx] = rp;
+          }
+        }
+        notifyListeners();
+      }
+    }, onError: (_) {});
+
+    _deletedTripsSettingSub = FirebaseBackendService.instance
+        .watchAppSetting('deleted_trips')
+        .listen((data) {
+      final val = data['value'];
+      if (val is String && val.isNotEmpty) {
+        try {
+          final list = jsonDecode(val);
+          if (list is List) {
+            deletedTripReferences.addAll(list.map((e) => e.toString().trim().toUpperCase()));
+            trips.removeWhere((t) =>
+                deletedTripReferences.contains(t.reference.trim().toUpperCase()) ||
+                deletedTripReferences.contains(t.effectiveTripNumber.trim().toUpperCase()));
+            notifyListeners();
+          }
+        } catch (_) {}
+      }
+    }, onError: (_) {});
+
+    _deletedDriversSettingSub = FirebaseBackendService.instance
+        .watchAppSetting('deleted_drivers')
+        .listen((data) {
+      final val = data['value'];
+      if (val is String && val.isNotEmpty) {
+        try {
+          final list = jsonDecode(val);
+          if (list is List) {
+            deletedDriverEmails.addAll(list.map((e) => e.toString().trim().toLowerCase()));
+            drivers.removeWhere((d) => deletedDriverEmails.contains(d.email.trim().toLowerCase()));
+            notifyListeners();
+          }
+        } catch (_) {}
       }
     }, onError: (_) {});
 
@@ -1584,6 +1678,115 @@ class PlannerController extends ChangeNotifier {
       if (remoteTelemetry.isNotEmpty) {
         _applyFleetTelemetry(remoteTelemetry);
       }
+
+      // 6. Fetch remote drivers from Firestore
+      final remoteDrivers = await FirebaseBackendService.instance.fetchCollection('drivers');
+      if (remoteDrivers.isNotEmpty) {
+        for (final doc in remoteDrivers) {
+          try {
+            final rd = DriverProfile.fromJson({'email': doc['id'] ?? doc['email'], ...doc});
+            final idx = drivers.indexWhere((d) =>
+                d.email.trim().toLowerCase() == rd.email.trim().toLowerCase() ||
+                (d.phone.isNotEmpty && rd.phone.isNotEmpty && d.phone == rd.phone));
+            if (idx < 0) {
+              drivers.add(rd);
+            } else {
+              drivers[idx] = rd;
+            }
+          } catch (_) {}
+        }
+      }
+
+      // 7. Fetch remote fleet vehicles from Firestore
+      final remoteVehicles = await FirebaseBackendService.instance.fetchCollection('fleet_vehicles');
+      if (remoteVehicles.isNotEmpty) {
+        for (final doc in remoteVehicles) {
+          try {
+            final rv = TruckModel.fromJson({'code': doc['id'] ?? doc['code'], ...doc});
+            final idx = truckModels.indexWhere((t) => t.code == rv.code);
+            if (idx < 0) {
+              truckModels.add(rv);
+            } else {
+              truckModels[idx] = rv;
+            }
+          } catch (_) {}
+        }
+      }
+
+      // 8. Fetch remote expenses from Firestore
+      final remoteExp = await FirebaseBackendService.instance.fetchCollection('expenses');
+      if (remoteExp.isNotEmpty) {
+        for (final doc in remoteExp) {
+          try {
+            final exp = ExpenseRecord.fromJson({'id': doc['id'], ...doc});
+            final idx = expenses.indexWhere((e) => e.id == exp.id);
+            if (idx < 0) {
+              expenses.add(exp);
+            } else {
+              expenses[idx] = exp;
+            }
+          } catch (_) {}
+        }
+      }
+
+      // 9. Fetch remote billing records from Firestore
+      final remoteBill = await FirebaseBackendService.instance.fetchCollection('billing_records');
+      if (remoteBill.isNotEmpty) {
+        for (final doc in remoteBill) {
+          try {
+            final bill = BillingRecord.fromJson({'id': doc['id'], ...doc});
+            final idx = billingRecords.indexWhere((b) => b.id == bill.id);
+            if (idx < 0) {
+              billingRecords.add(bill);
+            } else {
+              billingRecords[idx] = bill;
+            }
+          } catch (_) {}
+        }
+      }
+
+      // 10. Fetch remote customers from Firestore
+      final remoteCust = await FirebaseBackendService.instance.fetchCollection('customers');
+      if (remoteCust.isNotEmpty) {
+        for (final doc in remoteCust) {
+          try {
+            final cust = CustomerRecord.fromJson({'id': doc['id'], ...doc});
+            final idx = customers.indexWhere((c) => c.id == cust.id);
+            if (idx < 0) {
+              customers.add(cust);
+            } else {
+              customers[idx] = cust;
+            }
+          } catch (_) {}
+        }
+      }
+
+      // 11. Fetch deleted settings from Firestore
+      final delTripsVal = await FirebaseBackendService.instance.getAppSetting('deleted_trips');
+      if (delTripsVal is String && delTripsVal.isNotEmpty) {
+        try {
+          final list = jsonDecode(delTripsVal);
+          if (list is List) {
+            deletedTripReferences.addAll(list.map((e) => e.toString().trim().toUpperCase()));
+            trips.removeWhere((t) =>
+                deletedTripReferences.contains(t.reference.trim().toUpperCase()) ||
+                deletedTripReferences.contains(t.effectiveTripNumber.trim().toUpperCase()));
+          }
+        } catch (_) {}
+      }
+
+      final delDriversVal = await FirebaseBackendService.instance.getAppSetting('deleted_drivers');
+      if (delDriversVal is String && delDriversVal.isNotEmpty) {
+        try {
+          final list = jsonDecode(delDriversVal);
+          if (list is List) {
+            deletedDriverEmails.addAll(list.map((e) => e.toString().trim().toLowerCase()));
+            drivers.removeWhere((d) => deletedDriverEmails.contains(d.email.trim().toLowerCase()));
+          }
+        } catch (_) {}
+      }
+
+      notifyListeners();
     } catch (e) {
       debugPrint('[CloudSync] syncAllDataFromCloud failed: ');
     }
@@ -2686,10 +2889,11 @@ class PlannerController extends ChangeNotifier {
     );
   }
 
-  Future<void> _saveDeletedTrips() => _storage.setString(
-        _deletedTripsKey,
-        jsonEncode(deletedTripReferences.toList()),
-      );
+  Future<void> _saveDeletedTrips() async {
+    final payload = jsonEncode(deletedTripReferences.toList());
+    await _storage.setString(_deletedTripsKey, payload);
+    unawaited(FirebaseBackendService.instance.saveAppSetting('deleted_trips', payload));
+  }
 
   Future<void> updateTripStatus(int index, String status) async {
     if (index < 0 || index >= trips.length) return;
@@ -3635,7 +3839,15 @@ class PlannerController extends ChangeNotifier {
       customers[idx] = customers[idx].copyWith(isActive: false);
       notifyListeners();
       await _saveCustomers();
+      unawaited(FirebaseBackendService.instance.syncCustomerRecord(record: customers[idx]));
     }
+  }
+
+  Future<void> deleteCustomer(String customerId) async {
+    customers.removeWhere((c) => c.id == customerId);
+    notifyListeners();
+    await _saveCustomers();
+    unawaited(FirebaseBackendService.instance.deleteCustomerRecord(customerId));
   }
 
   Map<String, dynamic> calculateTripProfit(String tripReference) {
@@ -4526,8 +4738,9 @@ class PlannerController extends ChangeNotifier {
     seatbeltRecords.removeWhere((r) => r.id == id);
     notifyListeners();
     await _saveSeatbeltRecords();
-    await _storage.setString(
-        _deletedSeatbeltIdsKey, jsonEncode(deletedSeatbeltIds.toList()));
+    final delSbJson = jsonEncode(deletedSeatbeltIds.toList());
+    await _storage.setString(_deletedSeatbeltIdsKey, delSbJson);
+    unawaited(FirebaseBackendService.instance.saveAppSetting('deleted_seatbelts', delSbJson));
     try {
       await FirebaseBackendService.instance.deleteSeatbeltRecord(id);
     } catch (_) {}
@@ -4541,14 +4754,16 @@ class PlannerController extends ChangeNotifier {
     seatbeltRecords.clear();
     notifyListeners();
     await _saveSeatbeltRecords();
-    await _storage.setString(
-        _deletedSeatbeltIdsKey, jsonEncode(deletedSeatbeltIds.toList()));
+    final delSbJson = jsonEncode(deletedSeatbeltIds.toList());
+    await _storage.setString(_deletedSeatbeltIdsKey, delSbJson);
+    unawaited(FirebaseBackendService.instance.saveAppSetting('deleted_seatbelts', delSbJson));
   }
 
-  Future<void> _saveDeletedDrivers() => _storage.setString(
-        _deletedDriversKey,
-        jsonEncode(deletedDriverEmails.toList()),
-      );
+  Future<void> _saveDeletedDrivers() async {
+    final payload = jsonEncode(deletedDriverEmails.toList());
+    await _storage.setString(_deletedDriversKey, payload);
+    unawaited(FirebaseBackendService.instance.saveAppSetting('deleted_drivers', payload));
+  }
 
   Future<void> _saveEncryptedJsonList(
     String key,
@@ -4607,10 +4822,15 @@ class PlannerController extends ChangeNotifier {
     );
   }
 
-  Future<void> _saveActivities() => _saveEncryptedJsonList(
-        _activitiesKey,
-        activities.map((activity) => activity.toJson()),
-      );
+  Future<void> _saveActivities() {
+    for (final act in activities.take(50)) {
+      unawaited(FirebaseBackendService.instance.saveAppSetting('activity_', act.toJson()));
+    }
+    return _saveEncryptedJsonList(
+      _activitiesKey,
+      activities.map((activity) => activity.toJson()),
+    );
+  }
 
   Future<void> _saveAttendance() {
     for (final att in attendanceRecords) {

@@ -265,6 +265,35 @@ class FirebaseBackendService {
     return _put('expenses', record.id, data, client: client);
   }
 
+  Future<bool> deleteExpenseRecord(String rawExpenseId) async {
+    if (!isConfigured) return true;
+    final documentId =
+        rawExpenseId.trim().replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
+    if (documentId.isEmpty) return false;
+    try {
+      await FirebaseFirestore.instance
+          .collection('expenses')
+          .doc(documentId)
+          .delete()
+          .timeout(const Duration(seconds: 12));
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Stream<List<ExpenseRecord>> watchExpenses() {
+    if (!isConfigured) return const Stream.empty();
+    return FirebaseFirestore.instance
+        .collection('expenses')
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => ExpenseRecord.fromJson(
+                  <String, dynamic>{'id': doc.id, ...doc.data()},
+                ))
+            .toList(growable: false));
+  }
+
   Future<bool> syncBillingRecord({
     required BillingRecord record,
     http.Client? client,
@@ -272,6 +301,35 @@ class FirebaseBackendService {
     final data = Map<String, dynamic>.from(record.toJson())
       ..remove('invoiceFileBase64');
     return _put('billing_records', record.id, data, client: client);
+  }
+
+  Future<bool> deleteBillingRecord(String rawBillingId) async {
+    if (!isConfigured) return true;
+    final documentId =
+        rawBillingId.trim().replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
+    if (documentId.isEmpty) return false;
+    try {
+      await FirebaseFirestore.instance
+          .collection('billing_records')
+          .doc(documentId)
+          .delete()
+          .timeout(const Duration(seconds: 12));
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Stream<List<BillingRecord>> watchBillingRecords() {
+    if (!isConfigured) return const Stream.empty();
+    return FirebaseFirestore.instance
+        .collection('billing_records')
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => BillingRecord.fromJson(
+                  <String, dynamic>{'id': doc.id, ...doc.data()},
+                ))
+            .toList(growable: false));
   }
 
   Future<bool> syncDeliveryProof({
@@ -285,6 +343,48 @@ class FirebaseBackendService {
     return _put('delivery_proofs', record.id, data, client: client);
   }
 
+  Stream<List<DeliveryProofRecord>> watchDeliveryProofs() {
+    if (!isConfigured) return const Stream.empty();
+    return FirebaseFirestore.instance
+        .collection('delivery_proofs')
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => DeliveryProofRecord.fromJson(
+                  <String, dynamic>{'id': doc.id, ...doc.data()},
+                ))
+            .toList(growable: false));
+  }
+
+  // --- App Settings (Deleted IDs, System Flags) Firestore Sync ---
+  Future<bool> saveAppSetting(String settingKey, dynamic value) async {
+    return _put('app_settings', settingKey, <String, dynamic>{
+      'value': value,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<dynamic> getAppSetting(String settingKey) async {
+    if (!isConfigured) return null;
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('app_settings')
+          .doc(settingKey)
+          .get()
+          .timeout(const Duration(seconds: 10));
+      return doc.data()?['value'];
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Stream<Map<String, dynamic>> watchAppSetting(String settingKey) {
+    if (!isConfigured) return const Stream.empty();
+    return FirebaseFirestore.instance
+        .collection('app_settings')
+        .doc(settingKey)
+        .snapshots()
+        .map((doc) => doc.data() ?? <String, dynamic>{});
+  }
   // --- Customers Firestore Sync ---
   Future<bool> syncCustomerRecord({
     required CustomerRecord record,
@@ -360,6 +460,22 @@ class FirebaseBackendService {
   }
 
   // --- Fleet Vehicles Firestore Sync ---
+    Future<bool> deleteFleetVehicle(String vehicleCode) async {
+    if (!isConfigured) return true;
+    final documentId = vehicleCode.trim().toUpperCase();
+    if (documentId.isEmpty) return false;
+    try {
+      await FirebaseFirestore.instance
+          .collection('fleet_vehicles')
+          .doc(documentId)
+          .delete()
+          .timeout(const Duration(seconds: 12));
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<bool> syncFleetVehicle({
     required TruckModel vehicle,
     http.Client? client,
