@@ -1361,6 +1361,7 @@ class PlannerController extends ChangeNotifier {
   StreamSubscription<List<CustomerRecord>>? _customersSubscription;
   StreamSubscription<List<TruckModel>>? _vehiclesSubscription;
   StreamSubscription<List<OperationsAlert>>? _alertsSubscription;
+  StreamSubscription<List<DriverProfile>>? _driversSubscription;
   bool _driverReminderCheckInProgress = false;
 
   void startGpsAutoPolling({Duration interval = const Duration(seconds: 15)}) {
@@ -1373,6 +1374,7 @@ class PlannerController extends ChangeNotifier {
     _customersSubscription?.cancel();
     _vehiclesSubscription?.cancel();
     _alertsSubscription?.cancel();
+    _driversSubscription?.cancel();
     // Do not launch background periodic timers in unit/widget test environments
     if (const bool.fromEnvironment('FLUTTER_TEST') ||
         (kDebugMode && Zone.current[#test.declarer] != null)) {
@@ -1400,6 +1402,23 @@ class PlannerController extends ChangeNotifier {
       debugPrint('Live trips sync failed: $error');
     });
     // Listen to real-time vehicles synchronization from Firestore
+    _driversSubscription = FirebaseBackendService.instance
+        .watchDrivers()
+        .listen((remoteDrivers) {
+      if (remoteDrivers.isNotEmpty) {
+        for (final rd in remoteDrivers) {
+          final idx = drivers.indexWhere((d) =>
+              d.email.trim().toLowerCase() == rd.email.trim().toLowerCase() ||
+              (d.phone.isNotEmpty && rd.phone.isNotEmpty && d.phone == rd.phone));
+          if (idx < 0) {
+            drivers.add(rd);
+          } else {
+            drivers[idx] = rd;
+          }
+        }
+        notifyListeners();
+      }
+    }, onError: (_) {});
     _vehiclesSubscription = FirebaseBackendService.instance
         .watchFleetVehicles()
         .listen((remoteVehicles) {
@@ -4534,10 +4553,16 @@ class PlannerController extends ChangeNotifier {
         seatbeltRecords.map((record) => record.toJson()),
       );
 
-  Future<void> _saveDrivers() => _saveEncryptedJsonList(
-        _driversKey,
-        drivers.map((driver) => driver.toJson()),
-      );
+  Future<void> _saveDrivers() {
+    for (final driver in drivers) {
+      unawaited(
+          FirebaseBackendService.instance.syncDriverProfile(driver: driver));
+    }
+    return _saveEncryptedJsonList(
+      _driversKey,
+      drivers.map((driver) => driver.toJson()),
+    );
+  }
 
   Future<void> _saveTruckModels() {
     for (final vehicle in truckModels) {
@@ -4881,7 +4906,7 @@ class PlannerController extends ChangeNotifier {
       drivers.add(newDriver);
       await _saveDrivers();
       await _completeFirebaseLogin(AuthenticatedFleetUser(
-        uid: 'local_',
+        uid: 'local_${cleanEmail.replaceAll("@", "_")}',
         email: cleanEmail,
         name: cleanName,
         role: role,
@@ -4901,7 +4926,7 @@ class PlannerController extends ChangeNotifier {
       drivers.add(newDriver);
       await _saveDrivers();
       await _completeFirebaseLogin(AuthenticatedFleetUser(
-        uid: 'local_',
+        uid: 'local_${cleanEmail.replaceAll("@", "_")}',
         email: cleanEmail,
         name: cleanName,
         role: role,
@@ -4922,7 +4947,7 @@ class PlannerController extends ChangeNotifier {
       drivers.add(newDriver);
       await _saveDrivers();
       await _completeFirebaseLogin(AuthenticatedFleetUser(
-        uid: 'local_',
+        uid: 'local_${cleanEmail.replaceAll("@", "_")}',
         email: cleanEmail,
         name: cleanName,
         role: role,

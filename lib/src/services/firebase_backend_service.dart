@@ -318,6 +318,47 @@ class FirebaseBackendService {
             .toList(growable: false));
   }
 
+  // --- Drivers Firestore Sync ---
+  Future<bool> syncDriverProfile({
+    required DriverProfile driver,
+    http.Client? client,
+  }) {
+    final driverId = driver.phone.isNotEmpty
+        ? driver.phone
+        : driver.email.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
+    return _put('drivers', driverId, driver.toJson(), client: client);
+  }
+
+  Stream<List<DriverProfile>> watchDrivers() {
+    if (!isConfigured) return const Stream.empty();
+    return FirebaseFirestore.instance
+        .collection('drivers')
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => DriverProfile.fromJson(
+                  <String, dynamic>{'email': doc.id, ...doc.data()},
+                ))
+            .toList(growable: false));
+  }
+
+  Future<bool> deleteDriverProfile(String driverId) async {
+    if (!isConfigured) return true;
+    final documentId =
+        driverId.trim().replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
+    if (documentId.isEmpty) return false;
+    try {
+      await FirebaseFirestore.instance
+          .collection('drivers')
+          .doc(documentId)
+          .delete()
+          .timeout(const Duration(seconds: 12));
+      return true;
+    } catch (e) {
+      debugPrint('[FirebaseSync] Failed to delete driver: ');
+      return false;
+    }
+  }
+
   // --- Fleet Vehicles Firestore Sync ---
   Future<bool> syncFleetVehicle({
     required TruckModel vehicle,
