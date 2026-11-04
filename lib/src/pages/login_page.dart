@@ -739,7 +739,7 @@ class _LoginPageState extends State<LoginPage> {
                                         const SizedBox(width: 4),
                                         const Expanded(
                                           child: Text(
-                                            'Naya Account Banayein',
+                                            'Sign up',
                                             style: TextStyle(
                                               fontSize: 16,
                                               fontWeight: FontWeight.w700,
@@ -1334,7 +1334,7 @@ class _LoginPageState extends State<LoginPage> {
                                               color: Color(0xFF16A34A)),
                                           SizedBox(width: 5),
                                           Text(
-                                            'Naya Account Banayein',
+                                            'Sign up',
                                             style: TextStyle(
                                               fontSize: 13,
                                               color: Color(0xFF16A34A),
