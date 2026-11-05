@@ -125,7 +125,7 @@ class FirebaseBackendService {
               final data = <String, dynamic>{'id': doc.id, ...doc.data()};
               final ts = data['timestamp'];
               if (ts is Timestamp) {
-                data['timestamp'] = ts.toDate().toIso8601String();
+                data['timestamp'] = ts.toDate().toUtc().toIso8601String();
               }
               return SeatbeltRecord.fromJson(data);
             }).toList(growable: false));

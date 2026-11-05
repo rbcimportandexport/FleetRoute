@@ -25,14 +25,37 @@ DateTime _jsonDateTime(Object? value) {
   if (value is DateTime) return value.toLocal();
   final raw = value?.toString().trim() ?? '';
   if (raw.isEmpty) return DateTime.now();
-  // Handle Firestore Timestamp object string representation or milliseconds if any
-  final parsed = DateTime.tryParse(raw);
-  if (parsed != null) {
-    return parsed.toLocal();
+
+  // If string contains Firestore Timestamp format like Timestamp(seconds=1793868840, nanoseconds=...)
+  final tsMatch = RegExp(r'seconds=(\d+)').firstMatch(raw);
+  if (tsMatch != null) {
+    final secs = int.tryParse(tsMatch.group(1)!);
+    if (secs != null) {
+      return DateTime.fromMillisecondsSinceEpoch(secs * 1000).toLocal();
+    }
   }
+
+  // If string has date time, ensure UTC offset if ends with Z or parsed as UTC
+  DateTime? parsed = DateTime.tryParse(raw);
+  if (parsed != null) {
+    // If raw string ended with 'Z' or timezone offset, parsed is UTC/offset-aware
+    // If raw string was like '2026-11-05T08:59:00' without Z, DateTime.tryParse treats it as local, which is WRONG if server saved UTC without Z!
+    if (!raw.endsWith('Z') && !raw.contains('+') && !raw.contains('-') && raw.contains('T')) {
+      // Treat as UTC
+      parsed = DateTime.tryParse(raw + 'Z');
+    }
+    if (parsed != null) {
+      return parsed.toLocal();
+    }
+  }
+
   final asNum = int.tryParse(raw);
-  if (asNum != null && asNum > 1000000000) {
-    return DateTime.fromMillisecondsSinceEpoch(asNum).toLocal();
+  if (asNum != null) {
+    if (asNum > 1000000000000) {
+      return DateTime.fromMillisecondsSinceEpoch(asNum).toLocal();
+    } else if (asNum > 1000000000) {
+      return DateTime.fromMillisecondsSinceEpoch(asNum * 1000).toLocal();
+    }
   }
   return DateTime.now();
 }
