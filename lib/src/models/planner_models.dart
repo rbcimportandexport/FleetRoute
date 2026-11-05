@@ -22,11 +22,17 @@ int _jsonInt(Object? value, [int fallback = 0]) {
 }
 
 DateTime _jsonDateTime(Object? value) {
+  if (value is DateTime) return value.toLocal();
   final raw = value?.toString().trim() ?? '';
   if (raw.isEmpty) return DateTime.now();
+  // Handle Firestore Timestamp object string representation or milliseconds if any
   final parsed = DateTime.tryParse(raw);
   if (parsed != null) {
     return parsed.toLocal();
+  }
+  final asNum = int.tryParse(raw);
+  if (asNum != null && asNum > 1000000000) {
+    return DateTime.fromMillisecondsSinceEpoch(asNum).toLocal();
   }
   return DateTime.now();
 }

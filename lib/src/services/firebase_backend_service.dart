@@ -546,9 +546,15 @@ class FirebaseBackendService {
           .limit(limit.clamp(1, 1000))
           .get()
           .timeout(const Duration(seconds: 15));
-      return snapshot.docs
-          .map((doc) => <String, dynamic>{'id': doc.id, ...doc.data()})
-          .toList(growable: false);
+      return snapshot.docs.map((doc) {
+        final data = <String, dynamic>{'id': doc.id, ...doc.data()};
+        for (final entry in data.entries.toList()) {
+          if (entry.value is Timestamp) {
+            data[entry.key] = (entry.value as Timestamp).toDate().toUtc().toIso8601String();
+          }
+        }
+        return data;
+      }).toList(growable: false);
     } catch (error) {
       debugPrint('[FirebaseSync] $collection read failed: $error');
       return const [];
