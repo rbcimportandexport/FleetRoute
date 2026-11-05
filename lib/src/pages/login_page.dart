@@ -43,6 +43,7 @@ class _LoginPageState extends State<LoginPage> {
   late bool _useOtpMode = widget.initialUseOtpMode;
   bool _otpSent = false;
   bool _isSendingOtp = false;
+  bool _isForgotPasswordMode = false;
 
   Timer? _resendTimer;
   int _resendCountdown = 0;
@@ -80,6 +81,37 @@ class _LoginPageState extends State<LoginPage> {
     _regPhoneController.dispose();
     _regVehicleController.dispose();
     super.dispose();
+  }
+
+  void _enterForgotPasswordMode() {
+    setState(() {
+      _isForgotPasswordMode = true;
+      _useOtpMode = true;
+      _otpSent = false;
+      _errorMessage = null;
+      _infoMessage = null;
+      _otpController.clear();
+      if (_phoneController.text.contains('@')) {
+        _phoneController.clear();
+      } else {
+        final digits = _phoneController.text.replaceAll(RegExp(r'\D'), '');
+        if (digits.length >= 10) {
+          _phoneController.text = digits.substring(digits.length - 10);
+        }
+      }
+    });
+  }
+
+  void _exitForgotPasswordMode() {
+    setState(() {
+      _isForgotPasswordMode = false;
+      _useOtpMode = false;
+      _otpSent = false;
+      _errorMessage = null;
+      _infoMessage = null;
+      _otpController.clear();
+      _passwordController.clear();
+    });
   }
 
   Future<void> _handleRegister() async {
@@ -485,6 +517,24 @@ class _LoginPageState extends State<LoginPage> {
                                         ],
                                       ),
                                     ),
+                                    if (!_isSignUp) ...[
+                                      const SizedBox(height: 10),
+                                      Align(
+                                        alignment: Alignment.centerRight,
+                                        child: GestureDetector(
+                                          onTap: _enterForgotPasswordMode,
+                                          child: const Text(
+                                            'Forgot password?',
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w600,
+                                              color: Color(0xFF2563EB),
+                                              decoration: TextDecoration.underline,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                     const SizedBox(height: 16),
                                   ],
 
@@ -521,201 +571,99 @@ class _LoginPageState extends State<LoginPage> {
                                         ],
                                       ),
                                     ),
+                                    if (!_isSignUp) ...[
+                                      const SizedBox(height: 10),
+                                      Align(
+                                        alignment: Alignment.centerRight,
+                                        child: GestureDetector(
+                                          onTap: _enterForgotPasswordMode,
+                                          child: const Text(
+                                            'Forgot password?',
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w600,
+                                              color: Color(0xFF2563EB),
+                                              decoration: TextDecoration.underline,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                     const SizedBox(height: 16),
                                   ],
 
-                                  if (!_isSignUp) ...[
-                                    // Mode Selector Tab (WhatsApp OTP vs Password / PIN)
+                                  if (!_isSignUp && _isForgotPasswordMode) ...[
                                     Container(
-                                      padding: const EdgeInsets.all(4),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 14, vertical: 10),
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFFF1F5F9),
-                                        borderRadius: BorderRadius.circular(12),
+                                        color: const Color(0xFFEFF6FF),
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(
+                                            color: const Color(0xFFBFDBFE)),
                                       ),
                                       child: Row(
                                         children: [
-                                          Expanded(
-                                            child: InkWell(
-                                              onTap: () {
-                                                setState(() {
-                                                  _useOtpMode = true;
-                                                  _errorMessage = null;
-                                                  if (_phoneController.text
-                                                      .contains('@')) {
-                                                    _phoneController.clear();
-                                                  } else {
-                                                    // Keep digits only
-                                                    final digits =
-                                                        _phoneController.text
-                                                            .replaceAll(
-                                                                RegExp(r'\D'),
-                                                                '');
-                                                    if (digits.length >= 10) {
-                                                      _phoneController.text =
-                                                          digits.substring(
-                                                              digits.length -
-                                                                  10);
-                                                    }
-                                                  }
-                                                });
-                                              },
-                                              borderRadius:
-                                                  BorderRadius.circular(9),
-                                              child: Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                        vertical: 8),
-                                                decoration: BoxDecoration(
-                                                  color: _useOtpMode
-                                                      ? Colors.white
-                                                      : Colors.transparent,
-                                                  borderRadius:
-                                                      BorderRadius.circular(9),
-                                                  boxShadow: _useOtpMode
-                                                      ? const [
-                                                          BoxShadow(
-                                                            color: Color(
-                                                                0x14000000),
-                                                            blurRadius: 4,
-                                                            offset:
-                                                                Offset(0, 1),
-                                                          ),
-                                                        ]
-                                                      : null,
-                                                ),
-                                                child: Center(
-                                                  child: Row(
-                                                    mainAxisAlignment:
-                                                        MainAxisAlignment
-                                                            .center,
-                                                    mainAxisSize:
-                                                        MainAxisSize.min,
-                                                    children: [
-                                                      Icon(
-                                                        Icons
-                                                            .chat_bubble_outline_rounded,
-                                                        size: 14,
-                                                        color: _useOtpMode
-                                                            ? const Color(
-                                                                0xFF25D366)
-                                                            : const Color(
-                                                                0xFF64748B),
-                                                      ),
-                                                      const SizedBox(width: 4),
-                                                      Flexible(
-                                                        child: Text(
-                                                          AppLocalizationService
-                                                              .instance
-                                                              .tr('whatsapp_otp'),
-                                                          style: TextStyle(
-                                                            fontSize: 11.5,
-                                                            fontWeight:
-                                                                _useOtpMode
-                                                                    ? FontWeight
-                                                                        .w700
-                                                                    : FontWeight
-                                                                        .w500,
-                                                            color: _useOtpMode
-                                                                ? AppColors.navy
-                                                                : const Color(
-                                                                    0xFF64748B),
-                                                          ),
-                                                          overflow: TextOverflow
-                                                              .ellipsis,
-                                                          maxLines: 1,
-                                                        ),
-                                                      ),
-                                                    ],
+                                          const Icon(
+                                            Icons.lock_reset_rounded,
+                                            size: 20,
+                                            color: Color(0xFF2563EB),
+                                          ),
+                                          const SizedBox(width: 10),
+                                          const Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  'Forgot Password / Reset',
+                                                  style: TextStyle(
+                                                    fontSize: 13,
+                                                    fontWeight: FontWeight.w700,
+                                                    color: Color(0xFF1E3A8A),
                                                   ),
                                                 ),
-                                              ),
+                                                Text(
+                                                  'WhatsApp par OTP paane ke liye apna phone number dalein',
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    color: Color(0xFF475569),
+                                                  ),
+                                                ),
+                                              ],
                                             ),
                                           ),
-                                          Expanded(
-                                            child: InkWell(
-                                              onTap: () {
-                                                setState(() {
-                                                  _useOtpMode = false;
-                                                  _errorMessage = null;
-                                                  _phoneController.clear();
-                                                  _passwordController.clear();
-                                                });
-                                              },
-                                              borderRadius:
-                                                  BorderRadius.circular(9),
-                                              child: Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                        vertical: 8),
-                                                decoration: BoxDecoration(
-                                                  color: !_useOtpMode
-                                                      ? Colors.white
-                                                      : Colors.transparent,
-                                                  borderRadius:
-                                                      BorderRadius.circular(9),
-                                                  boxShadow: !_useOtpMode
-                                                      ? const [
-                                                          BoxShadow(
-                                                            color: Color(
-                                                                0x14000000),
-                                                            blurRadius: 4,
-                                                            offset:
-                                                                Offset(0, 1),
-                                                          ),
-                                                        ]
-                                                      : null,
-                                                ),
-                                                child: Center(
-                                                  child: Row(
-                                                    mainAxisAlignment:
-                                                        MainAxisAlignment
-                                                            .center,
-                                                    mainAxisSize:
-                                                        MainAxisSize.min,
-                                                    children: [
-                                                      Icon(
-                                                        Icons
-                                                            .lock_outline_rounded,
-                                                        size: 14,
-                                                        color: !_useOtpMode
-                                                            ? AppColors.blue
-                                                            : const Color(
-                                                                0xFF64748B),
-                                                      ),
-                                                      const SizedBox(width: 4),
-                                                      Flexible(
-                                                        child: Text(
-                                                          AppLocalizationService
-                                                              .instance
-                                                              .tr('password_pin'),
-                                                          style: TextStyle(
-                                                            fontSize: 11.5,
-                                                            fontWeight:
-                                                                !_useOtpMode
-                                                                    ? FontWeight
-                                                                        .w700
-                                                                    : FontWeight
-                                                                        .w500,
-                                                            color: !_useOtpMode
-                                                                ? AppColors.navy
-                                                                : const Color(
-                                                                    0xFF64748B),
-                                                          ),
-                                                          overflow: TextOverflow
-                                                              .ellipsis,
-                                                          maxLines: 1,
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
+                                          IconButton(
+                                            icon: const Icon(Icons.close_rounded,
+                                                size: 18,
+                                                color: Color(0xFF64748B)),
+                                            onPressed: _exitForgotPasswordMode,
+                                            tooltip: 'Cancel',
+                                            visualDensity:
+                                                VisualDensity.compact,
                                           ),
                                         ],
                                       ),
                                     ),
-                                    const SizedBox(height: 18),
+                                    if (!_isSignUp) ...[
+                                      const SizedBox(height: 10),
+                                      Align(
+                                        alignment: Alignment.centerRight,
+                                        child: GestureDetector(
+                                          onTap: _enterForgotPasswordMode,
+                                          child: const Text(
+                                            'Forgot password?',
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w600,
+                                              color: Color(0xFF2563EB),
+                                              decoration: TextDecoration.underline,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                    const SizedBox(height: 16),
                                   ],
 
                                   // Registration Fields
@@ -1086,6 +1034,24 @@ class _LoginPageState extends State<LoginPage> {
                                         ),
                                       ),
                                     ),
+                                    if (!_isSignUp) ...[
+                                      const SizedBox(height: 10),
+                                      Align(
+                                        alignment: Alignment.centerRight,
+                                        child: GestureDetector(
+                                          onTap: _enterForgotPasswordMode,
+                                          child: const Text(
+                                            'Forgot password?',
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w600,
+                                              color: Color(0xFF2563EB),
+                                              decoration: TextDecoration.underline,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                     const SizedBox(height: 16),
                                   ],
 
@@ -1170,6 +1136,24 @@ class _LoginPageState extends State<LoginPage> {
                                         ),
                                       ),
                                     ),
+                                    if (!_isSignUp) ...[
+                                      const SizedBox(height: 10),
+                                      Align(
+                                        alignment: Alignment.centerRight,
+                                        child: GestureDetector(
+                                          onTap: _enterForgotPasswordMode,
+                                          child: const Text(
+                                            'Forgot password?',
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w600,
+                                              color: Color(0xFF2563EB),
+                                              decoration: TextDecoration.underline,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                     const SizedBox(height: 16),
                                   ],
 
