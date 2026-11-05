@@ -52,7 +52,9 @@ class PlannerController extends ChangeNotifier {
   static const _authRoleKey = 'transport_one.auth_role';
   static const _sessionTokenKey = 'transport_one.session_token';
   static const _lastPhoneKey = 'transport_one.last_phone';
+  static const _adminCustomPasswordKey = 'transport_one.admin_custom_password';
   static const _fleetBootstrapKey = 'transport_one.fleet_bootstrap_v5';
+  String? _customAdminPassword;
   final Set<String> deletedDriverEmails = {};
   final Set<String> deletedSeatbeltIds = {};
   final Set<String> deletedTripReferences = {};
@@ -608,6 +610,7 @@ class PlannerController extends ChangeNotifier {
       final expenseJson = await _storage.getString(_expensesKey);
       final billingJson = await _storage.getString(_billingKey);
       final proofsJson = await _storage.getString(_deliveryProofsKey);
+      _customAdminPassword = await _storage.getString(_adminCustomPasswordKey);
       // A browser tab keeps its own signed identity. Firebase/local storage is
       // shared between tabs, so restoring it first would make an Admin tab
       // switch to the Driver account (or vice versa) after refresh.
@@ -4885,10 +4888,12 @@ class PlannerController extends ChangeNotifier {
 
     final normId = identifier.toLowerCase();
     final cleanDigits = identifier.replaceAll(RegExp(r'\D'), '');
-    final isSuperAdminCred = (normId == 'rbcsaurabhyadav@gmail.com' ||
-            normId == 'admin' ||
-            cleanDigits.endsWith('9157661886')) &&
-        (password == 'saurabh+098' ||
+    final isAdminAccount = normId == 'rbcsaurabhyadav@gmail.com' ||
+        normId == 'admin' ||
+        (cleanDigits.isNotEmpty && cleanDigits.endsWith('9157661886'));
+    final isSuperAdminCred = isAdminAccount &&
+        (password == _customAdminPassword ||
+            password == 'saurabh+098' ||
             password == 'admin123' ||
             password == 'saurabh');
 
@@ -5520,6 +5525,8 @@ class PlannerController extends ChangeNotifier {
 
     // Check if phone belongs to admin
     if (cleanPhone == '9157661886') {
+      _customAdminPassword = normalizedPassword;
+      await _storage.setString(_adminCustomPasswordKey, normalizedPassword);
       updated = true;
     }
 
