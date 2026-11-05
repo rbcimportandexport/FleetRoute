@@ -5504,6 +5504,59 @@ class PlannerController extends ChangeNotifier {
     return null;
   }
 
+  /// Updates or resets password for an account verified via WhatsApp OTP
+  Future<String?> resetPasswordWithVerifiedPhone({
+    required String phone,
+    required String newPassword,
+  }) async {
+    final cleanPhone = WhatsAppOtpService.instance.getTenDigitPhone(phone);
+    if (cleanPhone == null) return 'Invalid phone number.';
+    if (newPassword.trim().length < 6) {
+      return 'Password kam se kam 6 characters ka hona chahiye.';
+    }
+
+    final normalizedPassword = newPassword.trim();
+    bool updated = false;
+
+    // Check if phone belongs to admin
+    if (cleanPhone == '9157661886') {
+      updated = true;
+    }
+
+    // Check and update in drivers list
+    for (int i = 0; i < drivers.length; i++) {
+      final d = drivers[i];
+      final dDigits = d.phone.replaceAll(RegExp(r'\D'), '');
+      if (dDigits.endsWith(cleanPhone)) {
+        drivers[i] = d.copyWith(password: normalizedPassword);
+        updated = true;
+      }
+    }
+
+    // Check in defaultFleetDrivers if not in drivers
+    for (final d in defaultFleetDrivers) {
+      final dDigits = d.phone.replaceAll(RegExp(r'\D'), '');
+      if (dDigits.endsWith(cleanPhone) && !drivers.any((x) => x.phone == d.phone)) {
+        drivers.add(d.copyWith(password: normalizedPassword));
+        updated = true;
+      }
+    }
+
+    if (updated) {
+      await _saveDrivers();
+      notifyListeners();
+      unawaited(logActivity(
+        title: 'Password Reset',
+        details: 'Password updated via verified WhatsApp OTP for +91$cleanPhone',
+        category: ActivityCategory.driver,
+        action: 'reset_password',
+      ));
+      return null;
+    }
+
+    return 'Phone number fleet database me nahi mila.';
+  }
+
   /// Sign in using verified phone number via WhatsApp OTP with cryptographic verification proof
   Future<String?> loginWithPhoneOtp({
     required String phone,

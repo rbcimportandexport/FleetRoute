@@ -26,6 +26,8 @@ class _LoginPageState extends State<LoginPage> {
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _otpController = TextEditingController();
+  final _newPasswordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
 
   // Registration controllers
   final _nameController = TextEditingController();
@@ -35,6 +37,8 @@ class _LoginPageState extends State<LoginPage> {
 
   bool _isSignUp = false; // toggle between Sign In and Sign Up
   bool _obscurePassword = true;
+  bool _obscureNewPassword = true;
+  bool _obscureConfirmPassword = true;
   bool _isLoading = false;
   String? _errorMessage;
   String? _infoMessage;
@@ -42,6 +46,7 @@ class _LoginPageState extends State<LoginPage> {
   // Firebase email/password is the production authentication path.
   late bool _useOtpMode = widget.initialUseOtpMode;
   bool _otpSent = false;
+  bool _otpVerifiedForReset = false;
   bool _isSendingOtp = false;
   bool _isForgotPasswordMode = false;
 
@@ -77,6 +82,8 @@ class _LoginPageState extends State<LoginPage> {
     _phoneController.dispose();
     _passwordController.dispose();
     _otpController.dispose();
+    _newPasswordController.dispose();
+    _confirmPasswordController.dispose();
     _nameController.dispose();
     _regPhoneController.dispose();
     _regVehicleController.dispose();
@@ -88,9 +95,12 @@ class _LoginPageState extends State<LoginPage> {
       _isForgotPasswordMode = true;
       _useOtpMode = true;
       _otpSent = false;
+      _otpVerifiedForReset = false;
       _errorMessage = null;
       _infoMessage = null;
       _otpController.clear();
+      _newPasswordController.clear();
+      _confirmPasswordController.clear();
       if (_phoneController.text.contains('@')) {
         _phoneController.clear();
       } else {
@@ -107,9 +117,12 @@ class _LoginPageState extends State<LoginPage> {
       _isForgotPasswordMode = false;
       _useOtpMode = false;
       _otpSent = false;
+      _otpVerifiedForReset = false;
       _errorMessage = null;
       _infoMessage = null;
       _otpController.clear();
+      _newPasswordController.clear();
+      _confirmPasswordController.clear();
       _passwordController.clear();
     });
   }
@@ -224,12 +237,77 @@ class _LoginPageState extends State<LoginPage> {
     });
   }
 
+  Future<void> _handleResetPassword() async {
+    final newPass = _newPasswordController.text.trim();
+    final confirmPass = _confirmPasswordController.text.trim();
+
+    if (newPass.isEmpty) {
+      setState(() {
+        _errorMessage = 'Naya password enter karein.';
+      });
+      return;
+    }
+
+    if (newPass.length < 6) {
+      setState(() {
+        _errorMessage = 'Password kam se kam 6 characters ka hona chahiye.';
+      });
+      return;
+    }
+
+    if (newPass != confirmPass) {
+      setState(() {
+        _errorMessage = 'Dono password match nahi ho rahe.';
+      });
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final phone = _phoneController.text.trim();
+      final error = await widget.controller.resetPasswordWithVerifiedPhone(
+        phone: phone,
+        newPassword: newPass,
+      );
+
+      if (!mounted) return;
+
+      if (error != null) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = error;
+        });
+      } else {
+        setState(() {
+          _isLoading = false;
+          _isForgotPasswordMode = false;
+          _useOtpMode = false;
+          _otpSent = false;
+          _otpVerifiedForReset = false;
+          _errorMessage = null;
+          _infoMessage = 'Password successfully badal gaya! Naye password se Login karein.';
+          _passwordController.text = newPass;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Password reset failed: ${e.toString()}';
+      });
+    }
+  }
+
   Future<void> _handleVerifySmsOtp() async {
     final otp = _otpController.text.trim();
 
     if (otp.isEmpty) {
       setState(() {
-        _errorMessage = 'Kripya SMS me aaya OTP enter karein.';
+        _errorMessage = 'Kripya WhatsApp me aaya OTP enter karein.';
       });
       return;
     }
@@ -244,10 +322,30 @@ class _LoginPageState extends State<LoginPage> {
         phoneNumber: _phoneController.text,
         enteredOtp: otp,
       );
-      final error = result['success'] == true
-          ? await widget.controller.loginWithTrustedWhatsAppOtp(result)
-          : (result['message']?.toString() ??
-              'WhatsApp OTP verification failed.');
+
+      if (!mounted) return;
+
+      if (result['success'] != true) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = result['message']?.toString() ??
+              'WhatsApp OTP verification failed.';
+        });
+        return;
+      }
+
+      // If in Forgot Password Mode -> proceed to Set New Password screen
+      if (_isForgotPasswordMode) {
+        setState(() {
+          _isLoading = false;
+          _otpVerifiedForReset = true;
+          _errorMessage = null;
+          _infoMessage = 'OTP verified! Apna naya password dalein aur repeat karein.';
+        });
+        return;
+      }
+
+      final error = await widget.controller.loginWithTrustedWhatsAppOtp(result);
       if (!mounted) return;
 
       if (error != null) {
@@ -265,12 +363,17 @@ class _LoginPageState extends State<LoginPage> {
       if (!mounted) return;
       setState(() {
         _isLoading = false;
-        _errorMessage = 'Login failed: ${e.toString()}';
+        _errorMessage = 'Verification failed: ${e.toString()}';
       });
     }
   }
 
   Future<void> _handleLogin() async {
+    if (_isForgotPasswordMode && _otpVerifiedForReset) {
+      await _handleResetPassword();
+      return;
+    }
+
     if (_useOtpMode) {
       if (!_otpSent) {
         await _handleSendSmsOtp();
@@ -902,10 +1005,11 @@ class _LoginPageState extends State<LoginPage> {
                                   ),
                                   const SizedBox(height: 16),
 
-                                  // WhatsApp OTP Field (When in OTP mode and sent)
+                                  // WhatsApp OTP Field (When in OTP mode and sent, but not yet verified)
                                   if (!_isSignUp &&
                                       _useOtpMode &&
-                                      _otpSent) ...[
+                                      _otpSent &&
+                                      !_otpVerifiedForReset) ...[
                                     const Text(
                                       'WhatsApp OTP Code',
                                       style: TextStyle(
@@ -945,7 +1049,7 @@ class _LoginPageState extends State<LoginPage> {
                                               : _handleSendSmsOtp,
                                           child: Text(
                                             _resendCountdown > 0
-                                                ? 'Resend in ${_resendCountdown}s'
+                                                ? 'Resend in ' + _resendCountdown.toString() + 's'
                                                 : 'Resend',
                                             style: TextStyle(
                                               fontSize: 12,
@@ -987,8 +1091,152 @@ class _LoginPageState extends State<LoginPage> {
                                     const SizedBox(height: 16),
                                   ],
 
+                                  // New Password and Repeat Password Fields (When OTP is verified in Forgot Password mode)
+                                  if (!_isSignUp &&
+                                      _isForgotPasswordMode &&
+                                      _otpVerifiedForReset) ...[
+                                    const Text(
+                                      'New Password (नया पासवर्ड)',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.navy,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    TextField(
+                                      controller: _newPasswordController,
+                                      obscureText: _obscureNewPassword,
+                                      style: const TextStyle(
+                                          color: AppColors.navy,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w500),
+                                      decoration: InputDecoration(
+                                        hintText: 'Enter new password (min. 6 chars)',
+                                        hintStyle: const TextStyle(
+                                            color: Color(0xFF94A3B8),
+                                            fontSize: 13),
+                                        prefixIcon: const Icon(
+                                          Icons.lock_outline_rounded,
+                                          color: Color(0xFF64748B),
+                                          size: 18,
+                                        ),
+                                        suffixIcon: IconButton(
+                                          icon: Icon(
+                                            _obscureNewPassword
+                                                ? Icons.visibility_off_outlined
+                                                : Icons.visibility_outlined,
+                                            color: const Color(0xFF64748B),
+                                            size: 18,
+                                          ),
+                                          onPressed: () {
+                                            setState(() {
+                                              _obscureNewPassword =
+                                                  !_obscureNewPassword;
+                                            });
+                                          },
+                                        ),
+                                        filled: true,
+                                        fillColor: const Color(0xFFF8FAFC),
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                                horizontal: 14, vertical: 12),
+                                        border: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                          borderSide: const BorderSide(
+                                              color: Color(0xFFE2E8F0)),
+                                        ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                          borderSide: const BorderSide(
+                                              color: Color(0xFFE2E8F0)),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                          borderSide: const BorderSide(
+                                              color: Color(0xFF16A34A),
+                                              width: 1.5),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 14),
+
+                                    const Text(
+                                      'Repeat New Password (पासवर्ड दोबारा लिखें)',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.navy,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    TextField(
+                                      controller: _confirmPasswordController,
+                                      obscureText: _obscureConfirmPassword,
+                                      style: const TextStyle(
+                                          color: AppColors.navy,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w500),
+                                      onSubmitted: (_) => _handleResetPassword(),
+                                      decoration: InputDecoration(
+                                        hintText: 'Repeat new password',
+                                        hintStyle: const TextStyle(
+                                            color: Color(0xFF94A3B8),
+                                            fontSize: 13),
+                                        prefixIcon: const Icon(
+                                          Icons.lock_reset_rounded,
+                                          color: Color(0xFF64748B),
+                                          size: 18,
+                                        ),
+                                        suffixIcon: IconButton(
+                                          icon: Icon(
+                                            _obscureConfirmPassword
+                                                ? Icons.visibility_off_outlined
+                                                : Icons.visibility_outlined,
+                                            color: const Color(0xFF64748B),
+                                            size: 18,
+                                          ),
+                                          onPressed: () {
+                                            setState(() {
+                                              _obscureConfirmPassword =
+                                                  !_obscureConfirmPassword;
+                                            });
+                                          },
+                                        ),
+                                        filled: true,
+                                        fillColor: const Color(0xFFF8FAFC),
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                                horizontal: 14, vertical: 12),
+                                        border: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                          borderSide: const BorderSide(
+                                              color: Color(0xFFE2E8F0)),
+                                        ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                          borderSide: const BorderSide(
+                                              color: Color(0xFFE2E8F0)),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                          borderSide: const BorderSide(
+                                              color: Color(0xFF16A34A),
+                                              width: 1.5),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 16),
+                                  ],
+
                                   // Firebase password input
-                                  if (_isSignUp || !_useOtpMode) ...[
+                                  if (_isSignUp || (!_useOtpMode && !_isForgotPasswordMode)) ...[
                                     Text(
                                       _isSignUp
                                           ? 'Create Password (नया पासवर्ड)'
@@ -1130,14 +1378,16 @@ class _LoginPageState extends State<LoginPage> {
                                                   _isSignUp
                                                       ? Icons
                                                           .check_circle_outline_rounded
-                                                      : (_useOtpMode
-                                                          ? (_otpSent
-                                                              ? Icons
-                                                                  .verified_rounded
+                                                      : (_isForgotPasswordMode && _otpVerifiedForReset
+                                                          ? Icons.check_circle_rounded
+                                                          : (_useOtpMode
+                                                              ? (_otpSent
+                                                                  ? Icons
+                                                                      .verified_rounded
+                                                                  : Icons
+                                                                      .chat_rounded)
                                                               : Icons
-                                                                  .chat_rounded)
-                                                          : Icons
-                                                              .arrow_forward_rounded),
+                                                                  .arrow_forward_rounded)),
                                                   size: 17,
                                                 ),
                                                 const SizedBox(width: 8),
@@ -1145,19 +1395,18 @@ class _LoginPageState extends State<LoginPage> {
                                                   child: Text(
                                                     _isSignUp
                                                         ? 'Register & Sign In'
-                                                        : (_useOtpMode
-                                                            ? (_otpSent
-                                                                ? AppLocalizationService
-                                                                    .instance
-                                                                    .tr(
-                                                                        'verify_and_sign_in')
+                                                        : (_isForgotPasswordMode && _otpVerifiedForReset
+                                                            ? 'Save New Password & Login'
+                                                            : (_useOtpMode
+                                                                ? (_otpSent
+                                                                    ? 'Verify OTP'
+                                                                    : AppLocalizationService
+                                                                        .instance
+                                                                        .tr(
+                                                                            'send_otp'))
                                                                 : AppLocalizationService
                                                                     .instance
-                                                                    .tr(
-                                                                        'send_otp'))
-                                                            : AppLocalizationService
-                                                                .instance
-                                                                .tr('sign_in')),
+                                                                    .tr('sign_in'))),
                                                     style: const TextStyle(
                                                       fontSize: 14,
                                                       fontWeight:
