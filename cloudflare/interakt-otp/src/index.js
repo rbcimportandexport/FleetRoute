@@ -2,10 +2,10 @@ import { createHash } from 'node:crypto';
 
 const json = (body, status = 200, request) => {
   const origin = request?.headers.get('Origin') || '*';
-  return new Response(JSON.stringify(body), {
+  return new Response(status === 204 ? null : JSON.stringify(body), {
     status,
     headers: {
-      'Content-Type': 'application/json; charset=utf-8',
+      ...(status === 204 ? {} : { 'Content-Type': 'application/json; charset=utf-8' }),
       'Access-Control-Allow-Origin': origin,
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
