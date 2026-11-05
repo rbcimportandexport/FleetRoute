@@ -2901,13 +2901,15 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                     ),
                     onPressed: () async {
                       await widget.controller.acceptTrip(trip.reference);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                              'Ride Accepted! Ab aap trip start kar sakte hain.'),
-                          backgroundColor: Color(0xFF16A34A),
-                        ),
-                      );
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                                'Ride Accepted! Ab aap trip start kar sakte hain.'),
+                            backgroundColor: Color(0xFF16A34A),
+                          ),
+                        );
+                      }
                     },
                     icon: const Icon(Icons.check_circle_rounded, size: 18),
                     label: const Text(
@@ -2995,13 +2997,15 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
         onTap = () async {
           if (isAssignedOnly) {
             await widget.controller.acceptTrip(trip.reference);
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content:
-                    Text('Ride Accepted! Ab aap trip start kar sakte hain.'),
-                backgroundColor: Color(0xFF16A34A),
-              ),
-            );
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content:
+                      Text('Ride Accepted! Ab aap trip start kar sakte hain.'),
+                  backgroundColor: Color(0xFF16A34A),
+                ),
+              );
+            }
           } else {
             await widget.controller.updateTripOperationalStep(
               tripReference: trip.reference,

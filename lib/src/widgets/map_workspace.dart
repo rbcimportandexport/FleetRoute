@@ -77,6 +77,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
   String? _lastRouteKey;
   int _routeRequestId = 0;
   TrafficReport? _trafficReport;
+  final List<Timer> _routeFitTimers = [];
   bool _isFallbackRoute = false;
 
   // Live Navigation State
@@ -361,6 +362,10 @@ class _MapWorkspaceState extends State<MapWorkspace> {
 
   @override
   void dispose() {
+    for (final t in _routeFitTimers) {
+      t.cancel();
+    }
+    _routeFitTimers.clear();
     _intentSubscription?.cancel();
     _navTimer?.cancel();
     _gpsSubscription?.cancel();
@@ -604,6 +609,10 @@ class _MapWorkspaceState extends State<MapWorkspace> {
   }
 
   void _scheduleRouteFitRetries() {
+    for (final t in _routeFitTimers) {
+      t.cancel();
+    }
+    _routeFitTimers.clear();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && !_isNavigating) _fitRoute();
     });
@@ -611,11 +620,11 @@ class _MapWorkspaceState extends State<MapWorkspace> {
       Duration(milliseconds: 350),
       Duration(milliseconds: 1100),
     ]) {
-      Future<void>.delayed(delay, () {
+      _routeFitTimers.add(Timer(delay, () {
         if (mounted && !_isNavigating && _routePoints.length >= 2) {
           _fitRoute();
         }
-      });
+      }));
     }
   }
 
