@@ -14,6 +14,9 @@ import '../services/app_localization_service.dart';
 import '../theme/app_theme.dart';
 
 enum LogisticsReportType {
+  driverEfficiency(
+      '0. Driver Distance, Trips & Profit Matching',
+      'Real logistics match: Trips vs Distance (KM) vs Freight Revenue vs Diesel & Net Profit per KM'),
   tripSummary('1. Trip Summary & Lifecycle',
       'Trips, routes, vehicles, drivers, and operational status'),
   driverAttendance('2. Driver Attendance & Duty Hours',
@@ -57,7 +60,7 @@ class ReportsPage extends StatefulWidget {
 }
 
 class _ReportsPageState extends State<ReportsPage> {
-  LogisticsReportType _selectedReport = LogisticsReportType.tripSummary;
+  LogisticsReportType _selectedReport = LogisticsReportType.driverEfficiency;
   String _selectedDateFilter = 'all'; // all, today, week, month
   final TextEditingController _searchController = TextEditingController();
 
@@ -91,6 +94,194 @@ class _ReportsPageState extends State<ReportsPage> {
     }
 
     switch (_selectedReport) {
+      case LogisticsReportType.driverEfficiency:
+        final allDrivers = widget.controller.drivers;
+        final allTrips = widget.controller.trips;
+        final allExpenses = widget.controller.expenses;
+
+        final headers = [
+          'Driver Profile',
+          'Assigned Vehicle',
+          'Trips',
+          'Total KM',
+          'Avg KM/Trip',
+          'Gross Freight (Revenue)',
+          'Diesel Exp',
+          'Toll Exp',
+          'Total Cost',
+          'Net Fleet Profit',
+          'Profit / KM',
+          'Efficiency Profile & Match',
+        ];
+
+        final driverMetrics = allDrivers.map((driver) {
+          final dName = driver.name.trim().toLowerCase();
+          final dEmail = driver.email.trim().toLowerCase();
+          final dPhone = driver.phone.trim();
+          final dVeh = driver.assignedVehicle.replaceAll(RegExp(r'[\s\-]'), '').toUpperCase();
+
+          // 1. Matched Trips
+          final trips = allTrips.where((t) {
+            if (!matchesDate(t.createdAt)) return false;
+            final tDriver = t.assignedDriver.trim().toLowerCase();
+            final tVeh = t.assignedVehicle.replaceAll(RegExp(r'[\s\-]'), '').toUpperCase();
+            final isMatch = (dName.isNotEmpty && (tDriver.contains(dName) || dName.contains(tDriver))) ||
+                (dEmail.isNotEmpty && tDriver.contains(dEmail)) ||
+                (dPhone.isNotEmpty && tDriver.contains(dPhone)) ||
+                (dVeh.isNotEmpty && tVeh == dVeh);
+            return isMatch;
+          }).toList();
+
+          final completedTrips = trips.where((t) => t.status == 'completed' || t.status == 'delivered').toList();
+          final tripCount = trips.length;
+
+          // 2. Distance KM
+          int totalDistance = 0;
+          for (final t in trips) {
+            final km = (t.actualDistanceKm > 0 ? t.actualDistanceKm : t.plannedDistanceKm).round();
+            totalDistance += km;
+          }
+          if (totalDistance == 0 && driver.totalKilometersDriven > 0 && _selectedDateFilter == 'all') {
+            totalDistance = driver.totalKilometersDriven;
+          }
+
+          // 3. Financials (Revenue & Direct Costs)
+          double grossFreight = 0.0;
+          double dieselExp = 0.0;
+          double tollExp = 0.0;
+          double otherExp = 0.0;
+
+          for (final t in trips) {
+            grossFreight += t.freightAmount;
+            if (t.hasReturnLoad) {
+              grossFreight += t.returnFreightAmount;
+            }
+            dieselExp += t.dieselExpense;
+            tollExp += t.tollExpense;
+            otherExp += (t.parkingExpense + t.driverAllowance + t.otherExpense);
+          }
+
+          // Check if driver has standalone expense slips logged
+          final standaloneExpenses = allExpenses.where((e) {
+            if (e.isRejected) return false;
+            if (!matchesDate(e.date)) return false;
+            final edName = e.driverName.trim().toLowerCase();
+            final evNum = e.vehicleNumber.replaceAll(RegExp(r'[\s\-]'), '').toUpperCase();
+            return (dName.isNotEmpty && (edName == dName || edName.contains(dName))) ||
+                (dVeh.isNotEmpty && evNum == dVeh);
+          });
+
+          for (final e in standaloneExpenses) {
+            final cat = e.category.toLowerCase();
+            if (cat.contains('diesel') || cat.contains('fuel')) {
+              dieselExp += e.amount;
+            } else if (cat.contains('toll') || cat.contains('fastag')) {
+              tollExp += e.amount;
+            } else {
+              otherExp += e.amount;
+            }
+          }
+
+          final totalCost = dieselExp + tollExp + otherExp;
+          final netProfit = grossFreight - totalCost;
+          final avgKmPerTrip = tripCount > 0 ? (totalDistance / tripCount).round() : 0;
+          final profitPerKm = totalDistance > 0 ? (netProfit / totalDistance) : 0.0;
+
+          // Classification & Match Logic:
+          // e.g., low trips but high distance & high profit -> High-Yield Long-Haul
+          // e.g., high trips but low distance -> High-Frequency Local Short-Haul
+          String matchBadge;
+          if (tripCount >= 4 && avgKmPerTrip < 100) {
+            matchBadge = '🔵 Local Short-Haul ($tripCount Trips, Avg $avgKmPerTrip km)';
+          } else if (tripCount <= 3 && totalDistance >= 300 && netProfit > 15000) {
+            matchBadge = '🌟 High-Yield Long-Haul (Fewer Trips, High Profit)';
+          } else if (netProfit > 25000 && profitPerKm >= 20.0) {
+            matchBadge = '💎 Top Performer (Max ₹${profitPerKm.toStringAsFixed(1)}/km)';
+          } else if (totalCost > grossFreight && grossFreight > 0) {
+            matchBadge = '⚠️ High Expense / Loss-Making';
+          } else if (tripCount > 0) {
+            matchBadge = '🚚 Standard Regional ($avgKmPerTrip km/trip)';
+          } else {
+            matchBadge = '⚪ Idle / No Active Trips';
+          }
+
+          return {
+            'driver': driver,
+            'tripCount': tripCount,
+            'completedCount': completedTrips.length,
+            'distance': totalDistance,
+            'avgKm': avgKmPerTrip,
+            'freight': grossFreight,
+            'diesel': dieselExp,
+            'toll': tollExp,
+            'totalCost': totalCost,
+            'netProfit': netProfit,
+            'profitPerKm': profitPerKm,
+            'badge': matchBadge,
+          };
+        }).toList();
+
+        // Sort descending by Net Profit
+        driverMetrics.sort((a, b) => (b['netProfit'] as double).compareTo(a['netProfit'] as double));
+
+        final filtered = driverMetrics.where((m) {
+          if (query.isEmpty) return true;
+          final d = m['driver'] as DriverProfile;
+          final badge = m['badge'] as String;
+          final str = '${d.name} ${d.assignedVehicle} ${d.phone} $badge'.toLowerCase();
+          return str.contains(query);
+        }).toList();
+
+        final rows = <List<String>>[];
+        double totalFleetRevenue = 0.0;
+        double totalFleetCost = 0.0;
+        int totalFleetDistance = 0;
+        int totalFleetTrips = 0;
+
+        for (final m in filtered) {
+          final d = m['driver'] as DriverProfile;
+          final trips = m['tripCount'] as int;
+          final km = m['distance'] as int;
+          final avgKm = m['avgKm'] as int;
+          final freight = m['freight'] as double;
+          final diesel = m['diesel'] as double;
+          final toll = m['toll'] as double;
+          final cost = m['totalCost'] as double;
+          final profit = m['netProfit'] as double;
+          final ppKm = m['profitPerKm'] as double;
+          final badge = m['badge'] as String;
+
+          totalFleetRevenue += freight;
+          totalFleetCost += cost;
+          totalFleetDistance += km;
+          totalFleetTrips += trips;
+
+          rows.add([
+            d.name,
+            d.assignedVehicle.isNotEmpty ? d.assignedVehicle : 'UNASSIGNED',
+            '$trips Trips',
+            '${_formatIndianNumber(km)} km',
+            '$avgKm km',
+            _formatCurrency(freight),
+            _formatCurrency(diesel),
+            _formatCurrency(toll),
+            _formatCurrency(cost),
+            '${profit >= 0 ? '+' : ''}${_formatCurrency(profit)}',
+            '₹${ppKm.toStringAsFixed(1)} / km',
+            badge,
+          ]);
+        }
+
+        final totalFleetProfit = totalFleetRevenue - totalFleetCost;
+        final kpis = [
+          ('Total Freight (Revenue)', _formatCurrency(totalFleetRevenue), Icons.payments_rounded),
+          ('Total Direct Costs', _formatCurrency(totalFleetCost), Icons.receipt_long_rounded),
+          ('Net Fleet Profit', '${totalFleetProfit >= 0 ? '+' : ''}${_formatCurrency(totalFleetProfit)}', Icons.account_balance_wallet_rounded),
+          ('Fleet Trips & Distance', '$totalFleetTrips Trips · ${_formatIndianNumber(totalFleetDistance)} km', Icons.route_rounded),
+        ];
+
+        return _ReportData(headers: headers, rows: rows, kpis: kpis);
+
       case LogisticsReportType.tripSummary:
         final trips = widget.controller.trips.where((t) {
           if (!matchesDate(t.createdAt)) return false;
@@ -942,7 +1133,22 @@ class _ReportsPageState extends State<ReportsPage> {
         .toList(growable: false);
     // Calculate column widths map dynamically if trip summary or wide table
     Map<int, pw.TableColumnWidth>? colWidths;
-    if (_selectedReport == LogisticsReportType.tripSummary && printableHeaders.length >= 13) {
+    if (_selectedReport == LogisticsReportType.driverEfficiency && printableHeaders.length >= 12) {
+      colWidths = {
+        0: const pw.FixedColumnWidth(60),  // Driver
+        1: const pw.FixedColumnWidth(55),  // Vehicle
+        2: const pw.FixedColumnWidth(35),  // Trips
+        3: const pw.FixedColumnWidth(40),  // Total KM
+        4: const pw.FixedColumnWidth(38),  // Avg KM/Trip
+        5: const pw.FixedColumnWidth(55),  // Freight
+        6: const pw.FixedColumnWidth(45),  // Diesel
+        7: const pw.FixedColumnWidth(40),  // Toll
+        8: const pw.FixedColumnWidth(45),  // Total Cost
+        9: const pw.FixedColumnWidth(55),  // Net Profit
+        10: const pw.FixedColumnWidth(45), // Profit/KM
+        11: const pw.FlexColumnWidth(2.0), // Efficiency Profile
+      };
+    } else if (_selectedReport == LogisticsReportType.tripSummary && printableHeaders.length >= 13) {
       colWidths = {
         0: const pw.FixedColumnWidth(55),  // Trip #
         1: const pw.FixedColumnWidth(48),  // Customer
@@ -1988,7 +2194,75 @@ class _ReportsPageState extends State<ReportsPage> {
                 data.headers.map((h) => DataColumn(label: Text(h))).toList(),
             rows: data.rows.map((row) {
               return DataRow(
-                cells: row.map((cell) => DataCell(Text(cell))).toList(),
+                cells: row.map((cell) {
+                  final text = cell.trim();
+                  // Check if cell is an efficiency badge
+                  if (text.startsWith('🌟') || text.startsWith('🔵') || text.startsWith('💎') || text.startsWith('⚠️') || text.startsWith('🚚')) {
+                    Color bgColor = const Color(0xFFF1F5F9);
+                    Color textColor = AppColors.navy;
+                    Color borderColor = const Color(0xFFCBD5E1);
+
+                    if (text.startsWith('🌟') || text.startsWith('💎')) {
+                      bgColor = const Color(0xFFECFDF5);
+                      textColor = const Color(0xFF047857);
+                      borderColor = const Color(0xFFA7F3D0);
+                    } else if (text.startsWith('🔵')) {
+                      bgColor = const Color(0xFFEFF6FF);
+                      textColor = const Color(0xFF1D4ED8);
+                      borderColor = const Color(0xFFBFDBFE);
+                    } else if (text.startsWith('⚠️')) {
+                      bgColor = const Color(0xFFFEF2F2);
+                      textColor = const Color(0xFFB91C1C);
+                      borderColor = const Color(0xFFFECACA);
+                    }
+
+                    return DataCell(
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: bgColor,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: borderColor),
+                        ),
+                        child: Text(
+                          text,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: textColor,
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+
+                  // Check if cell is positive/negative profit
+                  if (text.startsWith('+₹')) {
+                    return DataCell(
+                      Text(
+                        text,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF16A34A),
+                        ),
+                      ),
+                    );
+                  } else if (text.startsWith('-₹')) {
+                    return DataCell(
+                      Text(
+                        text,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFFDC2626),
+                        ),
+                      ),
+                    );
+                  }
+
+                  return DataCell(Text(cell));
+                }).toList(),
               );
             }).toList(),
           ),
