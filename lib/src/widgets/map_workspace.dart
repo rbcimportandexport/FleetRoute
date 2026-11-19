@@ -66,10 +66,10 @@ class _MapWorkspaceState extends State<MapWorkspace> {
   bool _cardExpanded = false;
   bool _loadingRoute = false;
   int _tileErrorCount = 0;
-  // ignore: unused_field
   int _tileLayerRevision = 0;
   bool _mapTilesFailed = false;
   bool _tileErrorUpdateScheduled = false;
+  MapViewStyle? _lastRecordedMapStyle;
   List<LatLng> _routePoints = [];
   List<LatLng> _approachPoints = [];
   double _approachDistanceKm = 0;
@@ -488,6 +488,15 @@ class _MapWorkspaceState extends State<MapWorkspace> {
 
   void _onControllerChanged() {
     if (!mounted) return;
+
+    // Reset tile error status when user switches between Street / Satellite map style
+    if (_lastRecordedMapStyle != widget.controller.mapStyle) {
+      _lastRecordedMapStyle = widget.controller.mapStyle;
+      _tileErrorCount = 0;
+      _mapTilesFailed = false;
+      _tileLayerRevision++;
+    }
+
     // Clear stale map pins if user emptied the origin or destination
     if (widget.controller.origin.trim().isEmpty) {
       _pinnedOrigin = null;
@@ -4908,7 +4917,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                   children: [
                     TileLayer(
                       key: ValueKey(
-                        'tile_${widget.controller.satellite}_${widget.controller.isStreetlight}',
+                        'tile_${widget.controller.satellite}_${widget.controller.isStreetlight}_$_tileLayerRevision',
                       ),
                       urlTemplate: MapTileService.getTileUrl(
                         satellite: widget.controller.satellite,
@@ -4928,28 +4937,6 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                       errorTileCallback: (tile, error, stackTrace) =>
                           _handleMapTileError(),
                     ),
-                    if (widget.controller.satellite) ...[
-                      TileLayer(
-                        key: const ValueKey('sat_roads'),
-                        urlTemplate: MapTileService.satelliteRoadsTileUrl,
-                        maxNativeZoom: 18,
-                        maxZoom: 21.0,
-                        panBuffer: 2,
-                        keepBuffer: 4,
-                        tileProvider: NetworkTileProvider(),
-                        userAgentPackageName: MapTileService.userAgent,
-                      ),
-                      TileLayer(
-                        key: const ValueKey('sat_labels'),
-                        urlTemplate: MapTileService.satelliteLabelsTileUrl,
-                        maxNativeZoom: 18,
-                        maxZoom: 21.0,
-                        panBuffer: 2,
-                        keepBuffer: 4,
-                        tileProvider: NetworkTileProvider(),
-                        userAgentPackageName: MapTileService.userAgent,
-                      ),
-                    ],
                     PolylineLayer(polylines: _polylines),
                     CircleLayer(circles: _circles),
                     MarkerLayer(markers: _markers),
@@ -7420,11 +7407,20 @@ class _CompactMapBar extends StatelessWidget {
               controller.setMapStyle(next);
             },
             borderRadius: BorderRadius.circular(7),
-            child: Container(
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: const Color(0xFFF1F5F9),
+                color: controller.mapStyle == MapViewStyle.satellite
+                    ? const Color(0xFF0F172A)
+                    : const Color(0xFFF1F5F9),
                 borderRadius: BorderRadius.circular(7),
+                border: Border.all(
+                  color: controller.mapStyle == MapViewStyle.satellite
+                      ? const Color(0xFF38BDF8)
+                      : const Color(0xFFE2E8F0),
+                  width: 1,
+                ),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -7434,17 +7430,21 @@ class _CompactMapBar extends StatelessWidget {
                         ? Icons.satellite_alt_rounded
                         : Icons.map_rounded,
                     size: 15,
-                    color: AppColors.navy,
+                    color: controller.mapStyle == MapViewStyle.satellite
+                        ? const Color(0xFF38BDF8)
+                        : AppColors.navy,
                   ),
                   const SizedBox(width: 4),
                   Text(
                     controller.mapStyle == MapViewStyle.satellite
                         ? 'Satellite'
                         : 'Street',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
-                      color: AppColors.navy,
+                      color: controller.mapStyle == MapViewStyle.satellite
+                          ? Colors.white
+                          : AppColors.navy,
                     ),
                   ),
                 ],
