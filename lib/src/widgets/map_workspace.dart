@@ -4907,7 +4907,9 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                   ),
                   children: [
                     TileLayer(
-                      key: const ValueKey('_'),
+                      key: ValueKey(
+                        'tile_${widget.controller.satellite}_${widget.controller.isStreetlight}',
+                      ),
                       urlTemplate: MapTileService.getTileUrl(
                         satellite: widget.controller.satellite,
                         streetlight: widget.controller.isStreetlight,
@@ -4919,6 +4921,9 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                       fallbackUrl: MapTileService.fallbackTileUrl,
                       maxNativeZoom: 18,
                       maxZoom: 21.0,
+                      panBuffer: 2,
+                      keepBuffer: 4,
+                      tileProvider: NetworkTileProvider(),
                       userAgentPackageName: MapTileService.userAgent,
                       errorTileCallback: (tile, error, stackTrace) =>
                           _handleMapTileError(),
@@ -4929,6 +4934,9 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                         urlTemplate: MapTileService.satelliteRoadsTileUrl,
                         maxNativeZoom: 18,
                         maxZoom: 21.0,
+                        panBuffer: 2,
+                        keepBuffer: 4,
+                        tileProvider: NetworkTileProvider(),
                         userAgentPackageName: MapTileService.userAgent,
                       ),
                       TileLayer(
@@ -4936,6 +4944,9 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                         urlTemplate: MapTileService.satelliteLabelsTileUrl,
                         maxNativeZoom: 18,
                         maxZoom: 21.0,
+                        panBuffer: 2,
+                        keepBuffer: 4,
+                        tileProvider: NetworkTileProvider(),
                         userAgentPackageName: MapTileService.userAgent,
                       ),
                     ],
