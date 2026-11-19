@@ -270,9 +270,11 @@ class _DashboardPageState extends State<DashboardPage>
                       children: [
                         _buildSimpleWelcome(ctrl),
                         const SizedBox(height: 16),
-                        _buildPrimaryDriverAction(),
+                        _buildLiveFinancialHero(ctrl),
                         const SizedBox(height: 18),
                         _buildSimpleStats(ctrl),
+                        const SizedBox(height: 18),
+                        _buildPrimaryDriverAction(),
                         const SizedBox(height: 20),
                         _simpleTitle(
                             'Quick actions', 'Roz ke kaam ek tap mein'),
@@ -308,16 +310,288 @@ class _DashboardPageState extends State<DashboardPage>
               color: Colors.white, size: 26),
         ),
         const SizedBox(width: 12),
-        const Expanded(
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Fleet Dashboard',
+              const Text('Fleet Dashboard',
                   style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.w900,
                       color: AppColors.navy)),
+              Row(
+                children: [
+                  Container(
+                    width: 7,
+                    height: 7,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF16A34A),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 5),
+                  const Text(
+                    'Live Auto-Syncing',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF16A34A),
+                    ),
+                  ),
+                ],
+              ),
             ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLiveFinancialHero(PlannerController ctrl) {
+    double totalRevenue = 0.0;
+    double totalDiesel = 0.0;
+    double totalToll = 0.0;
+    double totalOtherExp = 0.0;
+    int totalDistanceKm = 0;
+
+    for (final t in ctrl.trips) {
+      totalRevenue += t.freightAmount;
+      if (t.hasReturnLoad) totalRevenue += t.returnFreightAmount;
+      totalDiesel += t.dieselExpense;
+      totalToll += t.tollExpense;
+      totalOtherExp += (t.parkingExpense + t.driverAllowance + t.otherExpense);
+      final km = (t.actualDistanceKm > 0 ? t.actualDistanceKm : t.plannedDistanceKm).round();
+      totalDistanceKm += km;
+    }
+
+    if (totalDistanceKm == 0) {
+      for (final d in ctrl.drivers) {
+        totalDistanceKm += d.totalKilometersDriven;
+      }
+    }
+
+    for (final e in ctrl.expenses.where((exp) => !exp.isRejected)) {
+      final cat = e.category.toLowerCase();
+      if (cat.contains('diesel') || cat.contains('fuel')) {
+        totalDiesel += e.amount;
+      } else if (cat.contains('toll') || cat.contains('fastag')) {
+        totalToll += e.amount;
+      } else {
+        totalOtherExp += e.amount;
+      }
+    }
+
+    final totalCost = totalDiesel + totalToll + totalOtherExp;
+    final actualNetProfit = totalRevenue - totalCost;
+    final profitPerKm = totalDistanceKm > 0 ? (actualNetProfit / totalDistanceKm) : 0.0;
+
+    String formatCur(double amount) {
+      final isNeg = amount < 0;
+      final absVal = amount.abs();
+      return '${isNeg ? "-₹" : "₹"}${absVal.toStringAsFixed(0)}';
+    }
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: actualNetProfit >= 0
+              ? [const Color(0xFF064E3B), const Color(0xFF047857)]
+              : [const Color(0xFF7F1D1D), const Color(0xFFB91C1C)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: (actualNetProfit >= 0 ? const Color(0xFF059669) : const Color(0xFFDC2626)).withValues(alpha: 0.25),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () => widget.onNavigate(WorkspaceSection.reports),
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF86EFAC),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 5),
+                          const Text(
+                            'LIVE FINANCIALS & PROFIT / KM',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Spacer(),
+                    const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white70, size: 14),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Actual Net Profit',
+                            style: TextStyle(
+                              color: Color(0xFFD1FAE5),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            formatCur(actualNetProfit),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 28,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          const Text(
+                            'PROFIT / KM',
+                            style: TextStyle(
+                              color: Color(0xFFD1FAE5),
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '₹${profitPerKm.toStringAsFixed(1)} / km',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _financialMicroCol(
+                          'Gross Freight',
+                          formatCur(totalRevenue),
+                          Colors.white,
+                        ),
+                      ),
+                      Container(width: 1, height: 26, color: Colors.white24),
+                      Expanded(
+                        child: _financialMicroCol(
+                          'Diesel (-)',
+                          formatCur(totalDiesel),
+                          const Color(0xFFFDE68A),
+                        ),
+                      ),
+                      Container(width: 1, height: 26, color: Colors.white24),
+                      Expanded(
+                        child: _financialMicroCol(
+                          'Toll & Exp (-)',
+                          formatCur(totalToll + totalOtherExp),
+                          const Color(0xFFFECACA),
+                        ),
+                      ),
+                      Container(width: 1, height: 26, color: Colors.white24),
+                      Expanded(
+                        child: _financialMicroCol(
+                          'Fleet Dist',
+                          '$totalDistanceKm km',
+                          const Color(0xFF93C5FD),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _financialMicroCol(String label, String value, Color valColor) {
+    return Column(
+      children: [
+        Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            fontSize: 9.5,
+            fontWeight: FontWeight.w600,
+            color: Colors.white70,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: 11.5,
+            fontWeight: FontWeight.w800,
+            color: valColor,
           ),
         ),
       ],
