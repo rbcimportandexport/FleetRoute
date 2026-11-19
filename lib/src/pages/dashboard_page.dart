@@ -334,7 +334,6 @@ class _DashboardPageState extends State<DashboardPage>
             ],
           ),
         ),
-        _buildLivePulseIndicator(compact: true),
       ],
     );
   }
