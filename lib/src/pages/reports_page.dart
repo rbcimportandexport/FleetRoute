@@ -954,16 +954,16 @@ class _ReportsPageState extends State<ReportsPage> {
           final dName = driver.name.trim().toLowerCase();
           final dEmail = driver.email.trim().toLowerCase();
           final dPhone = driver.phone.trim();
-          final dVeh = driver.assignedVehicle.replaceAll(RegExp(r'[\\s\\-]'), '').toUpperCase();
+          final dVeh = driver.assignedVehicle.replaceAll(RegExp(r'[\s\-]'), '').toUpperCase();
 
           // 1. Completed Trips
           final completed = allTrips.where((t) {
-            final isDone = t.status == 'completed' || t.status == 'delivered';
+            final isDone = t.status.toLowerCase() == 'completed' || t.status.toLowerCase() == 'delivered';
             if (!isDone) return false;
             final tDriver = t.assignedDriver.trim().toLowerCase();
-            final tVeh = t.assignedVehicle.replaceAll(RegExp(r'[\\s\\-]'), '').toUpperCase();
-            return (dName.isNotEmpty && tDriver.contains(dName)) ||
-                (dEmail.isNotEmpty && tDriver.contains(dEmail)) ||
+            final tVeh = t.assignedVehicle.replaceAll(RegExp(r'[\s\-]'), '').toUpperCase();
+            return (dName.isNotEmpty && (tDriver.contains(dName) || dName.contains(tDriver))) ||
+                (dEmail.isNotEmpty && (tDriver.contains(dEmail) || dEmail.contains(tDriver))) ||
                 (dPhone.isNotEmpty && tDriver.contains(dPhone)) ||
                 (dVeh.isNotEmpty && tVeh == dVeh);
           }).length;
@@ -972,7 +972,7 @@ class _ReportsPageState extends State<ReportsPage> {
           final attRecords = allAtt.where((a) {
             final aName = a.driverName.trim().toLowerCase();
             final aId = a.driverId.trim().toLowerCase();
-            return (dName.isNotEmpty && (aName == dName || aName.contains(dName))) ||
+            return (dName.isNotEmpty && (aName == dName || aName.contains(dName) || dName.contains(aName))) ||
                 (dEmail.isNotEmpty && aId == dEmail) ||
                 (dPhone.isNotEmpty && aId.contains(dPhone));
           }).toList();
@@ -982,8 +982,8 @@ class _ReportsPageState extends State<ReportsPage> {
           final photos = allSeatbelts.where((s) {
             final sName = s.driverName.trim().toLowerCase();
             final sId = s.driverId.trim().toLowerCase();
-            final sVeh = s.vehicleNumber.replaceAll(RegExp(r'[\\s\\-]'), '').toUpperCase();
-            return (dName.isNotEmpty && (sName == dName || sName.contains(dName))) ||
+            final sVeh = s.vehicleNumber.replaceAll(RegExp(r'[\s\-]'), '').toUpperCase();
+            return (dName.isNotEmpty && (sName == dName || sName.contains(dName) || dName.contains(sName))) ||
                 (dEmail.isNotEmpty && sId == dEmail) ||
                 (dVeh.isNotEmpty && sVeh == dVeh);
           }).toList();
@@ -1036,12 +1036,16 @@ class _ReportsPageState extends State<ReportsPage> {
           }).length;
 
           // Calculate composite performance score (0 - 100)
-          var score = 10.0;
-          score += (completed * 20.0).clamp(0.0, 40.0);
-          score += (totalHours * 2.0).clamp(0.0, 30.0);
-          score += (verifiedPhotos * 5.0).clamp(0.0, 20.0);
-          score -= (violations * 15.0);
-          score = score.clamp(0.0, 100.0);
+          // RULE: If driver has NOT completed any trips (completed == 0), score is 0.0 and no ranks/medals!
+          double score = 0.0;
+          if (completed > 0) {
+            score = 30.0; // Base score for having active completed trips
+            score += (completed * 20.0).clamp(0.0, 30.0);
+            score += (totalHours * 1.5).clamp(0.0, 25.0);
+            score += (verifiedPhotos * 5.0).clamp(0.0, 20.0);
+            score -= (violations * 15.0);
+            score = score.clamp(10.0, 100.0);
+          }
 
           return {
             'driver': driver,
@@ -1053,10 +1057,34 @@ class _ReportsPageState extends State<ReportsPage> {
           };
         }).toList();
 
-        // Sort descending by score for rankings
-        driverMetrics.sort((a, b) => (b['score'] as double).compareTo(a['score'] as double));
+        // Separate active drivers (who actually completed trips) from inactive drivers
+        final activeDrivers = driverMetrics.where((m) => (m['completed'] as int) > 0).toList();
+        final inactiveDrivers = driverMetrics.where((m) => (m['completed'] as int) == 0).toList();
 
-        final filteredMetrics = driverMetrics.where((m) {
+        // Sort active drivers by score descending, then by completed trips descending
+        activeDrivers.sort((a, b) {
+          final scoreComp = (b['score'] as double).compareTo(a['score'] as double);
+          if (scoreComp != 0) return scoreComp;
+          return (b['completed'] as int).compareTo(a['completed'] as int);
+        });
+
+        // Sort inactive drivers alphabetically by name
+        inactiveDrivers.sort((a, b) {
+          final da = a['driver'] as DriverProfile;
+          final db = b['driver'] as DriverProfile;
+          return da.name.compareTo(db.name);
+        });
+
+        // Search filtering
+        final filterActive = activeDrivers.where((m) {
+          if (query.isEmpty) return true;
+          final d = m['driver'] as DriverProfile;
+          return d.name.toLowerCase().contains(query) ||
+              d.assignedVehicle.toLowerCase().contains(query) ||
+              d.phone.contains(query);
+        }).toList();
+
+        final filterInactive = inactiveDrivers.where((m) {
           if (query.isEmpty) return true;
           final d = m['driver'] as DriverProfile;
           return d.name.toLowerCase().contains(query) ||
@@ -1065,19 +1093,21 @@ class _ReportsPageState extends State<ReportsPage> {
         }).toList();
 
         final rows = <List<String>>[];
-        for (var i = 0; i < filteredMetrics.length; i++) {
-          final m = filteredMetrics[i];
+
+        // 1. Add ranked active drivers (1st Gold, 2nd Silver, 3rd Bronze, # for others)
+        for (var i = 0; i < filterActive.length; i++) {
+          final m = filterActive[i];
           final d = m['driver'] as DriverProfile;
           final score = m['score'] as double;
           final rank = i + 1;
           final rankBadge = rank == 1
               ? '👑 1st (Gold)'
-              : (rank == 2 ? '🥈 2nd (Silver)' : (rank == 3 ? '🥉 3rd (Bronze)' : '#'));
+              : (rank == 2 ? '🥈 2nd (Silver)' : (rank == 3 ? '🥉 3rd (Bronze)' : '#$rank'));
           final rewardTier = score >= 85
-              ? '🌟 Grade A+ (Excellent Performance)'
+              ? '🌟 Grade A+ (Top Performer)'
               : (score >= 70
-                  ? '⭐ Grade A (Very Good Performance)'
-                  : (score >= 50 ? '👍 Grade B (Good Performance)' : 'Needs Improvement'));
+                  ? '⭐ Grade A (Eligible for Reward)'
+                  : (score >= 50 ? '👍 Grade B (Standard)' : 'Needs Improvement'));
 
           rows.add([
             rankBadge,
@@ -1092,8 +1122,26 @@ class _ReportsPageState extends State<ReportsPage> {
           ]);
         }
 
-        final topDriver = filteredMetrics.isNotEmpty ? (filteredMetrics.first['driver'] as DriverProfile).name : '--';
-        final eligibleCount = filteredMetrics.where((m) => (m['score'] as double) >= 70).length;
+        // 2. Add unranked inactive drivers (NO rank badge, '-' instead of fake medals)
+        for (var i = 0; i < filterInactive.length; i++) {
+          final m = filterInactive[i];
+          final d = m['driver'] as DriverProfile;
+
+          rows.add([
+            '-',
+            d.name,
+            d.assignedVehicle.isNotEmpty ? d.assignedVehicle : 'UNASSIGNED',
+            '0 Trips',
+            '${(m["hours"] as double).toStringAsFixed(1)} hrs',
+            '${m["photos"]} Verified',
+            '${m["violations"]} Alerts',
+            '0 / 100',
+            'No Trips (Unranked)',
+          ]);
+        }
+
+        final topDriver = filterActive.isNotEmpty ? (filterActive.first['driver'] as DriverProfile).name : 'No Active Drivers';
+        final eligibleCount = filterActive.where((m) => (m['score'] as double) >= 70).length;
 
         return _ReportData(
           headers: headers,

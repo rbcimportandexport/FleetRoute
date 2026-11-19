@@ -497,10 +497,12 @@ class PlannerController extends ChangeNotifier {
   /// Trip & Route tab cannot open with an unrelated stale map position.
   TripRecord? get activeTripForCurrentDriver {
     final driver = currentDriver;
-    if (driver == null) return trips.isEmpty ? null : trips.first;
+    if (driver == null) return null;
     final driverName = driver.name.trim().toLowerCase();
     final vehicle =
         driver.assignedVehicle.replaceAll(RegExp(r'[\s\-]'), '').toUpperCase();
+    if (driverName.isEmpty && vehicle.isEmpty) return null;
+
     for (final trip in trips) {
       final status = trip.status.trim().toLowerCase();
       if (status == 'delivered' ||
@@ -516,15 +518,7 @@ class PlannerController extends ChangeNotifier {
         return trip;
       }
     }
-    for (final trip in trips) {
-      final status = trip.status.trim().toLowerCase();
-      if (status != 'delivered' &&
-          status != 'completed' &&
-          status != 'cancelled') {
-        return trip;
-      }
-    }
-    return trips.isEmpty ? null : trips.first;
+    return null;
   }
 
   void startNavigation() {

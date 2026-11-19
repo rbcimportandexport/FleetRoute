@@ -431,30 +431,70 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                 widget.controller.getActiveDuty(dutyDriverId) != null;
             final isSunday = DateTime.now().weekday == DateTime.sunday;
             final driverRecords = widget.controller.seatbeltRecords.where((r) {
+              final tDriver = driverName.trim().toLowerCase();
+              final rDriver = r.driverName.trim().toLowerCase();
+              final dId = driver?.email.trim().toLowerCase() ?? '';
+              final rId = r.driverId.trim().toLowerCase();
+
+              // Driver match has highest priority
+              final isDriverMatch = (tDriver.isNotEmpty &&
+                      tDriver != 'driver' &&
+                      (rDriver == tDriver ||
+                          rDriver.contains(tDriver) ||
+                          tDriver.contains(rDriver))) ||
+                  (dId.isNotEmpty && (rId == dId || rId.contains(dId)));
+
+              if (isDriverMatch) return true;
+
+              // Only fall back to vehicle match if vehicle is valid and record has NO driver specified
               final tVehicle =
                   vehicleNumber.replaceAll(RegExp(r'[\s\-]'), '').toUpperCase();
               final rVehicle = r.vehicleNumber
                   .replaceAll(RegExp(r'[\s\-]'), '')
                   .toUpperCase();
-              final tDriver = driverName.trim().toLowerCase();
-              final rDriver = r.driverName.trim().toLowerCase();
-              return (rVehicle.isNotEmpty && rVehicle == tVehicle) ||
-                  (rDriver.isNotEmpty && rDriver == tDriver);
+
+              final isVehicleMatch = tVehicle.isNotEmpty &&
+                  tVehicle != 'NOTASSIGNED' &&
+                  rVehicle.isNotEmpty &&
+                  rVehicle == tVehicle;
+
+              // If record belongs to a completely different named driver, do NOT show it under this driver!
+              if (rDriver.isNotEmpty &&
+                  tDriver.isNotEmpty &&
+                  tDriver != 'driver' &&
+                  !rDriver.contains(tDriver) &&
+                  !tDriver.contains(rDriver)) {
+                return false;
+              }
+
+              return isVehicleMatch;
             }).toList();
 
             // Resolve active assigned trip for driver/vehicle
             TripRecord? activeTrip;
             for (final t in widget.controller.trips) {
-              final vMatch = t.assignedVehicle.isNotEmpty &&
+              final vMatch = vehicleNumber.isNotEmpty &&
+                  vehicleNumber != 'Not assigned' &&
+                  t.assignedVehicle.isNotEmpty &&
                   t.assignedVehicle
                           .replaceAll(RegExp(r'[\s\-]'), '')
                           .toUpperCase() ==
                       vehicleNumber
                           .replaceAll(RegExp(r'[\s\-]'), '')
                           .toUpperCase();
-              final dMatch = t.assignedDriver.isNotEmpty &&
-                  t.assignedDriver.trim().toLowerCase() ==
-                      driverName.trim().toLowerCase();
+              final dMatch = driverName.isNotEmpty &&
+                  driverName.toLowerCase() != 'driver' &&
+                  t.assignedDriver.isNotEmpty &&
+                  (t.assignedDriver.trim().toLowerCase() ==
+                          driverName.trim().toLowerCase() ||
+                      t.assignedDriver
+                          .trim()
+                          .toLowerCase()
+                          .contains(driverName.trim().toLowerCase()) ||
+                      driverName
+                          .trim()
+                          .toLowerCase()
+                          .contains(t.assignedDriver.trim().toLowerCase()));
               if (vMatch || dMatch) {
                 if (t.status != 'delivered' &&
                     t.status != 'completed' &&
@@ -464,26 +504,53 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                 }
               }
             }
-            activeTrip ??=
-                widget.controller.activeTripForCurrentDriver ??
-                (widget.controller.trips.isNotEmpty
-                    ? widget.controller.trips.first
-                    : null);
+            // Strict matching: Only use active trip if it actually belongs to this driver
+            if (activeTrip == null) {
+              final candidate = widget.controller.activeTripForCurrentDriver;
+              if (candidate != null) {
+                final cDriver = candidate.assignedDriver.trim().toLowerCase();
+                final cVeh = candidate.assignedVehicle
+                    .replaceAll(RegExp(r'[\s\-]'), '')
+                    .toUpperCase();
+                final curVeh = vehicleNumber
+                    .replaceAll(RegExp(r'[\s\-]'), '')
+                    .toUpperCase();
+                final curName = driverName.trim().toLowerCase();
+                if ((curName.isNotEmpty && cDriver.contains(curName)) ||
+                    (curVeh.isNotEmpty &&
+                        curVeh != 'NOTASSIGNED' &&
+                        cVeh == curVeh)) {
+                  activeTrip = candidate;
+                }
+              }
+            }
 
             // Resolve completed trips for driver/vehicle
             final completedTrips = widget.controller.trips.where((t) {
               final isDone = t.status == 'completed' || t.status == 'delivered';
               if (!isDone) return false;
-              final vMatch = t.assignedVehicle.isNotEmpty &&
+              final vMatch = vehicleNumber.isNotEmpty &&
+                  vehicleNumber != 'Not assigned' &&
+                  t.assignedVehicle.isNotEmpty &&
                   t.assignedVehicle
                           .replaceAll(RegExp(r'[\s\-]'), '')
                           .toUpperCase() ==
                       vehicleNumber
                           .replaceAll(RegExp(r'[\s\-]'), '')
                           .toUpperCase();
-              final dMatch = t.assignedDriver.isNotEmpty &&
-                  t.assignedDriver.trim().toLowerCase() ==
-                      driverName.trim().toLowerCase();
+              final dMatch = driverName.isNotEmpty &&
+                  driverName.toLowerCase() != 'driver' &&
+                  t.assignedDriver.isNotEmpty &&
+                  (t.assignedDriver.trim().toLowerCase() ==
+                          driverName.trim().toLowerCase() ||
+                      t.assignedDriver
+                          .trim()
+                          .toLowerCase()
+                          .contains(driverName.trim().toLowerCase()) ||
+                      driverName
+                          .trim()
+                          .toLowerCase()
+                          .contains(t.assignedDriver.trim().toLowerCase()));
               return vMatch || dMatch;
             }).toList();
 
