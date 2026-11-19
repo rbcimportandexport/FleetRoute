@@ -990,20 +990,50 @@ class _ReportsPageState extends State<ReportsPage> {
           }).toList();
           final verifiedPhotos = photos.where((s) => s.isApproved).length;
 
-          // 4. Safety violations / memo alerts
+          // 4. Safety violations / memo alerts (Driver-specific driving & traffic violations only)
           final violations = allAlerts.where((al) {
-            final alVeh = al.vehicleNumber.replaceAll(RegExp(r'[\\s\\-]'), '').toUpperCase();
+            final alVeh = al.vehicleNumber.replaceAll(RegExp(r'[\s\-]'), '').toUpperCase();
             final alTitle = al.title.toLowerCase();
             final alDetails = al.details.toLowerCase();
+            final alCategory = al.category.toLowerCase();
+
+            // Strict vehicle/driver match
             final isDriverMatch = (dName.isNotEmpty && (alTitle.contains(dName) || alDetails.contains(dName))) ||
                 (dVeh.isNotEmpty && alVeh == dVeh);
-            final isViolation = al.severity == 'critical' ||
-                al.severity == 'warning' ||
+            if (!isDriverMatch) return false;
+
+            // System maintenance/document/telemetry alerts must NOT be counted as driver driving violations
+            final isDocOrSystemAlert = alCategory == 'compliance' ||
+                alCategory == 'maintenance' ||
+                alCategory == 'vehicle' ||
+                alTitle.contains('date required') ||
+                alTitle.contains('expiring') ||
+                alTitle.contains('expired') ||
+                alTitle.contains('puc') ||
+                alTitle.contains('fitness') ||
+                alTitle.contains('insurance') ||
+                alTitle.contains('permit') ||
+                alTitle.contains('offline') ||
+                alTitle.contains('gps') ||
+                alTitle.contains('battery') ||
+                alTitle.contains('fastag');
+            if (isDocOrSystemAlert) return false;
+
+            // Only genuine driver safety and traffic violations
+            final isDriverSafetyViolation = alCategory == 'safety' ||
+                alCategory == 'traffic' ||
+                alCategory == 'challan' ||
                 alTitle.contains('overspeed') ||
-                alTitle.contains('seatbelt not detected') ||
+                alTitle.contains('speed limit') ||
+                alTitle.contains('seatbelt') ||
                 alTitle.contains('memo') ||
-                alTitle.contains('challan');
-            return isDriverMatch && isViolation;
+                alTitle.contains('challan') ||
+                alTitle.contains('harsh braking') ||
+                alTitle.contains('rash driving') ||
+                alDetails.contains('overspeed') ||
+                alDetails.contains('challan');
+
+            return isDriverSafetyViolation;
           }).length;
 
           // Calculate composite performance score (0 - 100)
@@ -1668,29 +1698,59 @@ class _ReportsPageState extends State<ReportsPage> {
         actualKm = driver.totalKilometersDriven;
       }
 
-      // Matched Alerts / Safety violations
+      // Matched Alerts / Safety violations (Driver-specific driving & traffic violations only)
       final violations = controller.alerts.where((al) {
         final alVeh = al.vehicleNumber.replaceAll(RegExp(r'[\s\-]'), '').toUpperCase();
         final alTitle = al.title.toLowerCase();
         final alDetails = al.details.toLowerCase();
+        final alCategory = al.category.toLowerCase();
+
+        // Strict vehicle/driver match
         final isDriverMatch = (dName.isNotEmpty && (alTitle.contains(dName) || alDetails.contains(dName))) ||
             (dVeh.isNotEmpty && alVeh == dVeh);
-        final isViolation = al.severity == 'critical' ||
-            al.severity == 'warning' ||
+        if (!isDriverMatch) return false;
+
+        // System maintenance/document/telemetry alerts must NOT be counted as driver driving violations
+        final isDocOrSystemAlert = alCategory == 'compliance' ||
+            alCategory == 'maintenance' ||
+            alCategory == 'vehicle' ||
+            alTitle.contains('date required') ||
+            alTitle.contains('expiring') ||
+            alTitle.contains('expired') ||
+            alTitle.contains('puc') ||
+            alTitle.contains('fitness') ||
+            alTitle.contains('insurance') ||
+            alTitle.contains('permit') ||
+            alTitle.contains('offline') ||
+            alTitle.contains('gps') ||
+            alTitle.contains('battery') ||
+            alTitle.contains('fastag');
+        if (isDocOrSystemAlert) return false;
+
+        // Only genuine driver safety and traffic violations
+        final isDriverSafetyViolation = alCategory == 'safety' ||
+            alCategory == 'traffic' ||
+            alCategory == 'challan' ||
             alTitle.contains('overspeed') ||
+            alTitle.contains('speed limit') ||
             alTitle.contains('seatbelt') ||
             alTitle.contains('memo') ||
-            alTitle.contains('challan');
-        return isDriverMatch && isViolation;
+            alTitle.contains('challan') ||
+            alTitle.contains('harsh braking') ||
+            alTitle.contains('rash driving') ||
+            alDetails.contains('overspeed') ||
+            alDetails.contains('challan');
+
+        return isDriverSafetyViolation;
       }).length;
 
       final violationCount = violations > 0 ? violations : driver.violationsCount;
       final completedCount = trips.where((t) => t.status == 'completed' || t.status == 'delivered').length;
       final safeCompleted = completedCount > 0 ? completedCount : driver.completedTripsCount;
 
-      // Real safety & reliability score
-      var score = (100 - (violationCount * 12)).clamp(40, 100);
-      if (safeCompleted > 0 && violationCount == 0) {
+      // Real safety & reliability score (100 base score, deducts 10 per verified violation)
+      var score = (100 - (violationCount * 10)).clamp(0, 100);
+      if (violationCount == 0) {
         score = 100;
       }
 

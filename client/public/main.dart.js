@@ -140448,17 +140448,19 @@ A.bhT.prototype={
 $1(a){return a.r},
 $S:20}
 A.bhU.prototype={
-$1(a){var s,r,q,p,o=A.ao("[\\\\s\\\\-]",!0,!1)
-o=A.aZ(a.x,o,"")
+$1(a){var s,r,q,p,o,n="overspeed",m=A.ao("[\\s\\-]",!0,!1)
+m=A.aZ(a.x,m,"")
 s=a.b.toLowerCase()
-r=this.a
-if(r.length!==0)r=B.e.n(s,r)||B.e.n(a.c.toLowerCase(),r)
-else r=!1
-if(!r){r=this.b
-q=r.length!==0&&o.toUpperCase()===r}else q=!0
-o=a.d
-p=o==="critical"||o==="warning"||B.e.n(s,"overspeed")||B.e.n(s,"seatbelt not detected")||B.e.n(s,"memo")||B.e.n(s,"challan")
-return q&&p},
+r=a.c.toLowerCase()
+q=a.w.toLowerCase()
+p=this.a
+if(p.length!==0)p=B.e.n(s,p)||B.e.n(r,p)
+else p=!1
+if(!p){p=this.b
+o=p.length!==0&&m.toUpperCase()===p}else o=!0
+if(!o)return!1
+if(q==="compliance"||q==="maintenance"||q==="vehicle"||B.e.n(s,"date required")||B.e.n(s,"expiring")||B.e.n(s,"expired")||B.e.n(s,"puc")||B.e.n(s,"fitness")||B.e.n(s,"insurance")||B.e.n(s,"permit")||B.e.n(s,"offline")||B.e.n(s,"gps")||B.e.n(s,"battery")||B.e.n(s,"fastag"))return!1
+return q==="safety"||q==="traffic"||q==="challan"||B.e.n(s,n)||B.e.n(s,"speed limit")||B.e.n(s,"seatbelt")||B.e.n(s,"memo")||B.e.n(s,"challan")||B.e.n(s,"harsh braking")||B.e.n(s,"rash driving")||B.e.n(r,n)||B.e.n(r,"challan")},
 $S:33}
 A.bix.prototype={
 $2(a,b){return B.o.be(A.cQ(J.ap(b,"score")),A.cQ(J.ap(a,"score")))},
@@ -140562,8 +140564,8 @@ m=new A.T(g,new A.bhs(h,e),A.I(g).i("T<1>")).gv(0)
 l=m>0?m:a.ax
 k=new A.T(q,new A.bht(),A.I(q).i("T<1>")).gv(0)
 j=k>0?k:a.as
-i=B.u.aZ(100-l*12,40,100)
-return A.aq(["driver",a,"actualKm",p,"violations",l,"completed",j,"score",j>0&&l===0?100:i],t.N,t.K)},
+i=B.u.aZ(100-l*10,0,100)
+return A.aq(["driver",a,"actualKm",p,"violations",l,"completed",j,"score",l===0?100:i],t.N,t.K)},
 $S:136}
 A.bhr.prototype={
 $1(a){var s,r,q=B.e.p(a.y).toLowerCase(),p=A.ao("[\\s\\-]",!0,!1)
@@ -140578,17 +140580,19 @@ p=s.length!==0&&p.toUpperCase()===s}else p=r}else p=r
 return p},
 $S:8}
 A.bhs.prototype={
-$1(a){var s,r,q,p,o=A.ao("[\\s\\-]",!0,!1)
-o=A.aZ(a.x,o,"")
+$1(a){var s,r,q,p,o,n="overspeed",m=A.ao("[\\s\\-]",!0,!1)
+m=A.aZ(a.x,m,"")
 s=a.b.toLowerCase()
-r=this.a
-if(r.length!==0)r=B.e.n(s,r)||B.e.n(a.c.toLowerCase(),r)
-else r=!1
-if(!r){r=this.b
-q=r.length!==0&&o.toUpperCase()===r}else q=!0
-o=a.d
-p=o==="critical"||o==="warning"||B.e.n(s,"overspeed")||B.e.n(s,"seatbelt")||B.e.n(s,"memo")||B.e.n(s,"challan")
-return q&&p},
+r=a.c.toLowerCase()
+q=a.w.toLowerCase()
+p=this.a
+if(p.length!==0)p=B.e.n(s,p)||B.e.n(r,p)
+else p=!1
+if(!p){p=this.b
+o=p.length!==0&&m.toUpperCase()===p}else o=!0
+if(!o)return!1
+if(q==="compliance"||q==="maintenance"||q==="vehicle"||B.e.n(s,"date required")||B.e.n(s,"expiring")||B.e.n(s,"expired")||B.e.n(s,"puc")||B.e.n(s,"fitness")||B.e.n(s,"insurance")||B.e.n(s,"permit")||B.e.n(s,"offline")||B.e.n(s,"gps")||B.e.n(s,"battery")||B.e.n(s,"fastag"))return!1
+return q==="safety"||q==="traffic"||q==="challan"||B.e.n(s,n)||B.e.n(s,"speed limit")||B.e.n(s,"seatbelt")||B.e.n(s,"memo")||B.e.n(s,"challan")||B.e.n(s,"harsh braking")||B.e.n(s,"rash driving")||B.e.n(r,n)||B.e.n(r,"challan")},
 $S:33}
 A.bht.prototype={
 $1(a){var s=a.e
