@@ -295,12 +295,6 @@ class _DashboardPageState extends State<DashboardPage>
   }
 
   Widget _buildSimpleWelcome(PlannerController ctrl) {
-    final activeTrips = ctrl.trips
-        .where((trip) =>
-            trip.status == 'assigned' ||
-            trip.status == 'in_progress' ||
-            trip.status == 'in_transit')
-        .length;
     return Row(
       children: [
         Container(
@@ -314,23 +308,15 @@ class _DashboardPageState extends State<DashboardPage>
               color: Colors.white, size: 26),
         ),
         const SizedBox(width: 12),
-        Expanded(
+        const Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Fleet Dashboard',
+              Text('Fleet Dashboard',
                   style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.w900,
                       color: AppColors.navy)),
-              Text(
-                activeTrips == 0
-                    ? 'Aaj koi active trip nahi hai'
-                    : (activeTrips == 1
-                        ? '1 active trip'
-                        : '$activeTrips active trips'),
-                style: const TextStyle(fontSize: 12, color: AppColors.slate),
-              ),
             ],
           ),
         ),
