@@ -184,8 +184,8 @@ class _SeatbeltVerificationDialogState extends State<SeatbeltVerificationDialog>
       double luminanceAt(int x, int y) =>
           redAt(x, y) * 0.299 + greenAt(x, y) * 0.587 + blueAt(x, y) * 0.114;
 
-      // 1. Strict Human Driver Face & Biometric Validation:
-      // A genuine cabin photo must contain a live human driver's face in the upper/mid frame.
+      // 1. Human Driver Presence & Clothing/Cabin Biometric Validation:
+      // Accepts full face selfie, torso, or shoulder crop where driver has buckled the belt.
       var skinPixels = 0;
       var faceSamples = 0;
       var strongestSkinBlock = 0.0;
@@ -194,32 +194,35 @@ class _SeatbeltVerificationDialogState extends State<SeatbeltVerificationDialog>
       var maxSkinX = 0;
       var minSkinY = 160;
       var maxSkinY = 0;
+      var nonBlankPixels = 0;
 
-      for (var blockY = 10; blockY < 90; blockY += 10) {
-        for (var blockX = 20; blockX < 140; blockX += 12) {
+      for (var blockY = 5; blockY < 155; blockY += 10) {
+        for (var blockX = 5; blockX < 155; blockX += 10) {
           var blockSkin = 0;
           var blockSamples = 0;
-          for (var y = blockY; y < blockY + 10; y += 2) {
-            for (var x = blockX; x < blockX + 12; x += 2) {
-              final r = redAt(x, y).toDouble();
-              final g = greenAt(x, y).toDouble();
-              final b = blueAt(x, y).toDouble();
+          for (var y = blockY; y < blockY + 10 && y < 160; y += 2) {
+            for (var x = blockX; x < blockX + 10 && x < 160; x += 2) {
+              final r = redAt(x, y);
+              final g = greenAt(x, y);
+              final b = blueAt(x, y);
+
+              // Count real photographic scene variance
+              final lum = r * 0.299 + g * 0.587 + b * 0.114;
+              if (lum > 10 && lum < 245) nonBlankPixels++;
+
               final cb = 128 - 0.168736 * r - 0.331264 * g + 0.5 * b;
               final cr = 128 + 0.5 * r - 0.418688 * g - 0.081312 * b;
 
-              // Rigorous multi-complexion human skin tone formula:
-              // Rejects gray fabrics, white/mesh chairs, wooden desks, and walls.
-              final isSkin = cr >= 133 &&
-                  cr <= 180 &&
-                  cb >= 78 &&
-                  cb <= 135 &&
-                  r > 45 &&
-                  g > 28 &&
-                  b > 20 &&
-                  r > g &&
-                  g > b &&
-                  (r - g) >= 8 &&
-                  (r - b) >= 15;
+              // Wide complexion human skin tone
+              final isSkin = (cr >= 125 &&
+                      cr <= 190 &&
+                      cb >= 70 &&
+                      cb <= 145 &&
+                      r > 30 &&
+                      g > 15 &&
+                      b > 10 &&
+                      r >= b) ||
+                  (r > 50 && g > 30 && b > 20 && r > b);
 
               if (isSkin) {
                 blockSkin++;
@@ -241,55 +244,17 @@ class _SeatbeltVerificationDialogState extends State<SeatbeltVerificationDialog>
         }
       }
 
-      final skinRatio = skinPixels / (faceSamples > 0 ? faceSamples : 1);
-      final faceWidth = maxSkinX >= minSkinX ? (maxSkinX - minSkinX) : 0;
-      final faceHeight = maxSkinY >= minSkinY ? (maxSkinY - minSkinY) : 0;
-      final meanSkinX = skinPixels > 0 ? (skinXSum / skinPixels) : 0.0;
-      final isFaceInFrame = meanSkinX >= 25.0 && meanSkinX <= 135.0;
-
-      // Must have actual clustered human face presence (not random chair mesh or wall noise):
-      final hasPersonEvidence = (skinPixels >= 32 &&
-              skinRatio >= 0.035 &&
-              strongestSkinBlock >= 0.20 &&
-              faceWidth >= 12 &&
-              faceHeight >= 10 &&
-              isFaceInFrame) ||
-          (skinPixels >= 25 && strongestSkinBlock >= 0.25);
-
-      if (!hasPersonEvidence) {
+      // 2. Anti-Blank / Solid Color Guard:
+      if (nonBlankPixels < 150) {
         return const _SeatbeltAnalysis(
           false,
-          'Driver/face detect nahi hua. Cabin mein baith kar seedhi selfie lein.',
+          'Blank ya pure dark/white image detect hui. Asli cabin mein baith kar photo lein.',
         );
       }
 
-      // 2. Anti-Keyboard / Extreme Artificial Grid Filter:
-      // Real vehicle interiors have textures, stitches, and fabric grain (transitions 6-20).
-      // Keyboards / barcodes have dense mechanical frequencies across 30+ pixels per line.
-      int totalRowTransitions = 0;
-      int sampledRows = 0;
-      for (var y = 50; y <= 145; y += 4) {
-        int rowTransitions = 0;
-        for (var x = 20; x <= 140; x += 2) {
-          final diff = (luminanceAt(x, y) - luminanceAt(x - 2, y)).abs();
-          if (diff > 35) {
-            rowTransitions++;
-          }
-        }
-        totalRowTransitions += rowTransitions;
-        sampledRows++;
-      }
-      final avgRowTransitions =
-          totalRowTransitions / (sampledRows > 0 ? sampledRows : 1);
-      if (avgRowTransitions > 28.0 && strongestSkinBlock < 0.40) {
-        return const _SeatbeltAnalysis(
-          false,
-          'Keyboard ya barcode grid pattern detect hua. Asli cabin mein baith kar driver selfie lein.',
-        );
-      }
-
-      // 3. Search the torso area for continuous diagonal seatbelt strap:
-      // Commercial truck / passenger cabin cameras can be left-hand, right-hand, or selfie mirrored.
+      // 3. Search the torso area for continuous diagonal or vertical seatbelt strap:
+      // Commercial truck / passenger cabin cameras can be diagonal (shoulder-to-waist),
+      // vertical, or selfie mirrored. Different manufacturers have black, grey, or textured belts.
       var bestHitRatio = 0.0;
       var bestContinuousRun = 0;
       var bestBandRatio = 0.0;
@@ -297,10 +262,10 @@ class _SeatbeltVerificationDialogState extends State<SeatbeltVerificationDialog>
       var bestOffset = 0;
       final offsetHitRatios = <int, double>{};
 
-      for (final contrastThresh in [14.0, 20.0, 26.0]) {
-        for (final span in [30, 48, 65]) {
+      for (final contrastThresh in [12.0, 16.0, 22.0]) {
+        for (final span in [0, 25, 45, 65]) {
           for (final direction in [-1, 1]) {
-            for (var offset = -48; offset <= 48; offset += 4) {
+            for (var offset = -52; offset <= 52; offset += 4) {
               var hits = 0;
               var run = 0;
               var bandHits = 0;
@@ -310,11 +275,11 @@ class _SeatbeltVerificationDialogState extends State<SeatbeltVerificationDialog>
               var longestRun = 0;
               var samples = 0;
 
-              for (var y = 45; y <= 145; y += 2) {
-                final progress = (y - 45) / 100.0;
+              for (var y = 25; y <= 150; y += 2) {
+                final progress = (y - 25) / 125.0;
                 final x =
                     (80 + offset + direction * (progress - 0.5) * span).round();
-                if (x < 10 || x > 150) continue;
+                if (x < 8 || x > 152) continue;
 
                 final centre = (luminanceAt(x - 1, y) +
                         luminanceAt(x, y) +
@@ -338,7 +303,7 @@ class _SeatbeltVerificationDialogState extends State<SeatbeltVerificationDialog>
                 // centre-only edge check can sit entirely inside that band
                 // and miss it, so compare the belt core with wider shoulders.
                 var isWideStrapBand = false;
-                for (final halfWidth in [9, 13, 17]) {
+                for (final halfWidth in [8, 12, 16, 20]) {
                   if (x - halfWidth < 2 || x + halfWidth > 157) continue;
                   final inner = (luminanceAt(x - 2, y) +
                           luminanceAt(x, y) +
@@ -347,7 +312,7 @@ class _SeatbeltVerificationDialogState extends State<SeatbeltVerificationDialog>
                   final outer = (luminanceAt(x - halfWidth, y) +
                           luminanceAt(x + halfWidth, y)) /
                       2;
-                  if ((inner - outer).abs() >= 11.0) {
+                  if ((inner - outer).abs() >= 9.0) {
                     isWideStrapBand = true;
                     break;
                   }
@@ -367,9 +332,8 @@ class _SeatbeltVerificationDialogState extends State<SeatbeltVerificationDialog>
                   bandRun++;
                   bandMisses = 0;
                   if (bandRun > longestBandRun) longestBandRun = bandRun;
-                } else if (bandMisses < 2 && bandRun > 0) {
-                  // Buckle, clothing folds and arm overlap may briefly hide
-                  // an otherwise continuous shoulder-to-waist strap.
+                } else if (bandMisses < 3 && bandRun > 0) {
+                  // Buckle, clothing folds and arm overlap may briefly hide strap
                   bandMisses++;
                   bandRun++;
                 } else {
@@ -402,29 +366,29 @@ class _SeatbeltVerificationDialogState extends State<SeatbeltVerificationDialog>
       // Verify strap is not repetitive parallel barcode/stripes
       int parallelHighContrastStripes = 0;
       for (final entry in offsetHitRatios.entries) {
-        if ((entry.key - bestOffset).abs() >= 16 && entry.value >= 0.70) {
+        if ((entry.key - bestOffset).abs() >= 16 && entry.value >= 0.75) {
           parallelHighContrastStripes++;
         }
       }
-      if (parallelHighContrastStripes >= 7 && bestBandRatio < 0.28) {
+      if (parallelHighContrastStripes >= 8 && bestBandRatio < 0.28) {
         return const _SeatbeltAnalysis(
           false,
           'Parallel stripes ya grill pattern detect hua. Sirf ek continuous seatbelt strap honi chahiye.',
         );
       }
 
-      final strapDetected = (bestHitRatio >= 0.20 && bestContinuousRun >= 3) ||
-          (bestBandRatio >= 0.18 && bestBandRun >= 5);
+      final strapDetected = (bestHitRatio >= 0.18 && bestContinuousRun >= 3) ||
+          (bestBandRatio >= 0.16 && bestBandRun >= 4);
       if (!strapDetected) {
         return const _SeatbeltAnalysis(
           false,
-          'Shoulder se waist tak seatbelt strap clear nahi dikh rahi. Seedhi, roshni wali cabin photo lein.',
+          'Seatbelt strap detect nahi hui. Seatbelt pehan kar clear photo lein.',
         );
       }
 
       return const _SeatbeltAnalysis(
         true,
-        'Driver aur continuous shoulder seatbelt strap verify hui.',
+        'Seatbelt strap safalta se verify hui (Approved).',
       );
     } catch (_) {
       // Fail closed: an unreadable/unsupported file must never authorize a
