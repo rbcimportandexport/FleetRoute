@@ -1360,13 +1360,13 @@ class _ReportsPageState extends State<ReportsPage> {
                       children: [
                         _buildHeader(isMobile, reportData),
                         const SizedBox(height: 16),
+                        _buildFilterBar(isMobile),
+                        const SizedBox(height: 16),
                         _buildLiveFinancialHero(),
                         const SizedBox(height: 16),
                         _buildReportSelector(isMobile),
                         const SizedBox(height: 16),
                         _buildKpiSummary(reportData.kpis, isMobile),
-                        const SizedBox(height: 16),
-                        _buildFilterBar(isMobile),
                         const SizedBox(height: 16),
                         _buildDataTableCard(reportData),
                         const SizedBox(height: 24),
@@ -1393,10 +1393,26 @@ class _ReportsPageState extends State<ReportsPage> {
 
     final targetDriver = _selectedDriverFilter != 'all' ? _selectedDriverFilter.trim().toLowerCase() : null;
 
+    // Identify selected driver vehicle if target is selected
+    String targetVehicle = '';
+    if (targetDriver != null) {
+      final matchedProfile = ctrl.drivers.where((d) {
+        final dName = d.name.trim().toLowerCase();
+        final dEmail = d.email.trim().toLowerCase();
+        return dName == targetDriver || dEmail == targetDriver || dName.contains(targetDriver) || targetDriver.contains(dName);
+      }).firstOrNull;
+      if (matchedProfile != null && matchedProfile.assignedVehicle.isNotEmpty) {
+        targetVehicle = matchedProfile.assignedVehicle.replaceAll(RegExp(r'[\s\-]'), '').toUpperCase();
+      }
+    }
+
     for (final t in ctrl.trips) {
       if (targetDriver != null) {
         final td = t.assignedDriver.trim().toLowerCase();
-        if (!td.contains(targetDriver) && !targetDriver.contains(td)) continue;
+        final tv = t.assignedVehicle.replaceAll(RegExp(r'[\s\-]'), '').toUpperCase();
+        final isDriverMatch = (td.isNotEmpty && (td.contains(targetDriver) || targetDriver.contains(td))) ||
+            (targetVehicle.isNotEmpty && tv == targetVehicle);
+        if (!isDriverMatch) continue;
       }
       totalRevenue += t.freightAmount;
       if (t.hasReturnLoad) totalRevenue += t.returnFreightAmount;
@@ -1411,7 +1427,12 @@ class _ReportsPageState extends State<ReportsPage> {
       for (final d in ctrl.drivers) {
         if (targetDriver != null) {
           final dn = d.name.trim().toLowerCase();
-          if (!dn.contains(targetDriver) && !targetDriver.contains(dn)) continue;
+          final de = d.email.trim().toLowerCase();
+          final dv = d.assignedVehicle.replaceAll(RegExp(r'[\s\-]'), '').toUpperCase();
+          final isDriverMatch = (dn.isNotEmpty && (dn.contains(targetDriver) || targetDriver.contains(dn))) ||
+              (de.isNotEmpty && de.contains(targetDriver)) ||
+              (targetVehicle.isNotEmpty && dv == targetVehicle);
+          if (!isDriverMatch) continue;
         }
         totalDistanceKm += d.totalKilometersDriven;
       }
@@ -1420,7 +1441,10 @@ class _ReportsPageState extends State<ReportsPage> {
     for (final e in ctrl.expenses.where((exp) => !exp.isRejected)) {
       if (targetDriver != null) {
         final ed = e.driverName.trim().toLowerCase();
-        if (!ed.contains(targetDriver) && !targetDriver.contains(ed)) continue;
+        final ev = e.vehicleNumber.replaceAll(RegExp(r'[\s\-]'), '').toUpperCase();
+        final isDriverMatch = (ed.isNotEmpty && (ed.contains(targetDriver) || targetDriver.contains(ed))) ||
+            (targetVehicle.isNotEmpty && ev == targetVehicle);
+        if (!isDriverMatch) continue;
       }
       final cat = e.category.toLowerCase();
       if (cat.contains('diesel') || cat.contains('fuel')) {
@@ -1599,7 +1623,7 @@ class _ReportsPageState extends State<ReportsPage> {
                   Container(width: 1, height: 26, color: Colors.white24),
                   Expanded(
                     child: _financialMicroCol(
-                      'Fleet Dist',
+                      targetDriver != null ? 'Driver Dist' : 'Fleet Dist',
                       '$totalDistanceKm km',
                       const Color(0xFF93C5FD),
                     ),
