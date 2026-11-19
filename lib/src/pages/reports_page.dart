@@ -1748,10 +1748,18 @@ class _ReportsPageState extends State<ReportsPage> {
       final completedCount = trips.where((t) => t.status == 'completed' || t.status == 'delivered').length;
       final safeCompleted = completedCount > 0 ? completedCount : driver.completedTripsCount;
 
-      // Real safety & reliability score (100 base score, deducts 10 per verified violation)
-      var score = (100 - (violationCount * 10)).clamp(0, 100);
-      if (violationCount == 0) {
-        score = 100;
+      // Realistic driver evaluation:
+      // If a driver has driven 0 km and completed 0 trips, they have no driving record yet (Score: 0/100 or Pending)
+      int score = 0;
+      if (actualKm > 0 || safeCompleted > 0) {
+        // Active driver with verified trips
+        score = (100 - (violationCount * 15)).clamp(10, 100);
+        if (violationCount == 0) {
+          score = 100;
+        }
+      } else {
+        // Driver has not started or driven any trips yet (0 km, 0 trips)
+        score = 0;
       }
 
       return {
@@ -1762,7 +1770,14 @@ class _ReportsPageState extends State<ReportsPage> {
         'score': score,
       };
     }).toList()
-      ..sort((a, b) => (b['score'] as int).compareTo(a['score'] as int));
+      ..sort((a, b) {
+        // Sort by score descending; if score equal, sort by actualKm descending, then completed trips
+        final scoreCmp = (b['score'] as int).compareTo(a['score'] as int);
+        if (scoreCmp != 0) return scoreCmp;
+        final kmCmp = (b['actualKm'] as int).compareTo(a['actualKm'] as int);
+        if (kmCmp != 0) return kmCmp;
+        return (b['completed'] as int).compareTo(a['completed'] as int);
+      });
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2090,18 +2105,21 @@ class _ReportsPageState extends State<ReportsPage> {
       child: drivers.isEmpty
           ? const _AnalyticsEmpty('No driver performance data recorded.')
           : Column(
-              children: drivers.take(5).map((m) {
+              children: drivers.map((m) {
                 final driver = m['driver'] as DriverProfile;
                 final actualKm = m['actualKm'] as int;
                 final violations = m['violations'] as int;
                 final score = m['score'] as int;
                 final completed = m['completed'] as int;
 
-                final color = score >= 90
-                    ? AppColors.primary
-                    : score >= 75
-                        ? const Color(0xFFD97706)
-                        : const Color(0xFFDC2626);
+                final hasRecord = actualKm > 0 || completed > 0;
+                final color = !hasRecord
+                    ? AppColors.slate
+                    : score >= 90
+                        ? AppColors.primary
+                        : score >= 75
+                            ? const Color(0xFFD97706)
+                            : const Color(0xFFDC2626);
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 10),
                   child: Row(
@@ -2167,11 +2185,11 @@ class _ReportsPageState extends State<ReportsPage> {
                           border: Border.all(color: color.withValues(alpha: 0.3)),
                         ),
                         child: Text(
-                          '$score/100',
+                          hasRecord ? '$score/100' : 'No Trips',
                           style: TextStyle(
                               color: color,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w900),
+                              fontSize: hasRecord ? 12 : 10.5,
+                              fontWeight: FontWeight.w800),
                         ),
                       ),
                     ],
