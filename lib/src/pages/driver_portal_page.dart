@@ -82,7 +82,7 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkWeeklyReminders();
       _ensureActiveDutyGps();
-      if (!kIsWeb) {
+      if (!kIsWeb && !widget.adminPreview) {
         widget.controller.syncDriverPhoneBattery();
       }
     });
@@ -746,66 +746,146 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                         ),
                         if (!kIsWeb) ...[
                           const SizedBox(width: 8),
-                          StreamBuilder<BatteryState>(
-                            stream: Battery().onBatteryStateChanged,
-                            builder: (context, stateSnap) {
-                              return FutureBuilder<int>(
-                                future: Battery().batteryLevel,
-                                builder: (context, levelSnap) {
-                                  final state = stateSnap.data;
-                                  final isCharging = state == BatteryState.charging || state == BatteryState.full;
-                                  final level = levelSnap.data ?? 95;
-                              return Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 6, vertical: 1.5),
-                                decoration: BoxDecoration(
-                                  color: isCharging
-                                      ? const Color(0xFFDCFCE7)
-                                      : (level <= 20
-                                          ? const Color(0xFFFEE2E2)
-                                          : const Color(0xFFF1F5F9)),
-                                  borderRadius: BorderRadius.circular(5),
-                                  border: Border.all(
-                                    color: isCharging
-                                        ? const Color(0xFF86EFAC)
-                                        : (level <= 20
-                                            ? const Color(0xFFFCA5A5)
-                                            : const Color(0xFFCBD5E1)),
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      isCharging
-                                          ? Icons.bolt_rounded
-                                          : (level <= 20
-                                              ? Icons.battery_alert_rounded
-                                              : Icons.battery_std_rounded),
-                                      size: 12,
+                          Builder(
+                            builder: (context) {
+                              // If this is an admin previewing a driver's dashboard, show that driver's synced truck telemetry
+                              if (widget.adminPreview) {
+                                final vKey = (_activeDriver?.assignedVehicle ?? '')
+                                    .replaceAll(RegExp(r'[\s\-]'), '')
+                                    .toUpperCase();
+                                final truck = vKey.isEmpty
+                                    ? null
+                                    : widget.controller.truckModels
+                                        .where((t) =>
+                                            t.code
+                                                .replaceAll(
+                                                    RegExp(r'[\s\-]'), '')
+                                                .toUpperCase() ==
+                                            vKey)
+                                        .firstOrNull;
+                                final bLevel = truck?.phoneBatteryLevel;
+                                final isCharging = truck?.isPhoneCharging ?? false;
+                                if (bLevel != null) {
+                                  final bColor = isCharging
+                                      ? const Color(0xFF16A34A)
+                                      : (bLevel <= 20
+                                          ? const Color(0xFFDC2626)
+                                          : const Color(0xFF0F766E));
+                                  return Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 6, vertical: 1.5),
+                                    decoration: BoxDecoration(
                                       color: isCharging
-                                          ? const Color(0xFF16A34A)
-                                          : (level <= 20
-                                              ? const Color(0xFFDC2626)
-                                              : const Color(0xFF2563EB)),
-                                    ),
-                                    const SizedBox(width: 2),
-                                    Text(
-                                      isCharging ? '$level% (⚡ Charging)' : '$level%',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w700,
+                                          ? const Color(0xFFDCFCE7)
+                                          : (bLevel <= 20
+                                              ? const Color(0xFFFEE2E2)
+                                              : const Color(0xFFF1F5F9)),
+                                      borderRadius: BorderRadius.circular(5),
+                                      border: Border.all(
                                         color: isCharging
-                                            ? const Color(0xFF16A34A)
-                                            : (level <= 20
-                                                ? const Color(0xFFDC2626)
-                                                : const Color(0xFF334155)),
+                                            ? const Color(0xFF86EFAC)
+                                            : (bLevel <= 20
+                                                ? const Color(0xFFFCA5A5)
+                                                : const Color(0xFFCBD5E1)),
                                       ),
                                     ),
-                                  ],
-                                ),
-                              );
-                            },
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          isCharging
+                                              ? Icons.bolt_rounded
+                                              : (bLevel <= 20
+                                                  ? Icons.battery_alert_rounded
+                                                  : Icons.battery_std_rounded),
+                                          size: 12,
+                                          color: bColor,
+                                        ),
+                                        const SizedBox(width: 2),
+                                        Text(
+                                          isCharging
+                                              ? '$bLevel% (⚡ Charging)'
+                                              : '$bLevel%',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w700,
+                                            color: bColor,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }
+                              }
+
+                              // When opened on driver's actual device
+                              return StreamBuilder<BatteryState>(
+                                stream: Battery().onBatteryStateChanged,
+                                builder: (context, stateSnap) {
+                                  return FutureBuilder<int>(
+                                    future: Battery().batteryLevel,
+                                    builder: (context, levelSnap) {
+                                      final state = stateSnap.data;
+                                      final isCharging = state ==
+                                              BatteryState.charging ||
+                                          state == BatteryState.full;
+                                      final level = levelSnap.data ?? 95;
+                                      return Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 6, vertical: 1.5),
+                                        decoration: BoxDecoration(
+                                          color: isCharging
+                                              ? const Color(0xFFDCFCE7)
+                                              : (level <= 20
+                                                  ? const Color(0xFFFEE2E2)
+                                                  : const Color(0xFFF1F5F9)),
+                                          borderRadius:
+                                              BorderRadius.circular(5),
+                                          border: Border.all(
+                                            color: isCharging
+                                                ? const Color(0xFF86EFAC)
+                                                : (level <= 20
+                                                    ? const Color(0xFFFCA5A5)
+                                                    : const Color(0xFFCBD5E1)),
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              isCharging
+                                                  ? Icons.bolt_rounded
+                                                  : (level <= 20
+                                                      ? Icons.battery_alert_rounded
+                                                      : Icons.battery_std_rounded),
+                                              size: 12,
+                                              color: isCharging
+                                                  ? const Color(0xFF16A34A)
+                                                  : (level <= 20
+                                                      ? const Color(0xFFDC2626)
+                                                      : const Color(0xFF2563EB)),
+                                            ),
+                                            const SizedBox(width: 2),
+                                            Text(
+                                              isCharging
+                                                  ? '$level% (⚡ Charging)'
+                                                  : '$level%',
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w700,
+                                                color: isCharging
+                                                    ? const Color(0xFF16A34A)
+                                                    : (level <= 20
+                                                        ? const Color(0xFFDC2626)
+                                                        : const Color(0xFF334155)),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    },
+                                  );
+                                },
                               );
                             },
                           ),

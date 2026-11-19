@@ -62,6 +62,7 @@ class ReportsPage extends StatefulWidget {
 class _ReportsPageState extends State<ReportsPage> {
   LogisticsReportType _selectedReport = LogisticsReportType.driverEfficiency;
   String _selectedDateFilter = 'all'; // all, today, week, month
+  String _selectedDriverFilter = 'all'; // all, or specific driver name/email
   final TextEditingController _searchController = TextEditingController();
 
   @override
@@ -225,8 +226,14 @@ class _ReportsPageState extends State<ReportsPage> {
         driverMetrics.sort((a, b) => (b['netProfit'] as double).compareTo(a['netProfit'] as double));
 
         final filtered = driverMetrics.where((m) {
-          if (query.isEmpty) return true;
           final d = m['driver'] as DriverProfile;
+          if (_selectedDriverFilter != 'all') {
+            final target = _selectedDriverFilter.toLowerCase();
+            final dEmail = d.email.trim().toLowerCase();
+            final dName = d.name.trim().toLowerCase();
+            if (dEmail != target && dName != target) return false;
+          }
+          if (query.isEmpty) return true;
           final badge = m['badge'] as String;
           final str = '${d.name} ${d.assignedVehicle} ${d.phone} $badge'.toLowerCase();
           return str.contains(query);
@@ -285,6 +292,13 @@ class _ReportsPageState extends State<ReportsPage> {
       case LogisticsReportType.tripSummary:
         final trips = widget.controller.trips.where((t) {
           if (!matchesDate(t.createdAt)) return false;
+          if (_selectedDriverFilter != 'all') {
+            final target = _selectedDriverFilter.toLowerCase();
+            final tDriver = t.assignedDriver.trim().toLowerCase();
+            if (!tDriver.contains(target) && !target.contains(tDriver)) {
+              return false;
+            }
+          }
           if (query.isNotEmpty) {
             final str =
                 '${t.effectiveTripNumber} ${t.customerName} ${t.origin} ${t.destination} ${t.assignedVehicle} ${t.assignedDriver}'
@@ -1135,18 +1149,18 @@ class _ReportsPageState extends State<ReportsPage> {
     Map<int, pw.TableColumnWidth>? colWidths;
     if (_selectedReport == LogisticsReportType.driverEfficiency && printableHeaders.length >= 12) {
       colWidths = {
-        0: const pw.FixedColumnWidth(60),  // Driver
-        1: const pw.FixedColumnWidth(55),  // Vehicle
-        2: const pw.FixedColumnWidth(35),  // Trips
-        3: const pw.FixedColumnWidth(40),  // Total KM
-        4: const pw.FixedColumnWidth(38),  // Avg KM/Trip
-        5: const pw.FixedColumnWidth(55),  // Freight
-        6: const pw.FixedColumnWidth(45),  // Diesel
-        7: const pw.FixedColumnWidth(40),  // Toll
-        8: const pw.FixedColumnWidth(45),  // Total Cost
-        9: const pw.FixedColumnWidth(55),  // Net Profit
-        10: const pw.FixedColumnWidth(45), // Profit/KM
-        11: const pw.FlexColumnWidth(2.0), // Efficiency Profile
+        0: const pw.FixedColumnWidth(70),  // Driver Profile
+        1: const pw.FixedColumnWidth(62),  // Assigned Vehicle
+        2: const pw.FixedColumnWidth(40),  // Trips
+        3: const pw.FixedColumnWidth(48),  // Total KM
+        4: const pw.FixedColumnWidth(48),  // Avg KM/Trip
+        5: const pw.FixedColumnWidth(65),  // Freight (Revenue)
+        6: const pw.FixedColumnWidth(55),  // Diesel Exp
+        7: const pw.FixedColumnWidth(48),  // Toll Exp
+        8: const pw.FixedColumnWidth(55),  // Total Cost
+        9: const pw.FixedColumnWidth(65),  // Net Profit
+        10: const pw.FixedColumnWidth(55), // Profit / KM
+        11: const pw.FixedColumnWidth(190), // Efficiency Profile & Match
       };
     } else if (_selectedReport == LogisticsReportType.tripSummary && printableHeaders.length >= 13) {
       colWidths = {
@@ -2130,6 +2144,27 @@ class _ReportsPageState extends State<ReportsPage> {
             ],
             onChanged: (val) {
               if (val != null) setState(() => _selectedDateFilter = val);
+            },
+          ),
+          DropdownButton<String>(
+            value: _selectedDriverFilter,
+            underline: const SizedBox(),
+            hint: const Text('Filter by Driver'),
+            items: [
+              const DropdownMenuItem(value: 'all', child: Text('All Drivers')),
+              ...widget.controller.drivers.map((d) {
+                return DropdownMenuItem(
+                  value: d.name,
+                  child: Text(
+                    d.assignedVehicle.isNotEmpty
+                        ? '${d.name} (${d.assignedVehicle})'
+                        : d.name,
+                  ),
+                );
+              }),
+            ],
+            onChanged: (val) {
+              if (val != null) setState(() => _selectedDriverFilter = val);
             },
           ),
         ],
