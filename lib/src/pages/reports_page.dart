@@ -50,10 +50,12 @@ enum LogisticsReportType {
 class ReportsPage extends StatefulWidget {
   const ReportsPage({
     required this.controller,
+    this.initialDriverName,
     super.key,
   });
 
   final PlannerController controller;
+  final String? initialDriverName;
 
   @override
   State<ReportsPage> createState() => _ReportsPageState();
@@ -64,6 +66,15 @@ class _ReportsPageState extends State<ReportsPage> {
   String _selectedDateFilter = 'all'; // all, today, week, month
   String _selectedDriverFilter = 'all'; // all, or specific driver name/email
   final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialDriverName != null && widget.initialDriverName!.trim().isNotEmpty) {
+      _selectedDriverFilter = widget.initialDriverName!.trim();
+      _selectedReport = LogisticsReportType.driverEfficiency;
+    }
+  }
 
   @override
   void dispose() {
@@ -107,10 +118,10 @@ class _ReportsPageState extends State<ReportsPage> {
           'Total KM',
           'Avg KM/Trip',
           'Gross Freight (Revenue)',
-          'Diesel Exp',
-          'Toll Exp',
-          'Total Cost',
-          'Net Fleet Profit',
+          'Diesel Exp (-)',
+          'Toll Exp (-)',
+          'Total Cost (Exp)',
+          'Actual Net Profit',
           'Profit / KM',
           'Efficiency Profile & Match',
         ];
@@ -282,8 +293,8 @@ class _ReportsPageState extends State<ReportsPage> {
         final totalFleetProfit = totalFleetRevenue - totalFleetCost;
         final kpis = [
           ('Total Freight (Revenue)', _formatCurrency(totalFleetRevenue), Icons.payments_rounded),
-          ('Total Direct Costs', _formatCurrency(totalFleetCost), Icons.receipt_long_rounded),
-          ('Net Fleet Profit', '${totalFleetProfit >= 0 ? '+' : ''}${_formatCurrency(totalFleetProfit)}', Icons.account_balance_wallet_rounded),
+          ('Total Direct Costs (Diesel+Toll+Exp)', _formatCurrency(totalFleetCost), Icons.receipt_long_rounded),
+          ('Actual Net Profit (Revenue - Costs)', '${totalFleetProfit >= 0 ? '+' : ''}${_formatCurrency(totalFleetProfit)}', Icons.account_balance_wallet_rounded),
           ('Fleet Trips & Distance', '$totalFleetTrips Trips · ${_formatIndianNumber(totalFleetDistance)} km', Icons.route_rounded),
         ];
 
@@ -1319,8 +1330,6 @@ class _ReportsPageState extends State<ReportsPage> {
                       children: [
                         _buildHeader(isMobile, reportData),
                         const SizedBox(height: 16),
-                        _buildFleetAnalyticsOverview(isMobile),
-                        const SizedBox(height: 16),
                         _buildReportSelector(isMobile),
                         const SizedBox(height: 16),
                         _buildKpiSummary(reportData.kpis, isMobile),
@@ -1328,6 +1337,8 @@ class _ReportsPageState extends State<ReportsPage> {
                         _buildFilterBar(isMobile),
                         const SizedBox(height: 16),
                         _buildDataTableCard(reportData),
+                        const SizedBox(height: 24),
+                        _buildFleetAnalyticsOverview(isMobile),
                       ],
                     ),
                   ),
@@ -1880,112 +1891,88 @@ class _ReportsPageState extends State<ReportsPage> {
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.border),
       ),
-      child: Row(
+      child: Column(
         children: [
-          const AppIconBadge(
-              icon: Icons.assessment_outlined, size: 24, padding: 10),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  AppLocalizationService.instance.tr('reports'),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 18,
-                    color: AppColors.navy,
-                    fontFamily: 'sans-serif',
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  _selectedReport.description,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.slate,
-                    fontFamily: 'sans-serif',
-                  ),
-                ),
-              ],
-            ),
-          ),
-          PopupMenuButton<String>(
-            enabled: reportData.rows.isNotEmpty,
-            tooltip: reportData.rows.isEmpty
-                ? 'No data available to export'
-                : 'Download report',
-            onSelected: (format) {
-              switch (format) {
-                case 'pdf':
-                  _exportPdf(reportData);
-                case 'excel':
-                  _exportExcel(reportData);
-                case 'csv':
-                  _exportCsv(reportData);
-              }
-            },
-            itemBuilder: (context) => const [
-              PopupMenuItem(
-                value: 'pdf',
-                child: ListTile(
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(Icons.picture_as_pdf_outlined,
-                      color: Color(0xFFDC2626)),
-                  title: Text('Download PDF'),
-                ),
-              ),
-              PopupMenuItem(
-                value: 'excel',
-                child: ListTile(
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  leading:
-                      Icon(Icons.table_view_outlined, color: Color(0xFF15803D)),
-                  title: Text('Download Excel (.xlsx)'),
-                ),
-              ),
-              PopupMenuItem(
-                value: 'csv',
-                child: ListTile(
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(Icons.description_outlined,
-                      color: Color(0xFF2563EB)),
-                  title: Text('Download CSV'),
-                ),
-              ),
-            ],
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: reportData.rows.isEmpty
-                    ? AppColors.muted
-                    : AppColors.primary,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.download_rounded,
-                      size: 16, color: Colors.white),
-                  const SizedBox(width: 7),
-                  Text(
-                    isMobile ? 'Export' : 'Download Report',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 12,
-                      fontFamily: 'sans-serif',
+          Row(
+            children: [
+              const AppIconBadge(
+                  icon: Icons.assessment_outlined, size: 24, padding: 10),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      AppLocalizationService.instance.tr('reports'),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 18,
+                        color: AppColors.navy,
+                        fontFamily: 'sans-serif',
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 2),
+                    Text(
+                      _selectedReport.description,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.slate,
+                        fontFamily: 'sans-serif',
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
+              if (!isMobile)
+                _buildDownloadActions(reportData),
+            ],
           ),
+          if (isMobile) ...[
+            const SizedBox(height: 12),
+            _buildDownloadActions(reportData),
+          ],
         ],
       ),
+    );
+  }
+
+  Widget _buildDownloadActions(_ReportData reportData) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 6,
+      children: [
+        FilledButton.icon(
+          onPressed: reportData.rows.isEmpty ? null : () => _exportPdf(reportData),
+          icon: const Icon(Icons.picture_as_pdf_outlined, size: 15),
+          label: const Text('Download PDF', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800)),
+          style: FilledButton.styleFrom(
+            backgroundColor: const Color(0xFFDC2626),
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        ),
+        FilledButton.tonalIcon(
+          onPressed: reportData.rows.isEmpty ? null : () => _exportExcel(reportData),
+          icon: const Icon(Icons.table_view_outlined, size: 15),
+          label: const Text('Excel (.xlsx)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800)),
+          style: FilledButton.styleFrom(
+            backgroundColor: const Color(0xFFDCFCE7),
+            foregroundColor: const Color(0xFF15803D),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        ),
+        OutlinedButton.icon(
+          onPressed: reportData.rows.isEmpty ? null : () => _exportCsv(reportData),
+          icon: const Icon(Icons.description_outlined, size: 15),
+          label: const Text('CSV', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800)),
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        ),
+      ],
     );
   }
 
@@ -2106,69 +2093,192 @@ class _ReportsPageState extends State<ReportsPage> {
   }
 
   Widget _buildFilterBar(bool isMobile) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Wrap(
-        spacing: 10,
-        runSpacing: 10,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: [
-          SizedBox(
-            width: isMobile ? double.infinity : 240,
-            child: TextField(
-              controller: _searchController,
-              decoration: const InputDecoration(
-                hintText: 'Filter report entries...',
-                prefixIcon:
-                    Icon(Icons.search, size: 16, color: AppColors.slate),
-                isDense: true,
-                contentPadding:
-                    EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              ),
-              onChanged: (_) => setState(() {}),
+    DriverProfile? selectedDriver;
+    if (_selectedDriverFilter != 'all') {
+      final target = _selectedDriverFilter.trim().toLowerCase();
+      selectedDriver = widget.controller.drivers.where((d) =>
+          d.name.trim().toLowerCase() == target ||
+          d.email.trim().toLowerCase() == target).firstOrNull;
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Dedicated Quick Driver Selector Card
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFFF0FDF4), Color(0xFFF8FAFC)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFFBBF7D0)),
           ),
-          DropdownButton<String>(
-            value: _selectedDateFilter,
-            underline: const SizedBox(),
-            items: const [
-              DropdownMenuItem(value: 'all', child: Text('All Time')),
-              DropdownMenuItem(value: 'today', child: Text('Today')),
-              DropdownMenuItem(value: 'week', child: Text('Past 7 Days')),
-              DropdownMenuItem(value: 'month', child: Text('This Month')),
-            ],
-            onChanged: (val) {
-              if (val != null) setState(() => _selectedDateFilter = val);
-            },
-          ),
-          DropdownButton<String>(
-            value: _selectedDriverFilter,
-            underline: const SizedBox(),
-            hint: const Text('Filter by Driver'),
-            items: [
-              const DropdownMenuItem(value: 'all', child: Text('All Drivers')),
-              ...widget.controller.drivers.map((d) {
-                return DropdownMenuItem(
-                  value: d.name,
-                  child: Text(
-                    d.assignedVehicle.isNotEmpty
-                        ? '${d.name} (${d.assignedVehicle})'
-                        : d.name,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.person_search_rounded,
+                      size: 20, color: Color(0xFF15803D)),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Driver Select Karein (Single Driver Report & Download)',
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF166534),
+                      fontFamily: 'sans-serif',
+                    ),
                   ),
-                );
-              }),
+                  const Spacer(),
+                  if (_selectedDriverFilter != 'all')
+                    TextButton.icon(
+                      onPressed: () => setState(() => _selectedDriverFilter = 'all'),
+                      icon: const Icon(Icons.close_rounded, size: 14, color: Color(0xFFDC2626)),
+                      label: const Text(
+                        'Show All Drivers',
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFFDC2626)),
+                      ),
+                      style: TextButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  ChoiceChip(
+                    label: const Text('All Drivers'),
+                    selected: _selectedDriverFilter == 'all',
+                    selectedColor: const Color(0xFF15803D),
+                    labelStyle: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: _selectedDriverFilter == 'all' ? Colors.white : AppColors.navy,
+                    ),
+                    onSelected: (selected) {
+                      if (selected) setState(() => _selectedDriverFilter = 'all');
+                    },
+                  ),
+                  ...widget.controller.drivers.map((d) {
+                    final isSelected = _selectedDriverFilter.toLowerCase() == d.name.toLowerCase() ||
+                        _selectedDriverFilter.toLowerCase() == d.email.toLowerCase();
+                    return ChoiceChip(
+                      avatar: CircleAvatar(
+                        radius: 10,
+                        backgroundColor: isSelected ? Colors.white : const Color(0xFFDCFCE7),
+                        child: Text(
+                          d.name.isNotEmpty ? d.name[0].toUpperCase() : 'D',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            color: isSelected ? const Color(0xFF15803D) : const Color(0xFF166534),
+                          ),
+                        ),
+                      ),
+                      label: Text(
+                        d.assignedVehicle.isNotEmpty ? '${d.name} (${d.assignedVehicle})' : d.name,
+                      ),
+                      selected: isSelected,
+                      selectedColor: const Color(0xFF15803D),
+                      labelStyle: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: isSelected ? Colors.white : AppColors.navy,
+                      ),
+                      onSelected: (selected) {
+                        setState(() {
+                          _selectedDriverFilter = selected ? d.name : 'all';
+                        });
+                      },
+                    );
+                  }),
+                ],
+              ),
+              if (selectedDriver != null) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFF86EFAC)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.check_circle_rounded, size: 16, color: Color(0xFF16A34A)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Showing detailed report for ${selectedDriver.name} (${selectedDriver.assignedVehicle.isNotEmpty ? selectedDriver.assignedVehicle : "No Truck Assigned"})',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF166534),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ],
-            onChanged: (val) {
-              if (val != null) setState(() => _selectedDriverFilter = val);
-            },
           ),
-        ],
-      ),
+        ),
+        const SizedBox(height: 12),
+        // Filter bar for Search and Dates
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              SizedBox(
+                width: isMobile ? double.infinity : 240,
+                child: TextField(
+                  controller: _searchController,
+                  decoration: const InputDecoration(
+                    hintText: 'Filter report entries...',
+                    prefixIcon:
+                        Icon(Icons.search, size: 16, color: AppColors.slate),
+                    isDense: true,
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  ),
+                  onChanged: (_) => setState(() {}),
+                ),
+              ),
+              DropdownButton<String>(
+                value: _selectedDateFilter,
+                underline: const SizedBox(),
+                items: const [
+                  DropdownMenuItem(value: 'all', child: Text('All Time')),
+                  DropdownMenuItem(value: 'today', child: Text('Today')),
+                  DropdownMenuItem(value: 'week', child: Text('Past 7 Days')),
+                  DropdownMenuItem(value: 'month', child: Text('This Month')),
+                ],
+                onChanged: (val) {
+                  if (val != null) setState(() => _selectedDateFilter = val);
+                },
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 

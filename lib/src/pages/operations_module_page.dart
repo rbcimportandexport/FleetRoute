@@ -13,6 +13,7 @@ import '../widgets/trip_map_dialog.dart';
 import 'alerts_page.dart';
 import 'driver_portal_page.dart';
 import 'fastag_history_page.dart';
+import 'reports_page.dart';
 
 enum OperationsModule { drivers, vehicles, trips, alerts }
 
@@ -1179,6 +1180,39 @@ class _RecordCard extends StatelessWidget {
                 spacing: 8,
                 runSpacing: 6,
                 children: [
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => Scaffold(
+                            appBar: AppBar(
+                              title: Text('${driver.name} - Driver Report'),
+                              backgroundColor: AppColors.canvas,
+                            ),
+                            body: ReportsPage(
+                              controller: controller,
+                              initialDriverName: driver.name,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.picture_as_pdf_outlined,
+                        size: 14, color: Color(0xFF15803D)),
+                    label: const Text('Download Report',
+                        style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF15803D))),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Color(0xFF86EFAC)),
+                      backgroundColor: const Color(0xFFF0FDF4),
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
+                    ),
+                  ),
                   OutlinedButton.icon(
                     onPressed: () => DriverPortalPage.openDriverDashboard(
                       context,
