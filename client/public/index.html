@@ -93,69 +93,37 @@
       }
     };
 
-        // Suppress Google Maps development / billing error modal and watermarks completely
-    setInterval(function() {
-      try {
-        // 1. Remove dialog buttons and container cards
-        var btns = document.querySelectorAll('.dismissButton, button');
-        for (var i = 0; i < btns.length; i++) {
-          var b = btns[i];
-          if (b.classList.contains('dismissButton') || (b.innerText && b.innerText.trim() === 'OK')) {
-            var cur = b;
-            for (var d = 0; d < 5 && cur && cur.parentElement && cur.parentElement !== document.body; d++) {
-              if (cur.style && (cur.style.backgroundColor === 'white' || cur.style.padding === '15px 25px')) {
-                cur.remove();
-                break;
-              }
-              cur = cur.parentElement;
-            }
+    // Suppress Google Maps development / billing error modal and watermarks completely via efficient MutationObserver
+    (function setupMapErrorSuppressor() {
+      function cleanNodes() {
+        try {
+          var btns = document.querySelectorAll('.dismissButton');
+          for (var i = 0; i < btns.length; i++) {
+            var box = btns[i].closest('div[style*="padding"]');
+            if (box) box.remove();
           }
-        }
-
-        // 2. Remove "This page can't load Google Maps correctly"
-        var spans = document.getElementsByTagName('span');
-        for (var j = 0; j < spans.length; j++) {
-          var sp = spans[j];
-          var txt = sp.innerText || '';
-          if (txt.indexOf("can't load Google Maps") !== -1) {
-            var box = sp;
-            for (var d2 = 0; d2 < 6 && box && box.parentElement && box.parentElement !== document.body; d2++) {
-              if (box.style && (box.style.backgroundColor === 'white' || box.style.padding === '15px 25px')) {
-                box.remove();
-                break;
-              }
-              box = box.parentElement;
-            }
-          } else if (txt.indexOf('For development purposes only') !== -1) {
-            // Remove the watermark and its parent dark overlay container
-            var darkOverlay = sp.closest('div[style*="rgba(0, 0, 0, 0.5)"]') || sp.parentElement;
-            while (darkOverlay && darkOverlay.parentElement && darkOverlay.parentElement.className !== 'gm-style') {
-              if (darkOverlay.style && (darkOverlay.style.zIndex === '100' || darkOverlay.style.backgroundColor.indexOf('rgba(0, 0, 0') !== -1)) {
-                break;
-              }
-              darkOverlay = darkOverlay.parentElement;
-            }
-            if (darkOverlay && darkOverlay.parentElement) {
-              darkOverlay.remove();
-            } else if (sp.parentElement) {
-              sp.parentElement.remove();
-            }
+          var errs = document.querySelectorAll('.gm-err-container, .gm-err-content, [class*="gm-err"]');
+          for (var k = 0; k < errs.length; k++) {
+            errs[k].remove();
           }
-        }
+          var darkDivs = document.querySelectorAll('.gm-style div[style*="rgba(0, 0, 0, 0.5)"], .gm-style div[style*="rgba(0,0,0,0.5)"]');
+          for (var m = 0; m < darkDivs.length; m++) {
+            darkDivs[m].remove();
+          }
+        } catch (_) {}
+      }
 
-        // 3. Remove .gm-err-*
-        var errs = document.querySelectorAll('.gm-err-container, .gm-err-content, [class*="gm-err"]');
-        for (var k = 0; k < errs.length; k++) {
-          errs[k].remove();
-        }
-
-        // 4. Remove dark overlays covering the tiles
-        var darkDivs = document.querySelectorAll('.gm-style div[style*="rgba(0, 0, 0, 0.5)"], .gm-style div[style*="rgba(0,0,0,0.5)"]');
-        for (var m = 0; m < darkDivs.length; m++) {
-          darkDivs[m].remove();
-        }
-      } catch (_) {}
-    }, 50);
+      if (window.MutationObserver) {
+        var observer = new MutationObserver(function() {
+          cleanNodes();
+        });
+        observer.observe(document.body || document.documentElement, {
+          childList: true,
+          subtree: true
+        });
+      }
+      setInterval(cleanNodes, 1500);
+    })();
 
     // Intercept Google Maps constructor so gestureHandling is greedy by default.
     // Also isolate touch/wheel events on the map element so scrolling/dragging inside the map
