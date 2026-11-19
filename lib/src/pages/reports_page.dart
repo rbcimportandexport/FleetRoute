@@ -1645,12 +1645,64 @@ class _ReportsPageState extends State<ReportsPage> {
     }
     final rankedExpenses = expenseGroups.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
-    final rankedDrivers = controller.drivers.toList()
-      ..sort((a, b) {
-        final aScore = (100 - a.violationsCount * 5).clamp(0, 100);
-        final bScore = (100 - b.violationsCount * 5).clamp(0, 100);
-        return bScore.compareTo(aScore);
-      });
+    final rankedDrivers = controller.drivers.map((driver) {
+      final dName = driver.name.trim().toLowerCase();
+      final dEmail = driver.email.trim().toLowerCase();
+      final dVeh = driver.assignedVehicle.replaceAll(RegExp(r'[\s\-]'), '').toUpperCase();
+
+      // Matched Trips for actual driven distance
+      final trips = controller.trips.where((t) {
+        final tDriver = t.assignedDriver.trim().toLowerCase();
+        final tVeh = t.assignedVehicle.replaceAll(RegExp(r'[\s\-]'), '').toUpperCase();
+        return (dName.isNotEmpty && (tDriver.contains(dName) || dName.contains(tDriver))) ||
+            (dEmail.isNotEmpty && tDriver.contains(dEmail)) ||
+            (dVeh.isNotEmpty && tVeh == dVeh);
+      }).toList();
+
+      int actualKm = 0;
+      for (final t in trips) {
+        final km = (t.actualDistanceKm > 0 ? t.actualDistanceKm : t.plannedDistanceKm).round();
+        actualKm += km;
+      }
+      if (actualKm == 0 && driver.totalKilometersDriven > 0) {
+        actualKm = driver.totalKilometersDriven;
+      }
+
+      // Matched Alerts / Safety violations
+      final violations = controller.alerts.where((al) {
+        final alVeh = al.vehicleNumber.replaceAll(RegExp(r'[\s\-]'), '').toUpperCase();
+        final alTitle = al.title.toLowerCase();
+        final alDetails = al.details.toLowerCase();
+        final isDriverMatch = (dName.isNotEmpty && (alTitle.contains(dName) || alDetails.contains(dName))) ||
+            (dVeh.isNotEmpty && alVeh == dVeh);
+        final isViolation = al.severity == 'critical' ||
+            al.severity == 'warning' ||
+            alTitle.contains('overspeed') ||
+            alTitle.contains('seatbelt') ||
+            alTitle.contains('memo') ||
+            alTitle.contains('challan');
+        return isDriverMatch && isViolation;
+      }).length;
+
+      final violationCount = violations > 0 ? violations : driver.violationsCount;
+      final completedCount = trips.where((t) => t.status == 'completed' || t.status == 'delivered').length;
+      final safeCompleted = completedCount > 0 ? completedCount : driver.completedTripsCount;
+
+      // Real safety & reliability score
+      var score = (100 - (violationCount * 12)).clamp(40, 100);
+      if (safeCompleted > 0 && violationCount == 0) {
+        score = 100;
+      }
+
+      return {
+        'driver': driver,
+        'actualKm': actualKm,
+        'violations': violationCount,
+        'completed': safeCompleted,
+        'score': score,
+      };
+    }).toList()
+      ..sort((a, b) => (b['score'] as int).compareTo(a['score'] as int));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1971,16 +2023,20 @@ class _ReportsPageState extends State<ReportsPage> {
     );
   }
 
-  Widget _driverScorecard(List<dynamic> drivers) {
+  Widget _driverScorecard(List<Map<String, dynamic>> drivers) {
     return _analyticsPanel(
-      title: 'Driver Safety Scorecard',
+      title: 'Driver Safety & Performance Scorecard',
       icon: Icons.shield_outlined,
       child: drivers.isEmpty
           ? const _AnalyticsEmpty('No driver performance data recorded.')
           : Column(
-              children: drivers.take(4).map((driver) {
-                final score =
-                    (100 - driver.violationsCount * 5).clamp(0, 100) as int;
+              children: drivers.take(5).map((m) {
+                final driver = m['driver'] as DriverProfile;
+                final actualKm = m['actualKm'] as int;
+                final violations = m['violations'] as int;
+                final score = m['score'] as int;
+                final completed = m['completed'] as int;
+
                 final color = score >= 90
                     ? AppColors.primary
                     : score >= 75
@@ -2008,13 +2064,32 @@ class _ReportsPageState extends State<ReportsPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(driver.name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                    fontSize: 12, fontWeight: FontWeight.w800)),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(driver.name,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                          fontSize: 12, fontWeight: FontWeight.w800)),
+                                ),
+                                if (driver.assignedVehicle.isNotEmpty)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF1F5F9),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      driver.assignedVehicle,
+                                      style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, color: Color(0xFF475569)),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 1),
                             Text(
-                              '${_formatIndianNumber(driver.totalKilometersDriven)} km · ${driver.violationsCount} recorded violations',
+                              '${_formatIndianNumber(actualKm)} km · $completed Trips · $violations Violations',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
@@ -2024,11 +2099,21 @@ class _ReportsPageState extends State<ReportsPage> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Text('$score/100',
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: color.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: color.withValues(alpha: 0.3)),
+                        ),
+                        child: Text(
+                          '$score/100',
                           style: TextStyle(
                               color: color,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w900)),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w900),
+                        ),
+                      ),
                     ],
                   ),
                 );
