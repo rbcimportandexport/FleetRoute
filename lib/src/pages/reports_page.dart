@@ -2104,123 +2104,118 @@ class _ReportsPageState extends State<ReportsPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Dedicated Quick Driver Selector Card
+        // Dedicated Quick Driver Selector Card - Compact Dropdown & Clean UI
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFFF0FDF4), Color(0xFFF8FAFC)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            color: Colors.white,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0xFFBBF7D0)),
+            border: Border.all(color: const Color(0xFF86EFAC)),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x08000000),
+                blurRadius: 4,
+                offset: Offset(0, 2),
+              ),
+            ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  const Icon(Icons.person_search_rounded,
+                  const Icon(Icons.person_pin_rounded,
                       size: 20, color: Color(0xFF15803D)),
                   const SizedBox(width: 8),
                   const Text(
-                    'Driver Select Karein (Single Driver Report & Download)',
+                    'Select Driver:',
                     style: TextStyle(
-                      fontSize: 13.5,
+                      fontSize: 13,
                       fontWeight: FontWeight.w800,
                       color: Color(0xFF166534),
                       fontFamily: 'sans-serif',
                     ),
                   ),
-                  const Spacer(),
-                  if (_selectedDriverFilter != 'all')
-                    TextButton.icon(
-                      onPressed: () => setState(() => _selectedDriverFilter = 'all'),
-                      icon: const Icon(Icons.close_rounded, size: 14, color: Color(0xFFDC2626)),
-                      label: const Text(
-                        'Show All Drivers',
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFFDC2626)),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF0FDF4),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFF86EFAC)),
                       ),
-                      style: TextButton.styleFrom(
-                        visualDensity: VisualDensity.compact,
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  ChoiceChip(
-                    label: const Text('All Drivers'),
-                    selected: _selectedDriverFilter == 'all',
-                    selectedColor: const Color(0xFF15803D),
-                    labelStyle: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: _selectedDriverFilter == 'all' ? Colors.white : AppColors.navy,
-                    ),
-                    onSelected: (selected) {
-                      if (selected) setState(() => _selectedDriverFilter = 'all');
-                    },
-                  ),
-                  ...widget.controller.drivers.map((d) {
-                    final isSelected = _selectedDriverFilter.toLowerCase() == d.name.toLowerCase() ||
-                        _selectedDriverFilter.toLowerCase() == d.email.toLowerCase();
-                    return ChoiceChip(
-                      avatar: CircleAvatar(
-                        radius: 10,
-                        backgroundColor: isSelected ? Colors.white : const Color(0xFFDCFCE7),
-                        child: Text(
-                          d.name.isNotEmpty ? d.name[0].toUpperCase() : 'D',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w800,
-                            color: isSelected ? const Color(0xFF15803D) : const Color(0xFF166534),
-                          ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: _selectedDriverFilter,
+                          isExpanded: true,
+                          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF15803D)),
+                          items: [
+                            const DropdownMenuItem(
+                              value: 'all',
+                              child: Text(
+                                '👥 All Drivers (Full Fleet)',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF166534),
+                                ),
+                              ),
+                            ),
+                            ...widget.controller.drivers.map((d) {
+                              return DropdownMenuItem(
+                                value: d.name,
+                                child: Text(
+                                  d.assignedVehicle.isNotEmpty
+                                      ? '👤 ${d.name} (${d.assignedVehicle})'
+                                      : '👤 ${d.name}',
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.navy,
+                                  ),
+                                ),
+                              );
+                            }),
+                          ],
+                          onChanged: (val) {
+                            if (val != null) setState(() => _selectedDriverFilter = val);
+                          },
                         ),
                       ),
-                      label: Text(
-                        d.assignedVehicle.isNotEmpty ? '${d.name} (${d.assignedVehicle})' : d.name,
-                      ),
-                      selected: isSelected,
-                      selectedColor: const Color(0xFF15803D),
-                      labelStyle: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: isSelected ? Colors.white : AppColors.navy,
-                      ),
-                      onSelected: (selected) {
-                        setState(() {
-                          _selectedDriverFilter = selected ? d.name : 'all';
-                        });
-                      },
-                    );
-                  }),
+                    ),
+                  ),
+                  if (_selectedDriverFilter != 'all') ...[
+                    const SizedBox(width: 8),
+                    IconButton(
+                      onPressed: () => setState(() => _selectedDriverFilter = 'all'),
+                      tooltip: 'Clear Driver Filter',
+                      icon: const Icon(Icons.cancel_rounded, size: 20, color: Color(0xFFDC2626)),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                    ),
+                  ],
                 ],
               ),
               if (selectedDriver != null) ...[
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
+                    color: const Color(0xFFDCFCE7),
+                    borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: const Color(0xFF86EFAC)),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.check_circle_rounded, size: 16, color: Color(0xFF16A34A)),
-                      const SizedBox(width: 8),
+                      const Icon(Icons.check_circle_rounded, size: 15, color: Color(0xFF16A34A)),
+                      const SizedBox(width: 6),
                       Expanded(
                         child: Text(
-                          'Showing detailed report for ${selectedDriver.name} (${selectedDriver.assignedVehicle.isNotEmpty ? selectedDriver.assignedVehicle : "No Truck Assigned"})',
+                          'Showing only ${selectedDriver.name} (${selectedDriver.assignedVehicle.isNotEmpty ? selectedDriver.assignedVehicle : "No Truck Assigned"})',
                           style: const TextStyle(
-                            fontSize: 12,
+                            fontSize: 11.5,
                             fontWeight: FontWeight.w700,
                             color: Color(0xFF166534),
                           ),
