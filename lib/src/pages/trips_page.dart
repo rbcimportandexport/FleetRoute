@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart' as fm;
@@ -21,7 +20,6 @@ import '../theme/app_theme.dart';
 import '../widgets/cargo_workflow_dialogs.dart';
 import '../widgets/delivery_proof_dialog.dart';
 import '../widgets/location_search_dialog.dart';
-import '../widgets/driver_calendar_dialog.dart';
 import 'driver_calendar_screen.dart';
 import '../widgets/trip_detail_report_dialog.dart';
 
@@ -537,7 +535,7 @@ class _TripsPageState extends State<TripsPage> {
   final returnDepotController = TextEditingController();
   final driverInstructionsController = TextEditingController();
   gm.GoogleMapController? _tripGoogleMapController;
-  bool _mapReady = false;
+  final bool _mapReady = false;
 
   TruckModel? selectedVehicle;
   String? selectedDriver;
@@ -1373,10 +1371,7 @@ class _TripsPageState extends State<TripsPage> {
                   final totalKg = (sel.quantity * sel.weightKg).round();
                   _customCargoItems.add(
                     CargoItem(
-                      id: 'CI-' +
-                          DateTime.now().millisecondsSinceEpoch.toString() +
-                          '-' +
-                          sel.product.code,
+                      id: 'CI-${DateTime.now().millisecondsSinceEpoch}-${sel.product.code}',
                       productId: sel.product.id,
                       brand: sel.product.brand,
                       category: sel.product.category,
@@ -1385,7 +1380,7 @@ class _TripsPageState extends State<TripsPage> {
                       loadedQuantity: totalWeightTon,
                       unit: 'Ton',
                       notes:
-                          '${sel.product.category.isNotEmpty ? sel.product.category : "Item"} · ${sel.quantity} Pcs (${totalKg} KG)',
+                          '${sel.product.category.isNotEmpty ? sel.product.category : "Item"} · ${sel.quantity} Pcs ($totalKg KG)',
                     ),
                   );
                 }
@@ -1400,7 +1395,7 @@ class _TripsPageState extends State<TripsPage> {
                 cargoWeightController.text =
                     totalTon > 0 ? totalTon.toStringAsFixed(2) : '';
                 cargoDescController.text = _customCargoItems
-                    .map((e) => e.productName + ' (' + e.notes + ')')
+                    .map((e) => '${e.productName} (${e.notes})')
                     .join(', ');
               });
             }
@@ -1950,15 +1945,12 @@ class _TripSetupPanelState extends State<_TripSetupPanel> {
                       c.productId.isNotEmpty &&
                       c.productId != 'custom-product' &&
                       c.productId != 'custom-item')
-                  ? 'Select / Change Products (' +
-                      widget.customCargoItems
+                  ? 'Select / Change Products (${widget.customCargoItems
                           .where((c) =>
                               c.productId.isNotEmpty &&
                               c.productId != 'custom-product' &&
                               c.productId != 'custom-item')
-                          .length
-                          .toString() +
-                      ' selected)'
+                          .length} selected)'
                   : 'Choose RBC / RAMA Products with Photos (Multi-Select)',
               style: const TextStyle(fontWeight: FontWeight.w700),
               overflow: TextOverflow.ellipsis,
@@ -1988,15 +1980,12 @@ class _TripSetupPanelState extends State<_TripSetupPanel> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Selected Products (' +
-                            widget.customCargoItems
+                        'Selected Products (${widget.customCargoItems
                                 .where((c) =>
                                     c.productId.isNotEmpty &&
                                     c.productId != 'custom-product' &&
                                     c.productId != 'custom-item')
-                                .length
-                                .toString() +
-                            '):',
+                                .length}):',
                         style: const TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w800,
@@ -2108,10 +2097,8 @@ class _TripSetupPanelState extends State<_TripSetupPanel> {
                                       Text(
                                         item.notes.isNotEmpty
                                             ? item.notes
-                                            : (item.loadedQuantity
-                                                    .toStringAsFixed(1) +
-                                                ' ' +
-                                                item.unit),
+                                            : ('${item.loadedQuantity
+                                                    .toStringAsFixed(1)} ${item.unit}'),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: const TextStyle(

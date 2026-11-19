@@ -12,7 +12,6 @@ import '../widgets/seatbelt_records_dialog.dart';
 import '../widgets/trip_map_dialog.dart';
 import 'alerts_page.dart';
 import 'driver_portal_page.dart';
-import 'fastag_history_page.dart';
 import 'reports_page.dart';
 
 enum OperationsModule { drivers, vehicles, trips, alerts }

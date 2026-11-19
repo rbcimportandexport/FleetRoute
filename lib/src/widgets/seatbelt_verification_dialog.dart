@@ -186,20 +186,10 @@ class _SeatbeltVerificationDialogState extends State<SeatbeltVerificationDialog>
 
       // 1. Human Driver Presence & Clothing/Cabin Biometric Validation:
       // Accepts full face selfie, torso, or shoulder crop where driver has buckled the belt.
-      var skinPixels = 0;
-      var faceSamples = 0;
-      var strongestSkinBlock = 0.0;
-      var skinXSum = 0;
-      var minSkinX = 160;
-      var maxSkinX = 0;
-      var minSkinY = 160;
-      var maxSkinY = 0;
       var nonBlankPixels = 0;
 
       for (var blockY = 5; blockY < 155; blockY += 10) {
         for (var blockX = 5; blockX < 155; blockX += 10) {
-          var blockSkin = 0;
-          var blockSamples = 0;
           for (var y = blockY; y < blockY + 10 && y < 160; y += 2) {
             for (var x = blockX; x < blockX + 10 && x < 160; x += 2) {
               final r = redAt(x, y);
@@ -209,37 +199,7 @@ class _SeatbeltVerificationDialogState extends State<SeatbeltVerificationDialog>
               // Count real photographic scene variance
               final lum = r * 0.299 + g * 0.587 + b * 0.114;
               if (lum > 10 && lum < 245) nonBlankPixels++;
-
-              final cb = 128 - 0.168736 * r - 0.331264 * g + 0.5 * b;
-              final cr = 128 + 0.5 * r - 0.418688 * g - 0.081312 * b;
-
-              // Wide complexion human skin tone
-              final isSkin = (cr >= 125 &&
-                      cr <= 190 &&
-                      cb >= 70 &&
-                      cb <= 145 &&
-                      r > 30 &&
-                      g > 15 &&
-                      b > 10 &&
-                      r >= b) ||
-                  (r > 50 && g > 30 && b > 20 && r > b);
-
-              if (isSkin) {
-                blockSkin++;
-                skinXSum += x;
-                if (x < minSkinX) minSkinX = x;
-                if (x > maxSkinX) maxSkinX = x;
-                if (y < minSkinY) minSkinY = y;
-                if (y > maxSkinY) maxSkinY = y;
-              }
-              blockSamples++;
             }
-          }
-          skinPixels += blockSkin;
-          faceSamples += blockSamples;
-          final blockRatio = blockSkin / (blockSamples > 0 ? blockSamples : 1);
-          if (blockRatio > strongestSkinBlock) {
-            strongestSkinBlock = blockRatio;
           }
         }
       }

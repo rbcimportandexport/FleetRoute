@@ -1225,7 +1225,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
         liveTruck.hasCoordinates &&
         !liveTruck.isGpsStale;
     // When driver is on device, phone GPS takes absolute active precedence for instantaneous navigation!
-    final mayUsePhoneGps = true;
+    const mayUsePhoneGps = true;
     if (hasVehicleFix && !widget.controller.isDriver) {
       initialPos = LatLng(liveTruck.latitude!, liveTruck.longitude!);
       initialBearing = liveTruck.course;
@@ -4181,8 +4181,9 @@ class _MapWorkspaceState extends State<MapWorkspace> {
 
   Future<void> _handleMapTap(LatLng point) async {
     if (_isVerifyingSeatbelt) return;
-    if (_isNavigating && !widget.controller.pinMode && _activePinMode != 'stop')
+    if (_isNavigating && !widget.controller.pinMode && _activePinMode != 'stop') {
       return;
+    }
 
     final coordString = _format(point);
 
@@ -4906,7 +4907,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                   ),
                   children: [
                     TileLayer(
-                      key: ValueKey('_'),
+                      key: const ValueKey('_'),
                       urlTemplate: MapTileService.getTileUrl(
                         satellite: widget.controller.satellite,
                         streetlight: widget.controller.isStreetlight,

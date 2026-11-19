@@ -42,7 +42,7 @@ DateTime _jsonDateTime(Object? value) {
     // If raw string was like '2026-11-05T08:59:00' without Z, DateTime.tryParse treats it as local, which is WRONG if server saved UTC without Z!
     if (!raw.endsWith('Z') && !raw.contains('+') && !raw.contains('-') && raw.contains('T')) {
       // Treat as UTC
-      parsed = DateTime.tryParse(raw + 'Z');
+      parsed = DateTime.tryParse('${raw}Z');
     }
     if (parsed != null) {
       return parsed.toLocal();

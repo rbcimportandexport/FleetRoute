@@ -235,9 +235,9 @@ class _UpiScanAndPayDialogState extends State<UpiScanAndPayDialog> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.08),
+          color: color.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: color.withOpacity(0.35)),
+          border: Border.all(color: color.withValues(alpha: 0.35)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -505,7 +505,7 @@ class _UpiScanAndPayDialogState extends State<UpiScanAndPayDialog> {
                             backgroundColor: Colors.white,
                           ),
                           const SizedBox(height: 6),
-                          Text(
+                          const Text(
                             'Scan with any UPI app to pay',
                             style: TextStyle(
                               fontSize: 11,

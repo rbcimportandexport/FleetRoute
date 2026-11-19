@@ -1049,7 +1049,7 @@ class _LoginPageState extends State<LoginPage> {
                                               : _handleSendSmsOtp,
                                           child: Text(
                                             _resendCountdown > 0
-                                                ? 'Resend in ' + _resendCountdown.toString() + 's'
+                                                ? 'Resend in ${_resendCountdown}s'
                                                 : 'Resend',
                                             style: TextStyle(
                                               fontSize: 12,

@@ -2814,16 +2814,8 @@ class PlannerController extends ChangeNotifier {
 
     // Create immediate Operations Alert so it appears in Alerts & Driver Hub
     final alert = OperationsAlert(
-      title: 'New Trip Assigned: ' + trip.origin + ' -> ' + trip.destination,
-      details: 'Vehicle: ' +
-          vehicle +
-          ' | Driver: ' +
-          driver +
-          ' | Cargo: ' +
-          trip.cargoDescription +
-          ' (' +
-          trip.customerName +
-          ')',
+      title: 'New Trip Assigned: ${trip.origin} -> ${trip.destination}',
+      details: 'Vehicle: $vehicle | Driver: $driver | Cargo: ${trip.cargoDescription} (${trip.customerName})',
       severity: 'info',
       createdAt: DateTime.now().toIso8601String(),
       category: 'dispatch',
@@ -3211,16 +3203,8 @@ class PlannerController extends ChangeNotifier {
     // Create immediate Operations Alert so it appears in Alerts & Driver Hub
     final alert = OperationsAlert(
       title:
-          'New Trip Assigned: ' + newTrip.origin + ' -> ' + newTrip.destination,
-      details: 'Vehicle: ' +
-          newTrip.assignedVehicle +
-          ' | Driver: ' +
-          newTrip.assignedDriver +
-          ' | Cargo: ' +
-          newTrip.cargoDescription +
-          ' (' +
-          newTrip.customerName +
-          ')',
+          'New Trip Assigned: ${newTrip.origin} -> ${newTrip.destination}',
+      details: 'Vehicle: ${newTrip.assignedVehicle} | Driver: ${newTrip.assignedDriver} | Cargo: ${newTrip.cargoDescription} (${newTrip.customerName})',
       severity: 'info',
       createdAt: DateTime.now().toIso8601String(),
       category: 'dispatch',

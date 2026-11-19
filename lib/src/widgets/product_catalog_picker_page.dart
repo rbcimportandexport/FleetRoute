@@ -334,10 +334,10 @@ class _ProductCatalogPickerPageState extends State<ProductCatalogPickerPage> {
               child: SafeArea(
                 child: Row(
                   children: [
-                    Expanded(
+                    const Expanded(
                       child: Text(
                         ' Products Selected',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.w800,
                           fontSize: 14,
                           color: Color(0xFF065F46),
