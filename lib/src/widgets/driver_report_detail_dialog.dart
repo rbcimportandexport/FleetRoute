@@ -472,7 +472,12 @@ class DriverReportDetailDialog extends StatelessWidget {
       final sanitized =
           rawBase64.contains(',') ? rawBase64.split(',').last : rawBase64;
       final bytes = base64Decode(sanitized);
-      return Image.memory(bytes, fit: BoxFit.cover);
+      return Image.memory(
+        bytes,
+        fit: BoxFit.cover,
+        cacheWidth: 100,
+        cacheHeight: 100,
+      );
     } catch (_) {
       return const Icon(Icons.person_rounded,
           size: 24, color: AppColors.primary);

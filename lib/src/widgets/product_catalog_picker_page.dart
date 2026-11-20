@@ -237,6 +237,7 @@ class _ProductCatalogPickerPageState extends State<ProductCatalogPickerPage> {
                                             child: Image.asset(
                                               product.photoAsset,
                                               fit: BoxFit.contain,
+                                              cacheWidth: 250,
                                               errorBuilder: (_, __, ___) =>
                                                   const Center(
                                                 child: Icon(

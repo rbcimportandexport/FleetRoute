@@ -115,6 +115,7 @@ class _ExpensesPageState extends State<ExpensesPage> {
                           return Image.memory(
                             bytes,
                             fit: BoxFit.contain,
+                            cacheWidth: 600,
                             errorBuilder: (_, __, ___) => const Text(
                               'Unable to render image. Invalid file format.',
                               style: TextStyle(color: AppColors.slate),

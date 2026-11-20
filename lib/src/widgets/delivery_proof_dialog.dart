@@ -675,7 +675,11 @@ class _DeliveryProofDialogState extends State<DeliveryProofDialog> {
                             border:
                                 Border.all(color: AppColors.iconBadgeBorder),
                           ),
-                          child: Image.memory(_photoBytes!, fit: BoxFit.cover),
+                          child: Image.memory(
+                            _photoBytes!,
+                            fit: BoxFit.cover,
+                            cacheWidth: 400,
+                          ),
                         ),
                       ),
                     ] else ...[
@@ -1480,7 +1484,11 @@ class _DeliveryProofGalleryDialogState
       final bytes = base64Decode(clean);
       return ClipRRect(
         borderRadius: BorderRadius.circular(8),
-        child: Image.memory(bytes, fit: BoxFit.contain),
+        child: Image.memory(
+          bytes,
+          fit: BoxFit.contain,
+          cacheWidth: 600,
+        ),
       );
     } catch (_) {
       return const Center(

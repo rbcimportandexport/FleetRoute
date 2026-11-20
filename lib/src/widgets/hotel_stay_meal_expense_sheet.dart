@@ -409,7 +409,11 @@ class _HotelStayMealExpenseSheetState extends State<HotelStayMealExpenseSheet> {
             child: bytes != null
                 ? ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: Image.memory(bytes, fit: BoxFit.cover),
+                    child: Image.memory(
+                      bytes,
+                      fit: BoxFit.cover,
+                      cacheWidth: 350,
+                    ),
                   )
                 : Container(
                     decoration: BoxDecoration(

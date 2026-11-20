@@ -186,35 +186,42 @@ class DocumentGalleryPage extends StatelessWidget {
                         itemBuilder: (context, index) {
                           final record = records[index];
                           final bytes = _bytes(record.photoBase64);
-                          return Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: const Color(0xFFA7F3D0)),
-                            ),
-                            clipBehavior: Clip.antiAlias,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                Expanded(
-                                  child: bytes == null
-                                      ? const ColoredBox(color: Color(0xFFF1F5F9), child: Icon(Icons.broken_image_outlined))
-                                      : Image.memory(bytes, fit: BoxFit.cover),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.all(10),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(_category(record), maxLines: 1, overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(fontWeight: FontWeight.w800)),
-                                      const SizedBox(height: 3),
-                                      Text('${record.vehicleNumber} • ${record.timestamp.day}/${record.timestamp.month}/${record.timestamp.year}',
-                                          style: const TextStyle(fontSize: 11, color: AppColors.slate)),
-                                    ],
+                          return RepaintBoundary(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: const Color(0xFFA7F3D0)),
+                              ),
+                              clipBehavior: Clip.antiAlias,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Expanded(
+                                    child: bytes == null
+                                        ? const ColoredBox(color: Color(0xFFF1F5F9), child: Icon(Icons.broken_image_outlined))
+                                        : Image.memory(
+                                            bytes,
+                                            fit: BoxFit.cover,
+                                            cacheWidth: 350,
+                                            cacheHeight: 250,
+                                          ),
                                   ),
-                                ),
-                              ],
+                                  Padding(
+                                    padding: const EdgeInsets.all(10),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(_category(record), maxLines: 1, overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(fontWeight: FontWeight.w800)),
+                                        const SizedBox(height: 3),
+                                        Text('${record.vehicleNumber} • ${record.timestamp.day}/${record.timestamp.month}/${record.timestamp.year}',
+                                            style: const TextStyle(fontSize: 11, color: AppColors.slate)),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           );
                         },

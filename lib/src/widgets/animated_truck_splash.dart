@@ -273,6 +273,7 @@ class _MovingTruck extends StatelessWidget {
             child: Image.asset(
               'assets/images/splash_truck.png',
               fit: BoxFit.contain,
+              cacheWidth: 150,
               filterQuality: FilterQuality.high,
               errorBuilder: (_, __, ___) => const Icon(
                 Icons.local_shipping_rounded,

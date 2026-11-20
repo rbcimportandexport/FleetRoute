@@ -340,21 +340,23 @@ class OperationsModulePage extends StatelessWidget {
                                     const SizedBox(height: 10),
                                 itemBuilder: (context, index) {
                                   final record = _records[index];
-                                  return _RecordCard(
-                                    record: record,
-                                    icon: module.icon,
-                                    controller: controller,
-                                    onViewSeatbeltPhotos: record
-                                            is DriverProfile
-                                        ? () => SeatbeltRecordsDialog.show(
-                                              context,
-                                              controller: controller,
-                                              initialDriverEmail: record.email,
-                                            )
-                                        : null,
-                                    onRemove: canManage
-                                        ? () => _remove(context, index)
-                                        : null,
+                                  return RepaintBoundary(
+                                    child: _RecordCard(
+                                      record: record,
+                                      icon: module.icon,
+                                      controller: controller,
+                                      onViewSeatbeltPhotos: record
+                                              is DriverProfile
+                                          ? () => SeatbeltRecordsDialog.show(
+                                                context,
+                                                controller: controller,
+                                                initialDriverEmail: record.email,
+                                              )
+                                          : null,
+                                      onRemove: canManage
+                                          ? () => _remove(context, index)
+                                          : null,
+                                    ),
                                   );
                                 },
                               ),

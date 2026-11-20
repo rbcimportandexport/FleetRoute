@@ -646,6 +646,7 @@ class _SeatbeltVerificationDialogState extends State<SeatbeltVerificationDialog>
                   fit: BoxFit.cover,
                   width: double.infinity,
                   height: double.infinity,
+                  cacheWidth: 600,
                 ),
               )
             else

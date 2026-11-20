@@ -233,7 +233,11 @@ class _DriverCalendarScreenState extends State<DriverCalendarScreen> {
             ConstrainedBox(
               constraints: const BoxConstraints(maxHeight: 400),
               child: bytes != null
-                  ? Image.memory(bytes, fit: BoxFit.contain)
+                  ? Image.memory(
+                      bytes,
+                      fit: BoxFit.contain,
+                      cacheWidth: 600,
+                    )
                   : const Center(
                       child: Padding(
                         padding: EdgeInsets.all(40),

@@ -84,6 +84,7 @@ class TripDetailReportDialog extends StatelessWidget {
                         ? Image.memory(
                             base64Decode(imageSource),
                             fit: BoxFit.contain,
+                            cacheWidth: 800,
                             errorBuilder: (_, __, ___) => const Center(
                               child: Text('Unable to load photo',
                                   style: TextStyle(color: Colors.white70)),
@@ -143,6 +144,8 @@ class TripDetailReportDialog extends StatelessWidget {
                   ? Image.memory(
                       base64Decode(imageSource),
                       fit: BoxFit.cover,
+                      cacheWidth: 150,
+                      cacheHeight: 150,
                       errorBuilder: (_, __, ___) => const Icon(
                         Icons.broken_image_rounded,
                         color: AppColors.slate,

@@ -361,6 +361,7 @@ class _ProductCatalogPageState extends State<_ProductCatalogPage> {
                                             child: Image.asset(
                                               product.photoAsset,
                                               fit: BoxFit.contain,
+                                              cacheWidth: 250,
                                               errorBuilder: (_, __, ___) =>
                                                   const Center(
                                                 child: Icon(
@@ -1574,104 +1575,119 @@ class _TripsPageState extends State<TripsPage> {
       }
       return false;
     });
-    final indexed = source.toList().reversed;
-    return ListView(
+    final indexed = source.toList().reversed.toList();
+    final hasNoTrips = indexed.isEmpty;
+    final itemCount = hasNoTrips ? 2 : (1 + indexed.length);
+
+    return ListView.builder(
       padding: const EdgeInsets.fromLTRB(0, 0, 0, 80),
-      physics: const BouncingScrollPhysics(
-        parent: AlwaysScrollableScrollPhysics(),
-      ),
-      children: [
-        _TripSummary(trips: widget.controller.trips),
-        const SizedBox(height: 10),
-        Row(children: [
-          Expanded(
-            child: OutlinedButton.icon(
-              onPressed: () async {
-                final picked = await showDatePicker(
-                  context: context,
-                  initialDate: _historyDate ?? DateTime.now(),
-                  firstDate: DateTime(2020),
-                  lastDate: DateTime.now().add(const Duration(days: 365)),
-                );
-                if (picked != null && mounted) {
-                  setState(() => _historyDate = picked);
-                }
-              },
-              icon: const Icon(Icons.filter_alt_outlined, size: 16),
-              label: Text(_historyDate == null
-                  ? 'Date-wise filter'
-                  : '${_historyDate!.day.toString().padLeft(2, '0')}-${_historyDate!.month.toString().padLeft(2, '0')}-${_historyDate!.year}'),
-            ),
-          ),
-          if (_historyDate != null) ...[
-            const SizedBox(width: 8),
-            IconButton(
-              tooltip: 'Show all trips',
-              onPressed: () => setState(() => _historyDate = null),
-              icon: const Icon(Icons.close_rounded),
-            ),
-          ],
-          const SizedBox(width: 8),
-          FilledButton.icon(
-            onPressed: () {
-              DriverCalendarScreen.open(
-                context,
-                driverId: widget.controller.selectedDriver?.email ?? '',
-                driverName: widget.controller.selectedDriver?.name ?? 'Driver',
-                controller: widget.controller,
-              );
-            },
-            icon: const Icon(Icons.calendar_month_rounded, size: 15),
-            label: const Text('CALENDAR',
-                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800)),
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
-            ),
-          ),
-        ]),
-        const SizedBox(height: 14),
-        if (indexed.isEmpty)
-          const Padding(
+      physics: const AlwaysScrollableScrollPhysics(),
+      itemCount: itemCount,
+      itemBuilder: (context, index) {
+        if (index == 0) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _TripSummary(trips: widget.controller.trips),
+              const SizedBox(height: 10),
+              Row(children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: _historyDate ?? DateTime.now(),
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime.now().add(const Duration(days: 365)),
+                      );
+                      if (picked != null && mounted) {
+                        setState(() => _historyDate = picked);
+                      }
+                    },
+                    icon: const Icon(Icons.filter_alt_outlined, size: 16),
+                    label: Text(_historyDate == null
+                        ? 'Date-wise filter'
+                        : '${_historyDate!.day.toString().padLeft(2, '0')}-${_historyDate!.month.toString().padLeft(2, '0')}-${_historyDate!.year}'),
+                  ),
+                ),
+                if (_historyDate != null) ...[
+                  const SizedBox(width: 8),
+                  IconButton(
+                    tooltip: 'Show all trips',
+                    onPressed: () => setState(() => _historyDate = null),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ],
+                const SizedBox(width: 8),
+                FilledButton.icon(
+                  onPressed: () {
+                    DriverCalendarScreen.open(
+                      context,
+                      driverId: widget.controller.selectedDriver?.email ?? '',
+                      driverName: widget.controller.selectedDriver?.name ?? 'Driver',
+                      controller: widget.controller,
+                    );
+                  },
+                  icon: const Icon(Icons.calendar_month_rounded, size: 15),
+                  label: const Text('CALENDAR',
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800)),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ]),
+              const SizedBox(height: 14),
+            ],
+          );
+        }
+
+        if (hasNoTrips) {
+          return const Padding(
             padding: EdgeInsets.all(30),
             child: Center(child: Text('Is date par koi trip record nahi hai.')),
-          ),
-        for (final entry in indexed) ...[
-          _TripCard(
-            trip: entry.$2,
-            tripIndex: entry.$1,
-            controller: widget.controller,
-            onOpen: () => _openRoute(entry.$2),
-            onOpenInPlanner: () async {
-              final loaded =
-                  await widget.controller.loadTripIntoRoute(entry.$2);
-              if (!mounted) return;
-              if (!loaded) {
+          );
+        }
+
+        final entry = indexed[index - 1];
+        return RepaintBoundary(
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: _TripCard(
+              trip: entry.$2,
+              tripIndex: entry.$1,
+              controller: widget.controller,
+              onOpen: () => _openRoute(entry.$2),
+              onOpenInPlanner: () async {
+                final loaded =
+                    await widget.controller.loadTripIntoRoute(entry.$2);
+                if (!mounted) return;
+                if (!loaded) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Trip pickup/drop location nahi mili.'),
+                    ),
+                  );
+                  return;
+                }
+                widget.onOpenPlanner?.call();
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Trip pickup/drop location nahi mili.'),
+                  SnackBar(
+                    content: Text(
+                        'Trip "${entry.$2.reference}" Planner Map me load ho gaya!'),
                   ),
                 );
-                return;
-              }
-              widget.onOpenPlanner?.call();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                      'Trip "${entry.$2.reference}" Planner Map me load ho gaya!'),
-                ),
-              );
-            },
-            onStatus: (status) =>
-                widget.controller.updateTripStatus(entry.$1, status),
-            onDelete: () => _deleteTrip(entry.$1),
+              },
+              onStatus: (status) =>
+                  widget.controller.updateTripStatus(entry.$1, status),
+              onDelete: () => _deleteTrip(entry.$1),
+            ),
           ),
-          const SizedBox(height: 10),
-        ],
-      ],
+        );
+      },
     );
   }
 }
@@ -2049,6 +2065,8 @@ class _TripSetupPanelState extends State<_TripSetupPanel> {
                                         width: 48,
                                         height: 48,
                                         fit: BoxFit.contain,
+                                        cacheWidth: 96,
+                                        cacheHeight: 96,
                                         errorBuilder: (_, __, ___) =>
                                             const Icon(
                                                 Icons.broken_image_outlined,
@@ -3477,6 +3495,8 @@ class _TripCard extends StatelessWidget {
                           width: 58,
                           height: 58,
                           fit: BoxFit.cover,
+                          cacheWidth: 120,
+                          cacheHeight: 120,
                         ),
                       ),
                     ),
@@ -4526,6 +4546,7 @@ class _TripPhotoPreviewDialog extends StatelessWidget {
           child: Image.memory(
             bytes,
             fit: BoxFit.contain,
+            cacheWidth: 600,
             errorBuilder: (_, __, ___) => _buildPlaceholder(),
           ),
         );

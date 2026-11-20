@@ -346,6 +346,7 @@ class _SeatbeltRecordsDialogState extends State<SeatbeltRecordsDialog> {
         fit: fit,
         width: width,
         height: height,
+        cacheWidth: width != null && width.isFinite ? (width * 2).toInt().clamp(100, 800) : 350,
         errorBuilder: (_, __, ___) => const Center(
           child: Icon(Icons.broken_image_outlined, color: AppColors.muted),
         ),

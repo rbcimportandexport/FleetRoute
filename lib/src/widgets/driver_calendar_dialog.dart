@@ -273,6 +273,7 @@ class _DriverCalendarDialogState extends State<DriverCalendarDialog> {
                     height: 380,
                     width: double.infinity,
                     fit: BoxFit.contain,
+                    cacheWidth: 800,
                   ),
                 ),
               )
@@ -816,7 +817,11 @@ class _DriverCalendarDialogState extends State<DriverCalendarDialog> {
                 borderRadius:
                     const BorderRadius.vertical(top: Radius.circular(9)),
                 child: bytes != null
-                    ? Image.memory(bytes, fit: BoxFit.cover)
+                    ? Image.memory(
+                        bytes,
+                        fit: BoxFit.cover,
+                        cacheWidth: 200,
+                      )
                     : Container(
                         color: Colors.grey.shade100,
                         child: const Icon(Icons.broken_image_rounded, size: 24),

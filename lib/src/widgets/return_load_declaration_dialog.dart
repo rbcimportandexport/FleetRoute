@@ -452,6 +452,7 @@ class _ReturnLoadDeclarationDialogState
                       height: 120,
                       width: double.infinity,
                       fit: BoxFit.cover,
+                      cacheWidth: 400,
                     ),
                   ),
                 ],

@@ -634,6 +634,8 @@ class _PreTripCustomerDetailsDialogState
                                         width: 52,
                                         height: 52,
                                         fit: BoxFit.contain,
+                                        cacheWidth: 104,
+                                        cacheHeight: 104,
                                         errorBuilder: (_, __, ___) => const Icon(
                                             Icons.broken_image_outlined,
                                             size: 32,
@@ -1066,6 +1068,8 @@ class _PreTripCustomerDetailsDialogState
                                             fit: BoxFit.cover,
                                             width: 80,
                                             height: 80,
+                                            cacheWidth: 160,
+                                            cacheHeight: 160,
                                           )
                                         : const Icon(Icons.image, color: Colors.grey),
                                   ),
