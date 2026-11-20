@@ -1449,32 +1449,59 @@ class PlannerController extends ChangeNotifier {
         .watchDrivers()
         .listen((remoteDrivers) {
       if (remoteDrivers.isNotEmpty) {
+        var changed = false;
         for (final rd in remoteDrivers) {
           final idx = drivers.indexWhere((d) =>
               d.email.trim().toLowerCase() == rd.email.trim().toLowerCase() ||
               (d.phone.isNotEmpty && rd.phone.isNotEmpty && d.phone == rd.phone));
           if (idx < 0) {
             drivers.add(rd);
+            changed = true;
           } else {
-            drivers[idx] = rd;
+            final old = drivers[idx];
+            if (old.name != rd.name ||
+                old.phone != rd.phone ||
+                old.assignedVehicle != rd.assignedVehicle ||
+                old.licenseNumber != rd.licenseNumber ||
+                old.licenseExpiry != rd.licenseExpiry ||
+                old.completedTripsCount != rd.completedTripsCount ||
+                old.totalKilometersDriven != rd.totalKilometersDriven ||
+                old.violationsCount != rd.violationsCount) {
+              drivers[idx] = rd;
+              changed = true;
+            }
           }
         }
-        notifyListeners();
+        if (changed) notifyListeners();
       }
     }, onError: (_) {});
     _vehiclesSubscription = FirebaseBackendService.instance
         .watchFleetVehicles()
         .listen((remoteVehicles) {
       if (remoteVehicles.isNotEmpty) {
+        var changed = false;
         for (final rv in remoteVehicles) {
           final idx = truckModels.indexWhere((t) => t.code == rv.code);
           if (idx < 0) {
             truckModels.add(rv);
+            changed = true;
           } else {
-            truckModels[idx] = rv;
+            final old = truckModels[idx];
+            if (old.name != rv.name ||
+                old.assignedDriver != rv.assignedDriver ||
+                old.capacity != rv.capacity ||
+                old.axles != rv.axles) {
+              truckModels[idx] = old.copyWith(
+                name: rv.name,
+                assignedDriver: rv.assignedDriver,
+                capacity: rv.capacity,
+                axles: rv.axles,
+              );
+              changed = true;
+            }
           }
         }
-        notifyListeners();
+        if (changed) notifyListeners();
       }
     }, onError: (_) {});
     // Listen to real-time operations alerts from Firestore
@@ -1482,10 +1509,13 @@ class PlannerController extends ChangeNotifier {
         .watchOperationsAlerts()
         .listen((remoteAlerts) {
       if (remoteAlerts.isNotEmpty) {
-        alerts
-          ..clear()
-          ..addAll(remoteAlerts);
-        notifyListeners();
+        if (alerts.length != remoteAlerts.length ||
+            (alerts.isNotEmpty && remoteAlerts.isNotEmpty && alerts.first.id != remoteAlerts.first.id)) {
+          alerts
+            ..clear()
+            ..addAll(remoteAlerts);
+          notifyListeners();
+        }
       }
     }, onError: (_) {});
 
@@ -1493,15 +1523,20 @@ class PlannerController extends ChangeNotifier {
         .watchExpenses()
         .listen((remoteExpenses) {
       if (remoteExpenses.isNotEmpty) {
+        var changed = false;
         for (final re in remoteExpenses) {
           final idx = expenses.indexWhere((e) => e.id == re.id);
           if (idx < 0) {
             expenses.add(re);
-          } else {
+            changed = true;
+          } else if (expenses[idx].amount != re.amount ||
+              expenses[idx].category != re.category ||
+              expenses[idx].status != re.status) {
             expenses[idx] = re;
+            changed = true;
           }
         }
-        notifyListeners();
+        if (changed) notifyListeners();
       }
     }, onError: (_) {});
 
@@ -1509,15 +1544,19 @@ class PlannerController extends ChangeNotifier {
         .watchBillingRecords()
         .listen((remoteBilling) {
       if (remoteBilling.isNotEmpty) {
+        var changed = false;
         for (final rb in remoteBilling) {
           final idx = billingRecords.indexWhere((b) => b.id == rb.id);
           if (idx < 0) {
             billingRecords.add(rb);
-          } else {
+            changed = true;
+          } else if (billingRecords[idx].totalAmount != rb.totalAmount ||
+              billingRecords[idx].paymentStatus != rb.paymentStatus) {
             billingRecords[idx] = rb;
+            changed = true;
           }
         }
-        notifyListeners();
+        if (changed) notifyListeners();
       }
     }, onError: (_) {});
 
@@ -1525,15 +1564,19 @@ class PlannerController extends ChangeNotifier {
         .watchDeliveryProofs()
         .listen((remoteProofs) {
       if (remoteProofs.isNotEmpty) {
+        var changed = false;
         for (final rp in remoteProofs) {
           final idx = deliveryProofs.indexWhere((p) => p.id == rp.id);
           if (idx < 0) {
             deliveryProofs.add(rp);
-          } else {
+            changed = true;
+          } else if (deliveryProofs[idx].notes != rp.notes ||
+              deliveryProofs[idx].recipientName != rp.recipientName) {
             deliveryProofs[idx] = rp;
+            changed = true;
           }
         }
-        notifyListeners();
+        if (changed) notifyListeners();
       }
     }, onError: (_) {});
 
