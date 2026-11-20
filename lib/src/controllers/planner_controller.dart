@@ -2010,10 +2010,15 @@ class PlannerController extends ChangeNotifier {
         (kDebugMode && Zone.current[#test.declarer] != null)) {
       return;
     }
+    // Only logged-in Drivers broadcast hardware battery to the fleet.
+    // Admin devices must NEVER push their own phone battery to vehicle telemetry.
+    if (!isDriver) return;
+
     unawaited(syncDriverPhoneBattery());
     // Hardware battery broadcast stream: instantly triggers when phone is plugged/unplugged
     // or when the OS emits a battery level change event.
     _nativeBatterySub = DeviceTelemetryService.instance.batteryStream.listen((info) {
+      if (!isDriver) return;
       final level = (info['batteryLevel'] as num?)?.toInt() ?? -1;
       final isCharging = info['isCharging'] == true;
       if (level >= 0) {
@@ -2041,6 +2046,7 @@ class PlannerController extends ChangeNotifier {
     });
 
     _batteryPeriodicTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (!isDriver) return;
       unawaited(syncDriverPhoneBattery());
     });
   }
@@ -2049,7 +2055,7 @@ class PlannerController extends ChangeNotifier {
   /// to Firestore `fleet_telemetry/{vehicleCode}` so all admin consoles immediately see
   /// the exact percentage and charging state without requiring vehicle movement.
   Future<void> syncDriverPhoneBattery() async {
-    if (kIsWeb) return;
+    if (kIsWeb || !isDriver) return;
     try {
       final info = await DeviceTelemetryService.instance.getBatteryInfo();
       if (info == null) return;
@@ -2084,6 +2090,7 @@ class PlannerController extends ChangeNotifier {
 
   void _applyFleetTelemetry(List<Map<String, dynamic>> updates) {
     var changed = false;
+    final now = DateTime.now();
     for (final data in updates) {
       final code = (data['vehicleCode'] ?? data['id'] ?? '')
           .toString()
@@ -2097,7 +2104,20 @@ class PlannerController extends ChangeNotifier {
       final phoneBattery = rawBattery is num
           ? rawBattery.toInt()
           : int.tryParse(rawBattery?.toString() ?? '');
-      final isCharging = data['isPhoneCharging'] == true;
+      
+      // Determine if telemetry timestamp is fresh. If older than 5 minutes or missing,
+      // we must NOT display a stale or fake active charging bolt (⚡).
+      final rawLastUpdate = data['lastUpdate']?.toString();
+      DateTime? telemetryTime;
+      if (rawLastUpdate != null && rawLastUpdate.isNotEmpty) {
+        telemetryTime = DateTime.tryParse(rawLastUpdate);
+      }
+      final isFresh = telemetryTime != null &&
+          now.difference(telemetryTime).inMinutes.abs() <= 5;
+
+      final rawCharging = data['isPhoneCharging'] == true;
+      // Charging is only considered actively true if the driver's telemetry is fresh
+      final isCharging = isFresh ? rawCharging : false;
 
       // Update battery/charging even if lat/lng are unchanged or null
       truckModels[index] = truckModels[index].copyWith(
@@ -2106,8 +2126,8 @@ class PlannerController extends ChangeNotifier {
         currentSpeed: (data['speed'] as num?)?.toDouble() ?? truckModels[index].currentSpeed,
         isIgnitionOn: data.containsKey('isIgnitionOn') ? (data['isIgnitionOn'] == true) : truckModels[index].isIgnitionOn,
         phoneBatteryLevel: phoneBattery ?? truckModels[index].phoneBatteryLevel,
-        isPhoneCharging: data.containsKey('isPhoneCharging') ? isCharging : truckModels[index].isPhoneCharging,
-        lastGpsUpdate: data['lastUpdate']?.toString() ?? truckModels[index].lastGpsUpdate,
+        isPhoneCharging: data.containsKey('isPhoneCharging') ? isCharging : (isFresh && truckModels[index].isPhoneCharging),
+        lastGpsUpdate: rawLastUpdate ?? truckModels[index].lastGpsUpdate,
         hasValidGpsFix: (lat is num && lng is num) ? true : truckModels[index].hasValidGpsFix,
         isDemoTelemetry: false,
       );

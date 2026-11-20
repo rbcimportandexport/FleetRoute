@@ -1012,7 +1012,8 @@ class _MapWorkspaceState extends State<MapWorkspace> {
         .map((d) => d.name)
         .join(' / ');
     final battLevel = vehicle.phoneBatteryLevel;
-    final isCharging = vehicle.isPhoneCharging;
+    // Real charging bolt: ONLY display ⚡ if vehicle is online, GPS/telemetry is not stale, and isPhoneCharging is actively true.
+    final isCharging = vehicle.isPhoneCharging && online && !vehicle.isGpsStale;
     final battSnippet = battLevel != null
         ? ' · $battLevel%${isCharging ? " ⚡" : ""}'
         : '';
