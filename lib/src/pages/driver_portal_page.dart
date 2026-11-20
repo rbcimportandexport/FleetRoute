@@ -89,8 +89,6 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
     if (widget.adminPreview || !widget.controller.isDriver) return;
     final driver = _activeDriver;
     if (driver == null) return;
-    final driverId = _dutyDriverId(driver, driver.name);
-    if (widget.controller.getActiveDuty(driverId) == null) return;
     await widget.controller.ensureDriverLiveLocationSharing();
   }
 

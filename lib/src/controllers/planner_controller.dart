@@ -843,8 +843,9 @@ class PlannerController extends ChangeNotifier {
                 tyre.tyreNumber != 'CEAT-502')
             .toList();
         final isOnDuty = isVehicleDriverOnDuty(t.code);
+        final isOnline = isVehicleOnline(t.code);
         final shouldClearCoordinates = t.isDemoTelemetry ||
-            (!isOnDuty && t.currentLat != null && t.imei.trim().isEmpty);
+            (!isOnDuty && !isOnline && t.currentLat != null && t.imei.trim().isEmpty);
         final shouldClearCapacity =
             t.capacity.contains('Ton') || t.payloadCapacity.contains('Ton');
         truckModels[i] = t.copyWith(
@@ -1609,7 +1610,8 @@ class PlannerController extends ChangeNotifier {
           : (driver.name.trim().isNotEmpty
               ? driver.name.trim()
               : driver.email.trim());
-      if (driverId.isNotEmpty && getActiveDuty(driverId) != null) {
+      // Driver phone should share live GPS coordinates whenever logged into the app
+      if (driverId.isNotEmpty) {
         unawaited(_startDriverMobileLocationSharing());
       }
       _seatbeltSubscription = FirebaseBackendService.instance
@@ -1924,6 +1926,7 @@ class PlannerController extends ChangeNotifier {
           : 0.0;
       _lastPublishedDriverPosition = position;
 
+      // Publish live telemetry (GPS + Battery) to Firestore fleet_telemetry
       final synced = await FirebaseBackendService.instance.syncVehicleTelemetry(
         vehicleCode: vehicleCode,
         latitude: position.latitude,
@@ -1933,6 +1936,8 @@ class PlannerController extends ChangeNotifier {
         driverId: FirebaseBackendService.instance.currentEmail ?? driver.email,
         driverName: driver.name,
       );
+      // Immediately trigger battery telemetry sync so battery % and charging status stay fresh
+      unawaited(syncDriverPhoneBattery());
       if (!synced) {
         throw StateError(FirebaseBackendService.instance.lastWriteError ??
             'Firebase location write failed');

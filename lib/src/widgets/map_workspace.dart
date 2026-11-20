@@ -1011,6 +1011,11 @@ class _MapWorkspaceState extends State<MapWorkspace> {
             vehicle.code.trim().toUpperCase())
         .map((d) => d.name)
         .join(' / ');
+    final battLevel = vehicle.phoneBatteryLevel;
+    final isCharging = vehicle.isPhoneCharging;
+    final battSnippet = battLevel != null
+        ? ' · $battLevel%${isCharging ? " ⚡" : ""}'
+        : '';
     return ListTile(
       leading: Icon(Icons.person_pin_circle_rounded,
           color: online ? Colors.green : Colors.red),
@@ -1022,11 +1027,11 @@ class _MapWorkspaceState extends State<MapWorkspace> {
       subtitle: Text(
         online
             ? vehicle.hasCoordinates && !vehicle.isGpsStale
-                ? '${vehicle.code} · LIVE GPS · ${vehicle.currentSpeed.toStringAsFixed(0)} km/h'
-                : '${vehicle.code} · ON DUTY · Waiting for GPS fix'
+                ? '${vehicle.code} · LIVE GPS · ${vehicle.currentSpeed.toStringAsFixed(0)} km/h$battSnippet'
+                : '${vehicle.code} · ONLINE · Waiting for GPS fix$battSnippet'
             : vehicle.hasCoordinates
-                ? '${vehicle.code} · OFFLINE · ${_fleetLastUpdate(vehicle)}'
-                : '${vehicle.code} · OFFLINE · No GPS location recorded',
+                ? '${vehicle.code} · OFFLINE · ${_fleetLastUpdate(vehicle)}$battSnippet'
+                : '${vehicle.code} · OFFLINE · No GPS location recorded$battSnippet',
       ),
       trailing: Text(online ? 'ONLINE' : 'OFFLINE',
           style: TextStyle(
