@@ -883,74 +883,68 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                                 }
                               }
 
-                              // When opened on driver's actual device
-                              return StreamBuilder<BatteryState>(
-                                stream: Battery().onBatteryStateChanged,
-                                builder: (context, stateSnap) {
-                                  return FutureBuilder<int>(
-                                    future: Battery().batteryLevel,
-                                    builder: (context, levelSnap) {
-                                      final state = stateSnap.data;
-                                      final isCharging = state ==
-                                              BatteryState.charging ||
-                                          state == BatteryState.full;
-                                      final level = levelSnap.data ?? 95;
-                                      return Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 6, vertical: 1.5),
-                                        decoration: BoxDecoration(
-                                          color: isCharging
-                                              ? const Color(0xFFDCFCE7)
-                                              : (level <= 20
-                                                  ? const Color(0xFFFEE2E2)
-                                                  : const Color(0xFFF1F5F9)),
-                                          borderRadius:
-                                              BorderRadius.circular(5),
-                                          border: Border.all(
-                                            color: isCharging
-                                                ? const Color(0xFF86EFAC)
-                                                : (level <= 20
-                                                    ? const Color(0xFFFCA5A5)
-                                                    : const Color(0xFFCBD5E1)),
-                                          ),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Icon(
-                                              isCharging
-                                                  ? Icons.bolt_rounded
-                                                  : (level <= 20
-                                                      ? Icons.battery_alert_rounded
-                                                      : Icons.battery_std_rounded),
-                                              size: 12,
-                                              color: isCharging
-                                                  ? const Color(0xFF16A34A)
-                                                  : (level <= 20
-                                                      ? const Color(0xFFDC2626)
-                                                      : const Color(0xFF2563EB)),
-                                            ),
-                                            const SizedBox(width: 2),
-                                            Text(
-                                              isCharging
-                                                  ? '$level% (⚡ Charging)'
-                                                  : '$level%',
-                                              style: TextStyle(
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.w700,
-                                                color: isCharging
-                                                    ? const Color(0xFF16A34A)
-                                                    : (level <= 20
-                                                        ? const Color(0xFFDC2626)
-                                                        : const Color(0xFF334155)),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      );
-                                    },
-                                  );
-                                },
+                              // When opened on driver's actual device - safely display vehicle battery from controller
+                              final driverTruck = widget.controller.truckModels
+                                  .where((t) =>
+                                      t.code.trim().toUpperCase() ==
+                                      vehicle
+                                          .replaceAll(RegExp(r'[\s\-]'), '')
+                                          .toUpperCase())
+                                  .firstOrNull;
+                              final level = driverTruck?.phoneBatteryLevel ?? 95;
+                              final isCharging = driverTruck?.isPhoneCharging ?? false;
+                              return Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 1.5),
+                                decoration: BoxDecoration(
+                                  color: isCharging
+                                      ? const Color(0xFFDCFCE7)
+                                      : (level <= 20
+                                          ? const Color(0xFFFEE2E2)
+                                          : const Color(0xFFF1F5F9)),
+                                  borderRadius:
+                                      BorderRadius.circular(5),
+                                  border: Border.all(
+                                    color: isCharging
+                                        ? const Color(0xFF86EFAC)
+                                        : (level <= 20
+                                            ? const Color(0xFFFCA5A5)
+                                            : const Color(0xFFCBD5E1)),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      isCharging
+                                          ? Icons.bolt_rounded
+                                          : (level <= 20
+                                              ? Icons.battery_alert_rounded
+                                              : Icons.battery_std_rounded),
+                                      size: 12,
+                                      color: isCharging
+                                          ? const Color(0xFF16A34A)
+                                          : (level <= 20
+                                              ? const Color(0xFFDC2626)
+                                              : const Color(0xFF2563EB)),
+                                    ),
+                                    const SizedBox(width: 2),
+                                    Text(
+                                      isCharging
+                                          ? '$level% (⚡)'
+                                          : '$level%',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w700,
+                                        color: isCharging
+                                            ? const Color(0xFF16A34A)
+                                            : (level <= 20
+                                                ? const Color(0xFFDC2626)
+                                                : const Color(0xFF334155)),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               );
                             },
                           ),

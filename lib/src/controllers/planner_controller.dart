@@ -1986,8 +1986,8 @@ class PlannerController extends ChangeNotifier {
         unawaited(syncDriverPhoneBattery());
       });
     } catch (_) {}
-    // Periodic poll every 10 seconds for battery percentage updates
-    _driverBatteryPollTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+    // Periodic poll every 60 seconds (1 minute) for battery percentage updates to avoid phone CPU battery drain
+    _driverBatteryPollTimer = Timer.periodic(const Duration(seconds: 60), (_) {
       unawaited(syncDriverPhoneBattery());
     });
   }

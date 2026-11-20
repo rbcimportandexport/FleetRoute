@@ -4930,8 +4930,6 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                       fallbackUrl: MapTileService.fallbackTileUrl,
                       maxNativeZoom: 18,
                       maxZoom: 21.0,
-                      panBuffer: 2,
-                      keepBuffer: 4,
                       tileProvider: NetworkTileProvider(),
                       userAgentPackageName: MapTileService.userAgent,
                       errorTileCallback: (tile, error, stackTrace) =>
