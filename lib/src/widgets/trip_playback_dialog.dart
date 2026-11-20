@@ -129,6 +129,7 @@ class _PlaybackPoint {
 
 class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
   final MapController _mapController = MapController();
+  final TileProvider _tileProvider = NetworkTileProvider();
   List<_PlaybackPoint> _timeline = [];
   List<LatLng> _routeGeometry = [];
   List<LatLng> _allPositions = [];
@@ -508,7 +509,8 @@ class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
     }
 
     // Balanced interval: 100ms min to prevent frame drops
-    final intervalMs = (400 / _playbackSpeed).round().clamp(100, 600);
+    final safeSpeed = (_playbackSpeed > 0 && _playbackSpeed.isFinite) ? _playbackSpeed : 2.0;
+    final intervalMs = (400 / safeSpeed).round().clamp(100, 600);
     _playbackTimer = Timer.periodic(Duration(milliseconds: intervalMs), (timer) {
       if (!mounted) {
         timer.cancel();
@@ -552,13 +554,14 @@ class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
   }
 
   void _seekTo(double value) {
-    if (_timeline.isEmpty) return;
-    final index = (value * (_timeline.length - 1)).round().clamp(0, _timeline.length - 1);
+    if (_timeline.isEmpty || value.isNaN || !value.isFinite) return;
+    final index = (value.clamp(0.0, 1.0) * (_timeline.length - 1)).round().clamp(0, _timeline.length - 1);
     _playbackIndexNotifier.value = index;
     _checkAndRecenterIfNeeded(index);
   }
 
   void _changeSpeed(double speed) {
+    if (speed <= 0 || speed.isNaN || !speed.isFinite) return;
     setState(() => _playbackSpeed = speed);
     if (_isPlayingNotifier.value) {
       _startPlayback();
@@ -759,6 +762,7 @@ class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
                               fallbackUrl: MapTileService.fallbackTileUrl,
                               maxNativeZoom: 18,
                               maxZoom: 18.0,
+                              tileProvider: _tileProvider,
                               userAgentPackageName: MapTileService.userAgent,
                             ),
 
