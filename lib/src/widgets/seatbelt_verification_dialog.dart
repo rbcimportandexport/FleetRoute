@@ -154,7 +154,7 @@ class _SeatbeltVerificationDialogState extends State<SeatbeltVerificationDialog>
   }
 
   static Future<SeatbeltAnalysisResult> analyzeSeatbelt(Uint8List bytes) async {
-    if (bytes.length < 50) {
+    if (bytes.length < 2500) {
       return const _SeatbeltAnalysis(
         false,
         'Photo bahut chhoti ya invalid hai. Clear cabin photo lein.',

@@ -140,7 +140,7 @@ class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
   int _currentIndex = 0;
   double _playbackSpeed = 2.0; // 1x, 2x, 5x, 10x
   Timer? _playbackTimer;
-  MapViewStyle _mapStyle = MapViewStyle.satellite;
+  MapViewStyle _mapStyle = MapViewStyle.street;
 
   // Summary telemetry metrics
   double _maxSpeed = 0.0;
@@ -157,7 +157,9 @@ class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
   @override
   void dispose() {
     _playbackTimer?.cancel();
-    _mapController.dispose();
+    try {
+      _mapController.dispose();
+    } catch (_) {}
     super.dispose();
   }
 
@@ -459,12 +461,16 @@ class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
 
     if (mounted) {
       setState(() => _isLoading = false);
-      _fitMapToRoute();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _fitMapToRoute();
+        }
+      });
     }
   }
 
   void _fitMapToRoute() {
-    if (_routeGeometry.isEmpty) return;
+    if (_routeGeometry.isEmpty || !mounted) return;
     try {
       final bounds = LatLngBounds.fromPoints(_routeGeometry);
       _mapController.fitCamera(
@@ -473,7 +479,9 @@ class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
           padding: const EdgeInsets.all(50),
         ),
       );
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[TripPlayback] fitCamera error: $e');
+    }
   }
 
   void _togglePlayPause() {

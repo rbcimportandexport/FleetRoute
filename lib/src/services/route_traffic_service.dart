@@ -605,9 +605,11 @@ class RouteTrafficService {
         return _routeCache[cacheKey];
       }
 
-      // Always request full road geometry so the polyline perfectly follows actual highways and city roads
-      // without cutting straight across fields, rivers, or buildings!
-      const overview = 'full';
+      var routeDistanceKm = 0.0;
+      for (var i = 0; i < waypoints.length - 1; i++) {
+        routeDistanceKm += straightDistanceKm(waypoints[i], waypoints[i + 1]);
+      }
+      final overview = routeDistanceKm >= 300 ? 'simplified' : 'full';
 
       final uri = routingProxyUrl.isNotEmpty
           ? Uri.parse('$routingProxyUrl?coords=$coordsParam')
