@@ -122,8 +122,8 @@ class _FleetWorkspaceState extends State<FleetWorkspace> {
           setState(() => selected = WorkspaceSection.planner);
         }
       }
-      // Silently check and apply updates in the background without any UI dialog
-      AppUpdateService.instance.checkAndApplyUpdateSilently();
+      // Background updates disabled to prevent Android OS kill / cut
+      // AppUpdateService.instance.checkAndApplyUpdateSilently();
     });
   }
 

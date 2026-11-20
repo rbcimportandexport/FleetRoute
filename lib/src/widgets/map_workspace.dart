@@ -4,9 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_compass/flutter_compass.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:battery_plus/battery_plus.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart' as gm;
 import 'package:latlong2/latlong.dart';
@@ -89,8 +87,6 @@ class _MapWorkspaceState extends State<MapWorkspace> {
   NavigationTurnInfo? _currentTurnInfo;
   Timer? _navTimer;
   StreamSubscription<Position>? _gpsSubscription;
-  StreamSubscription<CompassEvent>? _compassSubscription;
-  double _compassHeading = 0.0;
   Position? _lastGpsPosition;
   DateTime? _lastGpsTime;
   DateTime? _lastTrackerFixTime;
@@ -369,7 +365,6 @@ class _MapWorkspaceState extends State<MapWorkspace> {
     _intentSubscription?.cancel();
     _navTimer?.cancel();
     _gpsSubscription?.cancel();
-    _compassSubscription?.cancel();
     widget.controller.removeListener(_onControllerChanged);
     _mapController.dispose();
     super.dispose();
@@ -1344,7 +1339,6 @@ class _MapWorkspaceState extends State<MapWorkspace> {
 
   void _startRealGpsTracking() {
     _gpsSubscription?.cancel();
-    _compassSubscription?.cancel();
     _navTimer?.cancel();
 
     try {
@@ -1361,36 +1355,6 @@ class _MapWorkspaceState extends State<MapWorkspace> {
         },
       );
 
-      // Real-time phone orientation / magnetic compass heading listener
-      // Rotates nav arrow instantly when the driver rotates/turns the phone
-      try {
-        _compassSubscription = FlutterCompass.events?.listen((event) {
-          final heading = event.heading;
-          if (heading == null || !mounted || !_isNavigating) return;
-          final normalizedHeading = (heading % 360.0 + 360.0) % 360.0;
-          _compassHeading = normalizedHeading;
-
-          // When stopped or moving slowly (< 12 km/h), compass heading takes immediate priority!
-          if (_currentSpeed < 12.0) {
-            final diff = (normalizedHeading - _currentNavBearing).abs();
-            // Update smoothly on changes > 1 degree without lag
-            if (diff > 1.0) {
-              setState(() {
-                _currentNavBearing = normalizedHeading;
-              });
-              // Rotate map camera only if user has locked camera on vehicle
-              if (_cameraFollowLocked && _currentNavPosition != null) {
-                try {
-                  _mapController.rotate(normalizedHeading);
-                } catch (_) {}
-              }
-            }
-          }
-        });
-      } catch (compassErr) {
-        debugPrint('[MapWorkspace] Compass error: $compassErr');
-      }
-
       _showMessage('Real GPS Navigation Active (Real movement tracking)');
     } catch (e) {
       _showMessage('GPS error: $e');
@@ -1401,8 +1365,6 @@ class _MapWorkspaceState extends State<MapWorkspace> {
     _navTimer?.cancel();
     _gpsSubscription?.cancel();
     _gpsSubscription = null;
-    _compassSubscription?.cancel();
-    _compassSubscription = null;
     _lastGpsPosition = null;
     _lastGpsTime = null;
     _lastTrackerFixTime = null;
@@ -1552,8 +1514,6 @@ class _MapWorkspaceState extends State<MapWorkspace> {
           newLatLng,
         );
       }
-    } else if (_compassHeading > 0.0) {
-      bearing = _compassHeading;
     }
 
     _lastGpsPosition = pos;
@@ -1636,26 +1596,12 @@ class _MapWorkspaceState extends State<MapWorkspace> {
         '';
     if (activeVehicleCode.isNotEmpty) {
       unawaited(() async {
-        int? batteryPct;
-        bool isCharging = false;
-        try {
-          if (!kIsWeb) {
-            final batt = Battery();
-            batteryPct = await batt.batteryLevel;
-            final state = await batt.batteryState;
-            isCharging =
-                (state == BatteryState.charging || state == BatteryState.full);
-          }
-        } catch (_) {}
-
         await FirebaseBackendService.instance.syncVehicleTelemetry(
           vehicleCode: activeVehicleCode,
           latitude: newLatLng.latitude,
           longitude: newLatLng.longitude,
           speed: realSpeed,
           isIgnitionOn: realSpeed > 1.0,
-          phoneBatteryLevel: batteryPct,
-          isPhoneCharging: isCharging,
         );
       }());
     }

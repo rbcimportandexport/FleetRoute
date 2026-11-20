@@ -4,7 +4,6 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:battery_plus/battery_plus.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -1349,8 +1348,6 @@ class PlannerController extends ChangeNotifier {
   String? lastGpsSyncError;
   DateTime? lastGpsSyncTime;
   Timer? _gpsAutoPollTimer;
-  Timer? _driverBatteryPollTimer;
-  StreamSubscription<BatteryState>? _driverBatteryStateSubscription;
   final Map<String, DateTime> _lastOverspeedAlerts = {};
   StreamSubscription<Position>? _foregroundLocationSubscription;
   Position? _lastPublishedDriverPosition;
@@ -1888,18 +1885,6 @@ class PlannerController extends ChangeNotifier {
           ? math.max(reportedSpeed, calculatedSpeed).clamp(0.0, 220.0)
           : 0.0;
       _lastPublishedDriverPosition = position;
-      int? batteryPct;
-      bool isCharging = false;
-      try {
-        if (!kIsWeb) {
-          final battery = Battery();
-          batteryPct = await battery.batteryLevel;
-          final state = await battery.batteryState;
-          isCharging = (state == BatteryState.charging || state == BatteryState.full);
-        }
-      } catch (batteryError) {
-        debugPrint('Battery status fetch error: $batteryError');
-      }
 
       final synced = await FirebaseBackendService.instance.syncVehicleTelemetry(
         vehicleCode: vehicleCode,
@@ -1909,8 +1894,6 @@ class PlannerController extends ChangeNotifier {
         isIgnitionOn: hasRealMovement,
         driverId: FirebaseBackendService.instance.currentEmail ?? driver.email,
         driverName: driver.name,
-        phoneBatteryLevel: batteryPct,
-        isPhoneCharging: isCharging,
       );
       if (!synced) {
         throw StateError(FirebaseBackendService.instance.lastWriteError ??
@@ -1974,57 +1957,14 @@ class PlannerController extends ChangeNotifier {
   }
 
   void _startDriverBatteryPeriodicSync() {
-    _driverBatteryPollTimer?.cancel();
-    _driverBatteryStateSubscription?.cancel();
-    if (kIsWeb) return;
-    // Initial immediate sync
-    unawaited(syncDriverPhoneBattery());
-    // Listen to real-time hardware battery charging events (plug in / unplug)
-    try {
-      final battery = Battery();
-      _driverBatteryStateSubscription = battery.onBatteryStateChanged.listen((_) {
-        unawaited(syncDriverPhoneBattery());
-      });
-    } catch (_) {}
-    // Periodic poll every 60 seconds (1 minute) for battery percentage updates to avoid phone CPU battery drain
-    _driverBatteryPollTimer = Timer.periodic(const Duration(seconds: 60), (_) {
-      unawaited(syncDriverPhoneBattery());
-    });
+    // Disabled native hardware battery polling to prevent Android OS EventChannel crashes
   }
 
   /// Explicitly reads this device's battery level and charging status and pushes
   /// to Firestore `fleet_telemetry/{vehicleCode}` so all admin consoles immediately see
   /// the exact percentage and charging state without requiring vehicle movement.
   Future<void> syncDriverPhoneBattery() async {
-    if (kIsWeb) return;
-    try {
-      final driver = selectedDriver ?? currentDriver;
-      final vehicleCode = driver?.assignedVehicle.trim().toUpperCase() ?? '';
-      if (vehicleCode.isEmpty) return;
-
-      final battery = Battery();
-      final level = await battery.batteryLevel;
-      final state = await battery.batteryState;
-      final isCharging = (state == BatteryState.charging || state == BatteryState.full);
-
-      // Optimistically update local truckModel
-      final idx = truckModels.indexWhere((t) => t.code.toUpperCase() == vehicleCode);
-      if (idx >= 0) {
-        truckModels[idx] = truckModels[idx].copyWith(
-          phoneBatteryLevel: level,
-          isPhoneCharging: isCharging,
-        );
-        notifyListeners();
-      }
-
-      await FirebaseBackendService.instance.updateVehicleBatteryTelemetry(
-        vehicleCode: vehicleCode,
-        phoneBatteryLevel: level,
-        isPhoneCharging: isCharging,
-      );
-    } catch (e) {
-      debugPrint('[BatterySync] Error syncing phone battery: $e');
-    }
+    // Disabled direct native Battery() call to prevent platform channel SIGSEGV/abort
   }
 
   void _applyFleetTelemetry(List<Map<String, dynamic>> updates) {
@@ -2066,10 +2006,6 @@ class PlannerController extends ChangeNotifier {
   }
 
   void stopGpsAutoPolling() {
-    _driverBatteryPollTimer?.cancel();
-    _driverBatteryPollTimer = null;
-    _driverBatteryStateSubscription?.cancel();
-    _driverBatteryStateSubscription = null;
     _gpsAutoPollTimer?.cancel();
     _gpsAutoPollTimer = null;
     _foregroundLocationSubscription?.cancel();

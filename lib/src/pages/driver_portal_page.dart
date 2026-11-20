@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:battery_plus/battery_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../controllers/planner_controller.dart';
