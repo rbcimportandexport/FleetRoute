@@ -28,7 +28,12 @@ class PlannerController extends ChangeNotifier {
     SharedPreferencesAsync? preferences,
     FlutterSecureStorage? secureStorage,
   })  : _preferences = preferences,
-        _secureStorage = secureStorage ?? const FlutterSecureStorage();
+        _secureStorage = secureStorage ??
+            const FlutterSecureStorage(
+              aOptions: AndroidOptions(
+                resetOnError: true,
+              ),
+            );
 
   static const _driversKey = 'transport_one.drivers';
   static const _deletedDriversKey = 'transport_one.deleted_drivers';
@@ -583,7 +588,13 @@ class PlannerController extends ChangeNotifier {
       final usePreferenceSecret = _preferences != null || isTest;
       final storedSec = usePreferenceSecret
           ? await _storage.getString('transport_one.sec_ctx')
-          : await _secureStorage.read(key: 'transport_one.sec_ctx');
+          : await (() async {
+              try {
+                return await _secureStorage.read(key: 'transport_one.sec_ctx');
+              } catch (_) {
+                return await _storage.getString('transport_one.sec_ctx');
+              }
+            })();
       if (storedSec != null && storedSec.isNotEmpty) {
         AppSecurityService.initDeviceSecret(storedSec);
       } else {
@@ -591,10 +602,14 @@ class PlannerController extends ChangeNotifier {
         if (usePreferenceSecret) {
           await _storage.setString('transport_one.sec_ctx', active);
         } else {
-          await _secureStorage.write(
-            key: 'transport_one.sec_ctx',
-            value: active,
-          );
+          try {
+            await _secureStorage.write(
+              key: 'transport_one.sec_ctx',
+              value: active,
+            );
+          } catch (_) {
+            await _storage.setString('transport_one.sec_ctx', active);
+          }
         }
       }
       final driverJson = await _storage.getString(_driversKey);
@@ -672,7 +687,13 @@ class PlannerController extends ChangeNotifier {
         final savedRole = await _storage.getString(_authRoleKey) ?? '';
         final savedToken = usePreferenceSecret
             ? await _storage.getString(_sessionTokenKey) ?? ''
-            : await _secureStorage.read(key: _sessionTokenKey) ?? '';
+            : await (() async {
+                try {
+                  return await _secureStorage.read(key: _sessionTokenKey) ?? '';
+                } catch (_) {
+                  return await _storage.getString(_sessionTokenKey) ?? '';
+                }
+              })();
         final validLocalSession = !kIsWeb &&
             savedLoggedIn &&
             AppSecurityService.verifySessionToken(
@@ -2102,6 +2123,63 @@ class PlannerController extends ChangeNotifier {
       });
       if (active) return true;
     }
+    return false;
+  }
+
+  /// Returns whether a vehicle / driver is currently online.
+  /// A vehicle is considered Online if ANY of the following is true:
+  /// 1. The assigned driver has an active duty shift (Attendance record without endTime).
+  /// 2. The driver's phone is active & transmitting live telemetry (battery reported >= 0).
+  /// 3. The vehicle has live GPS or has updated location fix within recent hours.
+  /// 4. The driver is actively logged into the app on their phone or web.
+  /// 5. A trip is currently active or in-progress for this vehicle.
+  bool isVehicleOnline(String vehicleCode) {
+    final code = vehicleCode.trim().toUpperCase();
+    if (code.isEmpty) return false;
+
+    // 1. Explicit On-Duty status in attendance
+    if (isVehicleDriverOnDuty(code)) return true;
+
+    // 2. Hardware / phone telemetry reported by driver device
+    final truckIdx =
+        truckModels.indexWhere((t) => t.code.trim().toUpperCase() == code);
+    if (truckIdx >= 0) {
+      final truck = truckModels[truckIdx];
+      if (truck.phoneBatteryLevel != null && truck.phoneBatteryLevel! >= 0) {
+        return true;
+      }
+      if (truck.hasValidGpsFix || truck.isIgnitionOn || truck.isMoving) {
+        return true;
+      }
+      if (truck.lastGpsTime != null) {
+        final diff = DateTime.now().difference(truck.lastGpsTime!);
+        if (diff.inHours < 12) return true;
+      }
+    }
+
+    // 3. Driver is actively logged into the app
+    final assignedDriver = drivers.firstWhere(
+      (d) => d.assignedVehicle.trim().toUpperCase() == code,
+      orElse: () => const DriverProfile('', ''),
+    );
+    if (assignedDriver.email.isNotEmpty) {
+      final target =
+          (activeDriverEmail ?? loggedInEmail ?? '').trim().toLowerCase();
+      if (target.isNotEmpty &&
+          (target == assignedDriver.email.trim().toLowerCase() ||
+              target == assignedDriver.phone.replaceAll(RegExp(r'\D'), ''))) {
+        return true;
+      }
+    }
+
+    // 4. Trip active/in-progress for this vehicle
+    final hasActiveTrip = trips.any((t) =>
+        t.assignedVehicle.trim().toUpperCase() == code &&
+        (t.status == 'in_progress' ||
+            t.status == 'active' ||
+            t.status == 'dispatched'));
+    if (hasActiveTrip) return true;
+
     return false;
   }
 
@@ -5742,10 +5820,14 @@ class PlannerController extends ChangeNotifier {
       if (_isWhatsAppSession &&
           _currentSessionToken != null &&
           _currentSessionToken!.isNotEmpty) {
-        await _secureStorage.write(
-          key: _sessionTokenKey,
-          value: _currentSessionToken,
-        );
+        try {
+          await _secureStorage.write(
+            key: _sessionTokenKey,
+            value: _currentSessionToken,
+          );
+        } catch (_) {
+          await _storage.setString(_sessionTokenKey, _currentSessionToken!);
+        }
       }
     } catch (e) {
       debugPrint('Warning: unable to persist auth session to storage: $e');
@@ -5771,7 +5853,9 @@ class PlannerController extends ChangeNotifier {
       final runningWidgetTest = const bool.fromEnvironment('FLUTTER_TEST') ||
           (kDebugMode && Zone.current[#test.declarer] != null);
       if (!runningWidgetTest) {
-        await _secureStorage.delete(key: _sessionTokenKey);
+        try {
+          await _secureStorage.delete(key: _sessionTokenKey);
+        } catch (_) {}
       }
     } catch (e) {
       debugPrint('Warning: unable to clear auth session in storage: $e');

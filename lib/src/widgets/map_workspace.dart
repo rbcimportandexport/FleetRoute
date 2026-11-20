@@ -305,15 +305,17 @@ class _MapWorkspaceState extends State<MapWorkspace> {
       });
       widget.controller.setOrigin(_format(userPos));
 
-      // Link real device GPS coordinates ONLY if driver is actively logged in and on duty
+      // Link real device GPS coordinates if driver is actively logged in or on duty
       if (widget.controller.isDriver) {
         final assignedCode = widget.controller.selectedDriver?.assignedVehicle
                 .trim()
                 .toUpperCase() ??
             '';
-        final isOnDuty = assignedCode.isNotEmpty &&
-            widget.controller.isVehicleDriverOnDuty(assignedCode);
-        if (assignedCode.isNotEmpty && isOnDuty) {
+        final isOnlineOrOnDuty = assignedCode.isNotEmpty &&
+            (widget.controller.isVehicleDriverOnDuty(assignedCode) ||
+                widget.controller.isVehicleOnline(assignedCode) ||
+                widget.controller.isDriver);
+        if (assignedCode.isNotEmpty && isOnlineOrOnDuty) {
           final vIdx = widget.controller.truckModels
               .indexWhere((t) => t.code.toUpperCase() == assignedCode);
           if (vIdx >= 0) {
@@ -744,7 +746,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
   }
 
   bool _isVehicleOnline(TruckModel vehicle) =>
-      widget.controller.isVehicleDriverOnDuty(vehicle.code);
+      widget.controller.isVehicleOnline(vehicle.code);
 
   String _fleetLastUpdate(TruckModel vehicle) {
     final updated = vehicle.lastGpsTime;
@@ -2355,12 +2357,13 @@ class _MapWorkspaceState extends State<MapWorkspace> {
     for (int tIdx = 0; tIdx < widget.controller.truckModels.length; tIdx++) {
       final truck = widget.controller.truckModels[tIdx];
       final isOnDuty = widget.controller.isVehicleDriverOnDuty(truck.code);
+      final isOnline = widget.controller.isVehicleOnline(truck.code);
       final bool hasRealGps = truck.hasCoordinates &&
           truck.hasValidGpsFix &&
           !truck.isDemoTelemetry;
 
-      // ONLY show marker if the driver is strictly ON DUTY (has turned duty ON).
-      if (!isOnDuty) {
+      // Show marker if driver is on duty OR actively online with device telemetry
+      if (!isOnDuty && !isOnline) {
         continue;
       }
 

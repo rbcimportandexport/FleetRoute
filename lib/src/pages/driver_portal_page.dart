@@ -756,44 +756,55 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: isOnDuty
-                                ? AppColors.primaryLight
-                                : const Color(0xFFF1F5F9),
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(
-                              color: isOnDuty
-                                  ? AppColors.iconBadgeBorder
-                                  : const Color(0xFFCBD5E1),
-                              width: 1,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.fiber_manual_record,
-                                  size: 8,
-                                  color: isOnDuty
-                                      ? AppColors.iconColor
-                                      : AppColors.slate),
-                              const SizedBox(width: 4),
-                              Text(
-                                AppLocalizationService.instance
-                                    .tr(isOnDuty ? 'on_duty' : 'off_duty'),
-                                style: TextStyle(
-                                  fontSize: 9.5,
-                                  fontWeight: FontWeight.w800,
-                                  color: isOnDuty
-                                      ? AppColors.primaryDark
-                                      : AppColors.slate,
-                                  fontFamily: 'sans-serif',
+                        Builder(
+                          builder: (context) {
+                            final isDriverOnline = isOnDuty ||
+                                widget.controller.isVehicleOnline(vehicle);
+                            final showGreenPill = isOnDuty || isDriverOnline;
+                            final statusLabel = isOnDuty
+                                ? AppLocalizationService.instance.tr('on_duty')
+                                : (isDriverOnline
+                                    ? 'ONLINE'
+                                    : AppLocalizationService.instance.tr('off_duty'));
+                            return Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: showGreenPill
+                                    ? AppColors.primaryLight
+                                    : const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: showGreenPill
+                                      ? AppColors.iconBadgeBorder
+                                      : const Color(0xFFCBD5E1),
+                                  width: 1,
                                 ),
                               ),
-                            ],
-                          ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.fiber_manual_record,
+                                      size: 8,
+                                      color: showGreenPill
+                                          ? AppColors.iconColor
+                                          : AppColors.slate),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    statusLabel,
+                                    style: TextStyle(
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.w800,
+                                      color: showGreenPill
+                                          ? AppColors.primaryDark
+                                          : AppColors.slate,
+                                      fontFamily: 'sans-serif',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
                         ),
                       ],
                     ),

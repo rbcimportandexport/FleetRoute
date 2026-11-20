@@ -11,9 +11,9 @@ void main() {
   runZonedGuarded(() {
     WidgetsFlutterBinding.ensureInitialized();
 
-    // Optimize image caching to reduce RAM footprint and prevent browser lag/freeze
-    PaintingBinding.instance.imageCache.maximumSize = 100;
-    PaintingBinding.instance.imageCache.maximumSizeBytes = 50 * 1024 * 1024; // 50 MB max
+    // Optimize image caching to reduce RAM footprint and prevent Android Low-Memory-Killer (LMK) crash
+    PaintingBinding.instance.imageCache.maximumSize = 60;
+    PaintingBinding.instance.imageCache.maximumSizeBytes = 25 * 1024 * 1024; // 25 MB max
 
     // Catch any synchronous Flutter widget/rendering error and prevent app crash
     FlutterError.onError = (FlutterErrorDetails details) {

@@ -29,7 +29,7 @@ Future<void> _ensureNotificationsInitialized() async {
     WidgetsFlutterBinding.ensureInitialized();
     _notificationsPlugin = FlutterLocalNotificationsPlugin();
     const androidSettings =
-        AndroidInitializationSettings('@drawable/ic_stat_transport');
+        AndroidInitializationSettings('ic_stat_transport');
     const initSettings = InitializationSettings(
       android: androidSettings,
     );
@@ -75,7 +75,7 @@ void triggerExternalSafetyNotification({
             'Trip, safety, compliance, maintenance, and cleaning reminders',
         importance: Importance.max,
         priority: Priority.high,
-        icon: '@drawable/ic_stat_transport',
+        icon: 'ic_stat_transport',
         color: isRejected ? const Color(0xFFDC2626) : const Color(0xFF16A34A),
       );
       final details = NotificationDetails(android: androidDetails);
