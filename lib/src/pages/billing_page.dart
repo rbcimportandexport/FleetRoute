@@ -618,10 +618,9 @@ class _BillingPageState extends State<BillingPage> {
   }
 
   Future<void> _openRecordPaymentDialog(BillingRecord bill) async {
-    double paymentAmount = bill.balanceDue > 0 ? bill.balanceDue : 5000.0;
+    double paymentAmount = bill.balanceDue > 0 ? bill.balanceDue : 0.0;
     String paymentMode = 'bank_transfer';
-    String reference =
-        'TXN-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
+    String reference = '';
     final notesController = TextEditingController();
 
     final result = await showDialog<bool>(

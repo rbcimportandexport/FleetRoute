@@ -135231,9 +135231,9 @@ Co(a){return this.aIW(a)},
 aIW(a){var s=0,r=A.t(t.H),q=this,p,o,n
 var $async$Co=A.u(function(b,c){if(b===1)return A.p(c,r)
 for(;;)switch(s){case 0:n={}
-n.a=a.glG()>0?a.glG():5000
+n.a=a.glG()>0?a.glG():0
 n.b="bank_transfer"
-n.c="TXN-"+B.e.bx(B.u.j(Date.now()),7)
+n.c=""
 p=new A.b3(B.aV,$.aj())
 o=q.c
 o.toString
