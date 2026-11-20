@@ -258,20 +258,15 @@
     };
   </script>
   <script>
-    // Aggressive Cache Buster & Service Worker Purge
-    (function purgeOldCachesAndStart() {
+    // Register Offline Service Worker for Seamless Offline & Low-Connectivity Operation
+    (function initOfflinePwa() {
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(function(registrations) {
-          for (var i = 0; i < registrations.length; i++) {
-            registrations[i].unregister();
-          }
-        });
-      }
-      if ('caches' in window) {
-        caches.keys().then(function(names) {
-          for (var i = 0; i < names.length; i++) {
-            caches.delete(names[i]);
-          }
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('sw.js').then(function(reg) {
+            console.log('[PWA] Transport One Offline ServiceWorker registered successfully.');
+          }).catch(function(err) {
+            console.warn('[PWA] ServiceWorker registration error:', err);
+          });
         });
       }
       var s = document.createElement('script');
