@@ -131,13 +131,14 @@ class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
   final MapController _mapController = MapController();
   List<_PlaybackPoint> _timeline = [];
   List<LatLng> _routeGeometry = [];
+  List<LatLng> _allPositions = [];
   List<_ConsolidatedStop> _consolidatedStops = [];
   bool _isLoading = true;
 
-  // Video-style playback controls
-  bool _isPlaying = false;
-  double _currentProgress = 0.0; // 0.0 to 1.0
-  int _currentIndex = 0;
+  // Video-style playback controls via ValueNotifiers
+  // (Prevents full-tree rebuilds, map re-instantiations, and Skia/Impeller GPU exhaustion)
+  final ValueNotifier<int> _playbackIndexNotifier = ValueNotifier<int>(0);
+  final ValueNotifier<bool> _isPlayingNotifier = ValueNotifier<bool>(false);
   double _playbackSpeed = 2.0; // 1x, 2x, 5x, 10x
   Timer? _playbackTimer;
   MapViewStyle _mapStyle = MapViewStyle.street;
@@ -157,9 +158,11 @@ class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
   @override
   void dispose() {
     _playbackTimer?.cancel();
-    try {
-      _mapController.dispose();
-    } catch (_) {}
+    _playbackIndexNotifier.dispose();
+    _isPlayingNotifier.dispose();
+    // Do not call _mapController.dispose() here because MapController's internal
+    // event stream is held by FlutterMap and closing it prematurely during dialog
+    // unmounting throws unhandled exceptions on Android.
     super.dispose();
   }
 
@@ -292,12 +295,13 @@ class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
           : 15;
       final stepDurationSec = (tripDurationMinutes * 60) ~/ totalSteps;
 
-      if (!isShortDirectTrip) {
+      if (!isShortDirectTrip && routePoints.length >= 6) {
         // Only for genuine long-haul interstate/highway journeys (>25 km), add optional highway stops:
-        final hotelIdx = (routePoints.length * 0.33).round().clamp(1, routePoints.length - 2);
-        final fuelIdx = (routePoints.length * 0.68).round().clamp(1, routePoints.length - 2);
+        final maxStopIdx = routePoints.length - 2;
+        final hotelIdx = (routePoints.length * 0.33).round().clamp(1, maxStopIdx);
+        final fuelIdx = (routePoints.length * 0.68).round().clamp(1, maxStopIdx);
         final trafficIdx = routePoints.length > 25
-            ? (routePoints.length * 0.86).round().clamp(1, routePoints.length - 2)
+            ? (routePoints.length * 0.86).round().clamp(1, maxStopIdx)
             : -1;
 
         final hotelStop = _ConsolidatedStop(
@@ -444,6 +448,7 @@ class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
 
     if (points.isNotEmpty) {
       _timeline = points;
+      _allPositions = points.map((p) => p.position).toList(growable: false);
       _maxSpeed = points.map((p) => p.speed).reduce(math.max);
       final movingPoints = points.where((p) => p.speed > 2.0).toList();
       _avgSpeed = movingPoints.isNotEmpty
@@ -461,11 +466,6 @@ class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
 
     if (mounted) {
       setState(() => _isLoading = false);
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          _fitMapToRoute();
-        }
-      });
     }
   }
 
@@ -473,19 +473,24 @@ class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
     if (_routeGeometry.isEmpty || !mounted) return;
     try {
       final bounds = LatLngBounds.fromPoints(_routeGeometry);
-      _mapController.fitCamera(
-        CameraFit.bounds(
-          bounds: bounds,
-          padding: const EdgeInsets.all(50),
-        ),
-      );
+      if (bounds.north == bounds.south && bounds.east == bounds.west) {
+        _mapController.move(bounds.center, 15.0);
+      } else {
+        _mapController.fitCamera(
+          CameraFit.bounds(
+            bounds: bounds,
+            padding: const EdgeInsets.all(50),
+            maxZoom: 16.5,
+          ),
+        );
+      }
     } catch (e) {
       debugPrint('[TripPlayback] fitCamera error: $e');
     }
   }
 
   void _togglePlayPause() {
-    if (_isPlaying) {
+    if (_isPlayingNotifier.value) {
       _pausePlayback();
     } else {
       _startPlayback();
@@ -495,15 +500,14 @@ class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
   void _startPlayback() {
     if (_timeline.isEmpty) return;
     _playbackTimer?.cancel();
-    setState(() => _isPlaying = true);
+    _isPlayingNotifier.value = true;
 
     // If at end, loop back to start
-    if (_currentIndex >= _timeline.length - 1) {
-      _currentIndex = 0;
-      _currentProgress = 0.0;
+    if (_playbackIndexNotifier.value >= _timeline.length - 1) {
+      _playbackIndexNotifier.value = 0;
     }
 
-    // Balanced smooth interval: 100ms min to avoid flooding Android frame pipeline
+    // Balanced interval: 100ms min to prevent frame drops
     final intervalMs = (400 / _playbackSpeed).round().clamp(100, 600);
     _playbackTimer = Timer.periodic(Duration(milliseconds: intervalMs), (timer) {
       if (!mounted) {
@@ -511,62 +515,58 @@ class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
         return;
       }
 
-      if (_currentIndex < _timeline.length - 1) {
-        setState(() {
-          _currentIndex++;
-          _currentProgress = _currentIndex / (_timeline.length - 1);
-        });
-
-        // Center map smoothly without overwhelming FlutterMap internal renderer
-        if (_currentIndex % 3 == 0) {
-          final currentPoint = _timeline[_currentIndex].position;
-          try {
-            _mapController.move(currentPoint, _mapController.camera.zoom);
-          } catch (_) {}
-        }
+      final nextIndex = _playbackIndexNotifier.value + 1;
+      if (nextIndex < _timeline.length) {
+        _playbackIndexNotifier.value = nextIndex;
+        // Auto-recenter camera ONLY if vehicle moves outside the visible camera bounds
+        _checkAndRecenterIfNeeded(nextIndex);
       } else {
         timer.cancel();
-        setState(() => _isPlaying = false);
+        _isPlayingNotifier.value = false;
       }
     });
   }
 
   void _pausePlayback() {
     _playbackTimer?.cancel();
-    setState(() => _isPlaying = false);
+    _isPlayingNotifier.value = false;
+  }
+
+  void _checkAndRecenterIfNeeded(int index) {
+    if (_timeline.isEmpty || index >= _timeline.length || !mounted) return;
+    try {
+      final camera = _mapController.camera;
+      final vehiclePos = _timeline[index].position;
+      final bounds = camera.visibleBounds;
+
+      if (!bounds.contains(vehiclePos)) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            try {
+              _mapController.move(vehiclePos, camera.zoom);
+            } catch (_) {}
+          }
+        });
+      }
+    } catch (_) {}
   }
 
   void _seekTo(double value) {
     if (_timeline.isEmpty) return;
     final index = (value * (_timeline.length - 1)).round().clamp(0, _timeline.length - 1);
-    setState(() {
-      _currentProgress = value;
-      _currentIndex = index;
-    });
-
-    final currentPoint = _timeline[index].position;
-    try {
-      _mapController.move(currentPoint, _mapController.camera.zoom);
-    } catch (_) {}
+    _playbackIndexNotifier.value = index;
+    _checkAndRecenterIfNeeded(index);
   }
 
   void _changeSpeed(double speed) {
     setState(() => _playbackSpeed = speed);
-    if (_isPlaying) {
-      _startPlayback(); // restart timer with new speed
+    if (_isPlayingNotifier.value) {
+      _startPlayback();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final currentPoint = _timeline.isNotEmpty && _currentIndex < _timeline.length
-        ? _timeline[_currentIndex]
-        : null;
-
-    final coveredPoints = _timeline.isNotEmpty
-        ? _timeline.sublist(0, _currentIndex + 1).map((p) => p.position).toList()
-        : <LatLng>[];
-
     return Scaffold(
       backgroundColor: const Color(0xFF0F172A),
       body: SafeArea(
@@ -678,14 +678,22 @@ class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
               color: const Color(0xFF1E293B),
               child: Row(
                 children: [
-                  _buildHeaderMetric(
-                    label: 'LIVE SPEED',
-                    value: currentPoint != null
-                        ? '${currentPoint.speed.toStringAsFixed(0)} km/h'
-                        : '0 km/h',
-                    color: currentPoint != null && currentPoint.speed > 80
-                        ? const Color(0xFFEF4444)
-                        : const Color(0xFF10B981),
+                  ValueListenableBuilder<int>(
+                    valueListenable: _playbackIndexNotifier,
+                    builder: (context, index, _) {
+                      final pt = (index >= 0 && index < _timeline.length)
+                          ? _timeline[index]
+                          : null;
+                      return _buildHeaderMetric(
+                        label: 'LIVE SPEED',
+                        value: pt != null
+                            ? '${pt.speed.toStringAsFixed(0)} km/h'
+                            : '0 km/h',
+                        color: pt != null && pt.speed > 80
+                            ? const Color(0xFFEF4444)
+                            : const Color(0xFF10B981),
+                      );
+                    },
                   ),
                   _buildDivider(),
                   _buildHeaderMetric(
@@ -732,7 +740,10 @@ class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
                                 : const LatLng(22.5, 79.0),
                             initialZoom: 14,
                             minZoom: 3.0,
-                            maxZoom: 21.0,
+                            maxZoom: 18.0,
+                            onMapReady: () {
+                              _fitMapToRoute();
+                            },
                           ),
                           children: [
                             TileLayer(
@@ -747,11 +758,11 @@ class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
                               ),
                               fallbackUrl: MapTileService.fallbackTileUrl,
                               maxNativeZoom: 18,
-                              maxZoom: 21.0,
+                              maxZoom: 18.0,
                               userAgentPackageName: MapTileService.userAgent,
                             ),
 
-                            // 1. Full Planned / Actual Route Polyline (grey/faded)
+                            // 1. Full Planned / Actual Route Polyline (grey/faded, static)
                             if (_routeGeometry.length >= 2)
                               PolylineLayer(
                                 polylines: [
@@ -764,18 +775,30 @@ class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
                               ),
 
                             // 2. Traveled Route Polyline (Active blue with animated progress)
-                            if (coveredPoints.length >= 2)
-                              PolylineLayer(
-                                polylines: [
-                                  Polyline(
-                                    points: coveredPoints,
-                                    strokeWidth: 7,
-                                    color: const Color(0xFF2563EB),
-                                  ),
-                                ],
-                              ),
+                            ValueListenableBuilder<int>(
+                              valueListenable: _playbackIndexNotifier,
+                              builder: (context, index, _) {
+                                if (_allPositions.length < 2 || index <= 0) {
+                                  return const SizedBox.shrink();
+                                }
+                                final covered = _allPositions.sublist(
+                                  0,
+                                  (index + 1).clamp(1, _allPositions.length),
+                                );
+                                if (covered.length < 2) return const SizedBox.shrink();
+                                return PolylineLayer(
+                                  polylines: [
+                                    Polyline(
+                                      points: covered,
+                                      strokeWidth: 7,
+                                      color: const Color(0xFF2563EB),
+                                    ),
+                                  ],
+                                );
+                              },
+                            ),
 
-                            // 3. Hold / Stoppage markers along the route
+                            // 3. Static Stoppage & Hold markers along the route
                             MarkerLayer(
                               markers: [
                                 // Origin marker
@@ -814,7 +837,9 @@ class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
                                       child: GestureDetector(
                                         onTap: () {
                                           _pausePlayback();
-                                          _seekTo((s.timelineIndex / math.max(1, _timeline.length - 1)).clamp(0.0, 1.0));
+                                          final idx = s.timelineIndex.clamp(0, math.max(0, _timeline.length - 1)).toInt();
+                                          _playbackIndexNotifier.value = idx;
+                                          _checkAndRecenterIfNeeded(idx);
                                           if (s.category == StopCategory.foodHotel && widget.controller != null) {
                                             HotelStayMealExpenseSheet.show(
                                               context,
@@ -879,192 +904,212 @@ class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
                                       ),
                                     ),
                                   ),
+                              ],
+                            ),
 
-                                // 4. Active moving vehicle marker
-                                if (currentPoint != null)
-                                  Marker(
-                                    point: currentPoint.position,
-                                    width: 52,
-                                    height: 52,
-                                    child: Transform.rotate(
-                                      angle:
-                                          (currentPoint.course * math.pi) / 180,
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFF2563EB),
-                                          shape: BoxShape.circle,
-                                          border: Border.all(
-                                              color: Colors.white, width: 3),
-                                          boxShadow: const [
-                                            BoxShadow(
-                                              color: Color(0x66000000),
-                                              blurRadius: 8,
-                                              offset: Offset(0, 3),
+                            // 4. Active moving vehicle marker (only this marker repaints on tick)
+                            ValueListenableBuilder<int>(
+                              valueListenable: _playbackIndexNotifier,
+                              builder: (context, index, _) {
+                                if (_timeline.isEmpty || index >= _timeline.length) {
+                                  return const SizedBox.shrink();
+                                }
+                                final currentPoint = _timeline[index];
+                                return MarkerLayer(
+                                  markers: [
+                                    Marker(
+                                      point: currentPoint.position,
+                                      width: 52,
+                                      height: 52,
+                                      child: Transform.rotate(
+                                        angle:
+                                            (currentPoint.course * math.pi) / 180,
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFF2563EB),
+                                            shape: BoxShape.circle,
+                                            border: Border.all(
+                                                color: Colors.white, width: 3),
+                                            boxShadow: const [
+                                              BoxShadow(
+                                                color: Color(0x66000000),
+                                                blurRadius: 8,
+                                                offset: Offset(0, 3),
+                                              ),
+                                            ],
+                                          ),
+                                          child: const Center(
+                                            child: Icon(
+                                              Icons.navigation_rounded,
+                                              color: Colors.white,
+                                              size: 26,
                                             ),
-                                          ],
-                                        ),
-                                        child: const Center(
-                                          child: Icon(
-                                            Icons.navigation_rounded,
-                                            color: Colors.white,
-                                            size: 26,
                                           ),
                                         ),
                                       ),
                                     ),
-                                  ),
-                              ],
+                                  ],
+                                );
+                              },
                             ),
                           ],
                         ),
 
                   // Floating Live Telematics Card on Map
-                  if (currentPoint != null)
-                    Positioned(
-                      top: 14,
-                      left: 14,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xEE0F172A),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                              color: const Color(0xFF334155), width: 1.2),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Color(0x33000000),
-                              blurRadius: 10,
-                              offset: Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: currentPoint.speed > 2.0
-                                        ? const Color(0xFF22C55E)
-                                        : const Color(0xFFF59E0B),
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  currentPoint.speed > 2.0
-                                      ? 'VEHICLE MOVING'
-                                      : (currentPoint.isHold
-                                          ? 'HOLD / STOPPED'
-                                          : 'STATIONARY'),
-                                  style: TextStyle(
-                                    color: currentPoint.speed > 2.0
-                                        ? const Color(0xFF4ADE80)
-                                        : const Color(0xFFFBBF24),
-                                    fontSize: 9.5,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${currentPoint.speed.toStringAsFixed(0)} km/h',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 20,
-                                fontWeight: FontWeight.w900,
+                  ValueListenableBuilder<int>(
+                    valueListenable: _playbackIndexNotifier,
+                    builder: (context, index, _) {
+                      if (_timeline.isEmpty || index >= _timeline.length) {
+                        return const SizedBox.shrink();
+                      }
+                      final currentPoint = _timeline[index];
+                      return Positioned(
+                        top: 14,
+                        left: 14,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xEE0F172A),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                                color: const Color(0xFF334155), width: 1.2),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color(0x33000000),
+                                blurRadius: 10,
+                                offset: Offset(0, 4),
                               ),
-                            ),
-                            Text(
-                              'Time: ${_formatTime(currentPoint.timestamp)}',
-                              style: const TextStyle(
-                                color: Color(0xFF94A3B8),
-                                fontSize: 10.5,
-                              ),
-                            ),
-                            if (currentPoint.label.isNotEmpty) ...[
-                              const SizedBox(height: 4),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 6, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: currentPoint.stop != null
-                                      ? currentPoint.stop!.color.withValues(alpha: 0.25)
-                                      : const Color(0x33EF4444),
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(
-                                    color: currentPoint.stop != null
-                                        ? currentPoint.stop!.color
-                                        : const Color(0xFFEF4444),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    if (currentPoint.stop != null) ...[
-                                      Icon(
-                                        currentPoint.stop!.icon,
-                                        size: 13,
-                                        color: currentPoint.stop!.color,
-                                      ),
-                                      const SizedBox(width: 4),
-                                    ],
-                                    Text(
-                                      currentPoint.label,
-                                      style: TextStyle(
-                                        color: currentPoint.stop != null
-                                            ? Colors.white
-                                            : const Color(0xFFF87171),
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w700,
-                                      ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 8,
+                                    height: 8,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: currentPoint.speed > 2.0
+                                          ? const Color(0xFF22C55E)
+                                          : const Color(0xFFF59E0B),
                                     ),
-                                    if (currentPoint.stop?.category == StopCategory.foodHotel &&
-                                        widget.controller != null) ...[
-                                      const SizedBox(width: 6),
-                                      InkWell(
-                                        onTap: () {
-                                          _pausePlayback();
-                                          HotelStayMealExpenseSheet.show(
-                                            context,
-                                            controller: widget.controller!,
-                                            trip: widget.trip,
-                                            hotelName: currentPoint.stop!.name,
-                                          );
-                                        },
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 6, vertical: 2),
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFFEA580C),
-                                            borderRadius: BorderRadius.circular(4),
-                                          ),
-                                          child: const Text(
-                                            '+ BILL / KHANA',
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 8.5,
-                                              fontWeight: FontWeight.w900,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    currentPoint.speed > 2.0
+                                        ? 'VEHICLE MOVING'
+                                        : (currentPoint.isHold
+                                            ? 'HOLD / STOPPED'
+                                            : 'STATIONARY'),
+                                    style: TextStyle(
+                                      color: currentPoint.speed > 2.0
+                                          ? const Color(0xFF4ADE80)
+                                          : const Color(0xFFFBBF24),
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${currentPoint.speed.toStringAsFixed(0)} km/h',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                              Text(
+                                'Time: ${_formatTime(currentPoint.timestamp)}',
+                                style: const TextStyle(
+                                  color: Color(0xFF94A3B8),
+                                  fontSize: 10.5,
+                                ),
+                              ),
+                              if (currentPoint.label.isNotEmpty) ...[
+                                const SizedBox(height: 4),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: currentPoint.stop != null
+                                        ? currentPoint.stop!.color.withValues(alpha: 0.25)
+                                        : const Color(0x33EF4444),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                      color: currentPoint.stop != null
+                                          ? currentPoint.stop!.color
+                                          : const Color(0xFFEF4444),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (currentPoint.stop != null) ...[
+                                        Icon(
+                                          currentPoint.stop!.icon,
+                                          size: 13,
+                                          color: currentPoint.stop!.color,
+                                        ),
+                                        const SizedBox(width: 4),
+                                      ],
+                                      Text(
+                                        currentPoint.label,
+                                        style: TextStyle(
+                                          color: currentPoint.stop != null
+                                              ? Colors.white
+                                              : const Color(0xFFF87171),
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                      if (currentPoint.stop?.category == StopCategory.foodHotel &&
+                                          widget.controller != null) ...[
+                                        const SizedBox(width: 6),
+                                        InkWell(
+                                          onTap: () {
+                                            _pausePlayback();
+                                            HotelStayMealExpenseSheet.show(
+                                              context,
+                                              controller: widget.controller!,
+                                              trip: widget.trip,
+                                              hotelName: currentPoint.stop!.name,
+                                            );
+                                          },
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFEA580C),
+                                              borderRadius: BorderRadius.circular(4),
+                                            ),
+                                            child: const Text(
+                                              '+ BILL / KHANA',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 8.5,
+                                                fontWeight: FontWeight.w900,
+                                              ),
                                             ),
                                           ),
                                         ),
-                                      ),
+                                      ],
                                     ],
-                                  ],
+                                  ),
                                 ),
-                              ),
+                              ],
                             ],
-                          ],
+                          ),
                         ),
-                      ),
-                    ),
+                      );
+                    },
+                  ),
 
                   // Recenter button
                   Positioned(
@@ -1133,48 +1178,59 @@ class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   // Video Scrub Slider
-                  Row(
-                    children: [
-                      Text(
-                        currentPoint != null
-                            ? _formatTime(currentPoint.timestamp)
-                            : '00:00',
-                        style: const TextStyle(
-                          color: Color(0xFF94A3B8),
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      Expanded(
-                        child: SliderTheme(
-                          data: SliderTheme.of(context).copyWith(
-                            thumbColor: AppColors.primary,
-                            activeTrackColor: AppColors.primary,
-                            inactiveTrackColor: const Color(0xFF334155),
-                            trackHeight: 4,
-                            thumbShape: const RoundSliderThumbShape(
-                                enabledThumbRadius: 7),
+                  ValueListenableBuilder<int>(
+                    valueListenable: _playbackIndexNotifier,
+                    builder: (context, index, _) {
+                      final currentPoint = (_timeline.isNotEmpty && index < _timeline.length)
+                          ? _timeline[index]
+                          : null;
+                      final progress = _timeline.length > 1
+                          ? (index / (_timeline.length - 1)).clamp(0.0, 1.0)
+                          : 0.0;
+                      return Row(
+                        children: [
+                          Text(
+                            currentPoint != null
+                                ? _formatTime(currentPoint.timestamp)
+                                : '00:00',
+                            style: const TextStyle(
+                              color: Color(0xFF94A3B8),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                          child: Slider(
-                            value: _currentProgress.clamp(0.0, 1.0),
-                            onChanged: (val) {
-                              _pausePlayback();
-                              _seekTo(val);
-                            },
+                          Expanded(
+                            child: SliderTheme(
+                              data: SliderTheme.of(context).copyWith(
+                                thumbColor: AppColors.primary,
+                                activeTrackColor: AppColors.primary,
+                                inactiveTrackColor: const Color(0xFF334155),
+                                trackHeight: 4,
+                                thumbShape: const RoundSliderThumbShape(
+                                    enabledThumbRadius: 7),
+                              ),
+                              child: Slider(
+                                value: progress,
+                                onChanged: (val) {
+                                  _pausePlayback();
+                                  _seekTo(val);
+                                },
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
-                      Text(
-                        _timeline.isNotEmpty
-                            ? _formatTime(_timeline.last.timestamp)
-                            : '--:--',
-                        style: const TextStyle(
-                          color: Color(0xFF94A3B8),
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
+                          Text(
+                            _timeline.isNotEmpty
+                                ? _formatTime(_timeline.last.timestamp)
+                                : '--:--',
+                            style: const TextStyle(
+                              color: Color(0xFF94A3B8),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      );
+                    },
                   ),
 
                   // Playback Action Buttons Row
@@ -1206,31 +1262,44 @@ class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
                                 color: Colors.white),
                             tooltip: 'Rewind',
                             onPressed: () {
-                              _seekTo((_currentProgress - 0.05).clamp(0.0, 1.0));
+                              final cur = _playbackIndexNotifier.value;
+                              final step = math.max(1, (_timeline.length * 0.05).round());
+                              _playbackIndexNotifier.value =
+                                  (cur - step).clamp(0, math.max(0, _timeline.length - 1));
+                              _checkAndRecenterIfNeeded(_playbackIndexNotifier.value);
                             },
                           ),
-                          Container(
-                            decoration: const BoxDecoration(
-                              color: AppColors.primary,
-                              shape: BoxShape.circle,
-                            ),
-                            child: IconButton(
-                              icon: Icon(
-                                _isPlaying
-                                    ? Icons.pause_rounded
-                                    : Icons.play_arrow_rounded,
-                                color: Colors.white,
-                                size: 28,
-                              ),
-                              onPressed: _togglePlayPause,
-                            ),
+                          ValueListenableBuilder<bool>(
+                            valueListenable: _isPlayingNotifier,
+                            builder: (context, isPlaying, _) {
+                              return Container(
+                                decoration: const BoxDecoration(
+                                  color: AppColors.primary,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: IconButton(
+                                  icon: Icon(
+                                    isPlaying
+                                        ? Icons.pause_rounded
+                                        : Icons.play_arrow_rounded,
+                                    color: Colors.white,
+                                    size: 28,
+                                  ),
+                                  onPressed: _togglePlayPause,
+                                ),
+                              );
+                            },
                           ),
                           IconButton(
                             icon: const Icon(Icons.forward_10_rounded,
                                 color: Colors.white),
                             tooltip: 'Fast Forward',
                             onPressed: () {
-                              _seekTo((_currentProgress + 0.05).clamp(0.0, 1.0));
+                              final cur = _playbackIndexNotifier.value;
+                              final step = math.max(1, (_timeline.length * 0.05).round());
+                              _playbackIndexNotifier.value =
+                                  (cur + step).clamp(0, math.max(0, _timeline.length - 1));
+                              _checkAndRecenterIfNeeded(_playbackIndexNotifier.value);
                             },
                           ),
                         ],
