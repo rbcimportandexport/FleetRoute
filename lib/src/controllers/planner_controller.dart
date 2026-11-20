@@ -2734,13 +2734,21 @@ class PlannerController extends ChangeNotifier {
     final driver = trip.assignedDriver.isNotEmpty
         ? trip.assignedDriver
         : (currentDriver?.name ?? 'Assigned Driver');
-    SafetyNotificationService.notifyDriverNewTrip(
-      driverName: driver,
-      vehicleNumber: vehicle,
-      origin: trip.origin,
-      destination: trip.destination,
-      cargoSummary: trip.cargoDescription,
-    );
+    // Instant Notification ONLY if the active/logged in user is the assigned driver
+    final currentDriverName = currentDriver?.name.trim().toLowerCase() ?? '';
+    final currentDriverVeh = currentDriver?.assignedVehicle.trim().replaceAll(RegExp(r'[\s\-]'), '').toUpperCase() ?? '';
+    final tripVeh = vehicle.trim().replaceAll(RegExp(r'[\s\-]'), '').toUpperCase();
+    final tripDrv = driver.trim().toLowerCase();
+
+    if (!isDriver || (isDriver && (currentDriverName == tripDrv || currentDriverVeh == tripVeh))) {
+      SafetyNotificationService.notifyDriverNewTrip(
+        driverName: driver,
+        vehicleNumber: vehicle,
+        origin: trip.origin,
+        destination: trip.destination,
+        cargoSummary: trip.cargoDescription,
+      );
+    }
 
     // Create immediate Operations Alert so it appears in Alerts & Driver Hub
     final alert = OperationsAlert(
@@ -3121,14 +3129,21 @@ class PlannerController extends ChangeNotifier {
     await _saveTrips();
     await FirebaseBackendService.instance.syncTripRecord(record: newTrip);
 
-    // Instant Notification to Assigned Driver
-    SafetyNotificationService.notifyDriverNewTrip(
-      driverName: newTrip.assignedDriver,
-      vehicleNumber: newTrip.assignedVehicle,
-      origin: newTrip.origin,
-      destination: newTrip.destination,
-      cargoSummary: newTrip.cargoDescription,
-    );
+    // Instant Notification ONLY if the active/logged in user is the assigned driver
+    final currentDriverName = currentDriver?.name.trim().toLowerCase() ?? '';
+    final currentDriverVeh = currentDriver?.assignedVehicle.trim().replaceAll(RegExp(r'[\s\-]'), '').toUpperCase() ?? '';
+    final tripVeh = newTrip.assignedVehicle.trim().replaceAll(RegExp(r'[\s\-]'), '').toUpperCase();
+    final tripDrv = newTrip.assignedDriver.trim().toLowerCase();
+
+    if (!isDriver || (isDriver && (currentDriverName == tripDrv || currentDriverVeh == tripVeh))) {
+      SafetyNotificationService.notifyDriverNewTrip(
+        driverName: newTrip.assignedDriver,
+        vehicleNumber: newTrip.assignedVehicle,
+        origin: newTrip.origin,
+        destination: newTrip.destination,
+        cargoSummary: newTrip.cargoDescription,
+      );
+    }
 
     // Create immediate Operations Alert so it appears in Alerts & Driver Hub
     final alert = OperationsAlert(
@@ -4388,7 +4403,13 @@ class PlannerController extends ChangeNotifier {
     final today = DateTime(now.year, now.month, now.day);
     bool alertsChanged = false;
 
-    for (final truck in truckModels) {
+    // Filter trucks: If logged in as driver, ONLY check compliance for this driver's assigned vehicle!
+    final activeVehicle = currentDriver?.assignedVehicle.trim().toUpperCase() ?? '';
+    final targetTrucks = isDriver && activeVehicle.isNotEmpty
+        ? truckModels.where((t) => t.code.trim().toUpperCase() == activeVehicle).toList()
+        : truckModels;
+
+    for (final truck in targetTrucks) {
       final docs = [
         ('Insurance', truck.insuranceExpiry),
         ('Fitness Certificate', truck.fitnessExpiry),

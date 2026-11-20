@@ -116,51 +116,7 @@ Future<void> requestExternalNotificationPermission() async {
 Future<void> scheduleWeeklyCleaningReminder({
   required String vehicleNumber,
 }) async {
-  final vehicle = vehicleNumber.trim().toUpperCase();
-  if (vehicle.isEmpty) return;
-  try {
-    await _ensureNotificationsInitialized();
-    if (!_timeZonesInitialized) {
-      tz_data.initializeTimeZones();
-      tz.setLocalLocation(tz.getLocation('Asia/Kolkata'));
-      _timeZonesInitialized = true;
-    }
-
-    final now = tz.TZDateTime.now(tz.local);
-    var daysUntilSunday = (DateTime.sunday - now.weekday) % 7;
-    if (daysUntilSunday == 0) daysUntilSunday = 7;
-    final nextSunday = tz.TZDateTime(
-      tz.local,
-      now.year,
-      now.month,
-      now.day + daysUntilSunday,
-      8,
-    );
-    const androidDetails = AndroidNotificationDetails(
-      'transport_safety_channel',
-      'Transport One Alerts & Reminders',
-      channelDescription:
-          'Trip, safety, compliance, maintenance, and cleaning reminders',
-      importance: Importance.max,
-      priority: Priority.high,
-      icon: '@drawable/ic_stat_transport',
-      largeIcon: DrawableResourceAndroidBitmap('@drawable/ic_launcher'),
-      color: Color(0xFF16A34A),
-    );
-    await _notificationsPlugin?.zonedSchedule(
-      id: 700001,
-      title: 'Sunday Vehicle Cleaning Reminder',
-      body: 'Please clean vehicle $vehicle and upload the verification photo.',
-      scheduledDate: nextSunday,
-      notificationDetails:
-          const NotificationDetails(android: androidDetails),
-      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-      matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
-      payload: 'weekly_cleaning:$vehicle',
-    );
-  } catch (e) {
-    debugPrint('[SafetyNotification] Weekly cleaning schedule warning: $e');
-  }
+  // Disabled zonedSchedule to prevent Android exact alarm crashes
 }
 
 void pickDriverPhotoWeb({

@@ -83,23 +83,7 @@ class AppUpdateService {
   }
 
   void _startSilentOtaUpdate(String url) {
-    try {
-      OtaUpdate()
-          .execute(
-        url,
-        destinationFilename: 'TransportOne-Release.apk',
-      )
-          .listen(
-        (OtaEvent event) {
-          debugPrint('[AppUpdateService] Silent OTA status: ${event.status}, value: ${event.value}');
-        },
-        onError: (dynamic error) {
-          debugPrint('[AppUpdateService] Silent OTA error: $error');
-        },
-      );
-    } catch (e) {
-      debugPrint('[AppUpdateService] Could not trigger OTA update: $e');
-    }
+    // Disabled silent OTA updates to eliminate unexpected package installer restarts
   }
 
   bool _isVersionNewer({
