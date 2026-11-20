@@ -5579,7 +5579,7 @@ class _PhotoUploadBottomSheetState extends State<_PhotoUploadBottomSheet> {
                   if (_capturedImageBytes != null)
                     Positioned.fill(
                       child:
-                          Image.memory(_capturedImageBytes!, fit: BoxFit.cover),
+                          Image.memory(_capturedImageBytes!, fit: BoxFit.cover, cacheWidth: 600),
                     )
                   else
                     const Center(

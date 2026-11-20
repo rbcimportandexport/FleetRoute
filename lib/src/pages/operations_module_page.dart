@@ -450,6 +450,8 @@ Widget _buildRecordBase64Image(String dataUri) {
       width: 40,
       height: 40,
       fit: BoxFit.cover,
+      cacheWidth: 80,
+      cacheHeight: 80,
       errorBuilder: (_, __, ___) => const Icon(
         Icons.person_rounded,
         size: 20,

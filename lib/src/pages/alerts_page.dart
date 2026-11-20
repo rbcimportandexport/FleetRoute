@@ -86,6 +86,7 @@ class _AlertsPageState extends State<AlertsPage> {
         width: width,
         height: height,
         fit: fit,
+        cacheWidth: width != null && width.isFinite ? (width * 2).toInt().clamp(80, 800) : 300,
         errorBuilder: (context, error, stackTrace) => Container(
           width: width,
           height: height,
@@ -2061,6 +2062,8 @@ class _AddAlertDialogState extends State<AddAlertDialog> {
         width: 68,
         height: 68,
         fit: BoxFit.cover,
+        cacheWidth: 140,
+        cacheHeight: 140,
         errorBuilder: (_, __, ___) => Container(
           width: 68,
           height: 68,
