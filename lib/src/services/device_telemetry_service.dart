@@ -16,7 +16,7 @@ class DeviceTelemetryService {
   Stream<Map<String, dynamic>>? _batteryStream;
 
   /// Real-time stream of hardware battery updates (triggers immediately when charger is plugged/unplugged
-  /// or when battery percentage changes).
+  /// or when battery percentage changes). Deduplicated to prevent UI / network thrashing.
   Stream<Map<String, dynamic>> get batteryStream {
     if (kIsWeb) return const Stream.empty();
     _batteryStream ??= _streamChannel
@@ -32,7 +32,10 @@ class DeviceTelemetryService {
           }
           return {'batteryLevel': -1, 'isCharging': false};
         })
-        .where((data) => (data['batteryLevel'] as int) >= 0);
+        .where((data) => (data['batteryLevel'] as int) >= 0)
+        .distinct((prev, curr) =>
+            prev['batteryLevel'] == curr['batteryLevel'] &&
+            prev['isCharging'] == curr['isCharging']);
     return _batteryStream!;
   }
 

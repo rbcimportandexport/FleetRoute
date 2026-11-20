@@ -37,6 +37,7 @@ class MapWorkspace extends StatefulWidget {
 class _MapWorkspaceState extends State<MapWorkspace> {
   static const _india = LatLng(22.6, 79.0);
   final MapController _mapController = MapController();
+  final TileProvider _tileProvider = NetworkTileProvider();
   gm.GoogleMapController? _googleMapController;
   gm.CameraPosition? _lastGoogleCameraPosition;
   final GlobalKey _mapViewKey = GlobalKey();
@@ -4891,7 +4892,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                       fallbackUrl: MapTileService.fallbackTileUrl,
                       maxNativeZoom: 18,
                       maxZoom: 21.0,
-                      tileProvider: NetworkTileProvider(),
+                      tileProvider: _tileProvider,
                       userAgentPackageName: MapTileService.userAgent,
                       errorTileCallback: (tile, error, stackTrace) =>
                           _handleMapTileError(),

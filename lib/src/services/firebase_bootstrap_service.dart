@@ -1,5 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../firebase_options.dart';
@@ -41,6 +42,14 @@ class FirebaseBootstrapService {
       // while keeping each tab independent.
       if (kIsWeb) {
         await FirebaseAuth.instance.setPersistence(Persistence.SESSION);
+      }
+      try {
+        FirebaseFirestore.instance.settings = const Settings(
+          persistenceEnabled: true,
+          cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+        );
+      } catch (settingsError) {
+        debugPrint('[FirebaseBootstrap] Firestore offline persistence: $settingsError');
       }
       _initialized = true;
       _initializationError = null;

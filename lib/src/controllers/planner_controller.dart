@@ -1897,54 +1897,84 @@ class PlannerController extends ChangeNotifier {
       return;
     }
 
-    Future<void> publish(Position position) async {
-      final previous = _lastPublishedDriverPosition;
-      final reportedSpeed = (position.speed * 3.6).clamp(0.0, 220.0);
-      var movedMeters = 0.0;
-      var calculatedSpeed = 0.0;
-      if (previous != null) {
-        movedMeters = Geolocator.distanceBetween(
-          previous.latitude,
-          previous.longitude,
-          position.latitude,
-          position.longitude,
-        );
-        final elapsedSeconds = position.timestamp
-                .difference(previous.timestamp)
-                .inMilliseconds
-                .abs() /
-            1000.0;
-        if (elapsedSeconds > 0 && elapsedSeconds <= 120) {
-          calculatedSpeed = (movedMeters / elapsedSeconds) * 3.6;
-        }
-      }
-      final hasRealMovement = previous != null &&
-          movedMeters >= 8.0 &&
-          (reportedSpeed >= 3.0 || calculatedSpeed >= 3.0);
-      final speed = hasRealMovement
-          ? math.max(reportedSpeed, calculatedSpeed).clamp(0.0, 220.0)
-          : 0.0;
-      _lastPublishedDriverPosition = position;
+    bool isPublishing = false;
+    DateTime? lastPublishTime;
 
-      // Publish live telemetry (GPS + Battery) to Firestore fleet_telemetry
-      final synced = await FirebaseBackendService.instance.syncVehicleTelemetry(
-        vehicleCode: vehicleCode,
-        latitude: position.latitude,
-        longitude: position.longitude,
-        speed: speed,
-        isIgnitionOn: hasRealMovement,
-        driverId: FirebaseBackendService.instance.currentEmail ?? driver.email,
-        driverName: driver.name,
-      );
-      // Immediately trigger battery telemetry sync so battery % and charging status stay fresh
-      unawaited(syncDriverPhoneBattery());
-      if (!synced) {
-        throw StateError(FirebaseBackendService.instance.lastWriteError ??
-            'Firebase location write failed');
+    Future<void> publish(Position position) async {
+      if (isPublishing) return;
+      final now = DateTime.now();
+      if (lastPublishTime != null &&
+          now.difference(lastPublishTime!).inMilliseconds < 1500) {
+        return; // Throttle: at most one upload every 1.5s
       }
-      lastGpsSyncError = null;
-      lastGpsSyncTime = DateTime.now();
-      notifyListeners();
+      isPublishing = true;
+      try {
+        final previous = _lastPublishedDriverPosition;
+        final reportedSpeed = (position.speed * 3.6).clamp(0.0, 220.0);
+        var movedMeters = 0.0;
+        var calculatedSpeed = 0.0;
+        if (previous != null) {
+          movedMeters = Geolocator.distanceBetween(
+            previous.latitude,
+            previous.longitude,
+            position.latitude,
+            position.longitude,
+          );
+          final elapsedSeconds = position.timestamp
+                  .difference(previous.timestamp)
+                  .inMilliseconds
+                  .abs() /
+              1000.0;
+          if (elapsedSeconds > 0 && elapsedSeconds <= 120) {
+            calculatedSpeed = (movedMeters / elapsedSeconds) * 3.6;
+          }
+        }
+        final hasRealMovement = previous != null &&
+            movedMeters >= 8.0 &&
+            (reportedSpeed >= 3.0 || calculatedSpeed >= 3.0);
+        final speed = hasRealMovement
+            ? math.max(reportedSpeed, calculatedSpeed).clamp(0.0, 220.0)
+            : 0.0;
+        _lastPublishedDriverPosition = position;
+        lastPublishTime = now;
+
+        final idx = truckModels.indexWhere(
+            (t) => t.code.trim().toUpperCase() == vehicleCode);
+        final currentTruck = idx >= 0 ? truckModels[idx] : null;
+
+        // Publish live telemetry (GPS + Battery in ONE atomic operation)
+        await FirebaseBackendService.instance.syncVehicleTelemetry(
+          vehicleCode: vehicleCode,
+          latitude: position.latitude,
+          longitude: position.longitude,
+          speed: speed,
+          isIgnitionOn: hasRealMovement,
+          driverId: FirebaseBackendService.instance.currentEmail ?? driver.email,
+          driverName: driver.name,
+          phoneBatteryLevel: currentTruck?.phoneBatteryLevel,
+          isPhoneCharging: currentTruck?.isPhoneCharging ?? false,
+        );
+
+        if (idx >= 0) {
+          truckModels[idx] = truckModels[idx].copyWith(
+            currentLat: position.latitude,
+            currentLng: position.longitude,
+            currentSpeed: speed,
+            isIgnitionOn: hasRealMovement,
+            lastGpsUpdate: now.toIso8601String(),
+            hasValidGpsFix: true,
+            isDemoTelemetry: false,
+          );
+        }
+
+        lastGpsSyncError = null;
+        lastGpsSyncTime = now;
+        notifyListeners();
+      } catch (e) {
+        debugPrint('[PlannerController] publish telemetry error: $e');
+      } finally {
+        isPublishing = false;
+      }
     }
 
     try {
@@ -1979,13 +2009,10 @@ class PlannerController extends ChangeNotifier {
     _foregroundLocationSubscription = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
         accuracy: LocationAccuracy.high,
-        distanceFilter: 0,
+        distanceFilter: 3,
       ),
     ).listen((position) {
-      unawaited(publish(position).catchError((Object error) {
-        lastGpsSyncError = 'Live location upload failed: $error';
-        notifyListeners();
-      }));
+      unawaited(publish(position));
     }, onError: (Object error) {
       lastGpsSyncError = 'Driver mobile GPS error: $error';
       notifyListeners();
@@ -2028,7 +2055,12 @@ class PlannerController extends ChangeNotifier {
           final idx = truckModels.indexWhere(
               (t) => t.code.trim().toUpperCase() == vehicleCode);
           if (idx >= 0) {
-            truckModels[idx] = truckModels[idx].copyWith(
+            final t = truckModels[idx];
+            // Deduplicate: if battery % and charging state haven't changed, ignore!
+            if (t.phoneBatteryLevel == level && t.isPhoneCharging == isCharging) {
+              return;
+            }
+            truckModels[idx] = t.copyWith(
               phoneBatteryLevel: level,
               isPhoneCharging: isCharging,
             );
@@ -2045,7 +2077,7 @@ class PlannerController extends ChangeNotifier {
       debugPrint('[PlannerController] native batteryStream error: $e');
     });
 
-    _batteryPeriodicTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+    _batteryPeriodicTimer = Timer.periodic(const Duration(seconds: 30), (_) {
       if (!isDriver) return;
       unawaited(syncDriverPhoneBattery());
     });
@@ -2070,7 +2102,12 @@ class PlannerController extends ChangeNotifier {
         final idx = truckModels.indexWhere(
             (t) => t.code.trim().toUpperCase() == vehicleCode);
         if (idx >= 0) {
-          truckModels[idx] = truckModels[idx].copyWith(
+          final t = truckModels[idx];
+          // Deduplicate: ignore if identical
+          if (t.phoneBatteryLevel == level && t.isPhoneCharging == isCharging) {
+            return;
+          }
+          truckModels[idx] = t.copyWith(
             phoneBatteryLevel: level,
             isPhoneCharging: isCharging,
           );
@@ -2128,23 +2165,55 @@ class PlannerController extends ChangeNotifier {
       // Battery-only updates must NOT make isCharging true if GPS is stale.
       final isCharging = (isFresh && hasGpsCoords) ? rawCharging : false;
 
-      // Update battery/charging even if lat/lng are unchanged or null.
-      // lastGpsUpdate is ONLY refreshed when real GPS coordinates are present.
-      truckModels[index] = truckModels[index].copyWith(
-        currentLat: hasGpsCoords ? lat.toDouble() : truckModels[index].currentLat,
-        currentLng: hasGpsCoords ? lng.toDouble() : truckModels[index].currentLng,
-        currentSpeed: (data['speed'] as num?)?.toDouble() ?? truckModels[index].currentSpeed,
-        isIgnitionOn: data.containsKey('isIgnitionOn') ? (data['isIgnitionOn'] == true) : truckModels[index].isIgnitionOn,
-        phoneBatteryLevel: phoneBattery ?? truckModels[index].phoneBatteryLevel,
-        isPhoneCharging: data.containsKey('isPhoneCharging') ? isCharging : false,
-        // Only advance GPS timestamp when real coordinates were received.
-        lastGpsUpdate: (hasGpsCoords && rawLastUpdate != null)
-            ? rawLastUpdate
-            : truckModels[index].lastGpsUpdate,
-        hasValidGpsFix: hasGpsCoords ? true : truckModels[index].hasValidGpsFix,
-        isDemoTelemetry: false,
-      );
-      changed = true;
+      final old = truckModels[index];
+      final newLat = hasGpsCoords ? lat.toDouble() : old.currentLat;
+      final newLng = hasGpsCoords ? lng.toDouble() : old.currentLng;
+      final newSpeed = (data['speed'] as num?)?.toDouble() ?? old.currentSpeed;
+      final newIgnition = data.containsKey('isIgnitionOn')
+          ? (data['isIgnitionOn'] == true)
+          : old.isIgnitionOn;
+      final newBattery = phoneBattery ?? old.phoneBatteryLevel;
+      final newCharging =
+          data.containsKey('isPhoneCharging') ? isCharging : false;
+      final newLastGps = (hasGpsCoords && rawLastUpdate != null)
+          ? rawLastUpdate
+          : old.lastGpsUpdate;
+      final newHasFix = hasGpsCoords ? true : old.hasValidGpsFix;
+
+      // Precision comparison: only mark changed if values truly changed
+      final latDiff = (old.currentLat == null && newLat != null) ||
+          (old.currentLat != null && newLat == null) ||
+          (old.currentLat != null &&
+              newLat != null &&
+              (old.currentLat! - newLat).abs() > 0.00005);
+      final lngDiff = (old.currentLng == null && newLng != null) ||
+          (old.currentLng != null && newLng == null) ||
+          (old.currentLng != null &&
+              newLng != null &&
+              (old.currentLng! - newLng).abs() > 0.00005);
+      final speedDiff = (old.currentSpeed - newSpeed).abs() > 0.8;
+
+      if (latDiff ||
+          lngDiff ||
+          speedDiff ||
+          old.isIgnitionOn != newIgnition ||
+          old.phoneBatteryLevel != newBattery ||
+          old.isPhoneCharging != newCharging ||
+          old.lastGpsUpdate != newLastGps ||
+          old.hasValidGpsFix != newHasFix) {
+        truckModels[index] = old.copyWith(
+          currentLat: newLat,
+          currentLng: newLng,
+          currentSpeed: newSpeed,
+          isIgnitionOn: newIgnition,
+          phoneBatteryLevel: newBattery,
+          isPhoneCharging: newCharging,
+          lastGpsUpdate: newLastGps,
+          hasValidGpsFix: newHasFix,
+          isDemoTelemetry: false,
+        );
+        changed = true;
+      }
     }
     if (changed) {
       lastGpsSyncTime = DateTime.now();

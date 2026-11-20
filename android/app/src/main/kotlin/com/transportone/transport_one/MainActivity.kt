@@ -57,15 +57,29 @@ class MainActivity : FlutterActivity() {
 
         batteryEventChannel = EventChannel(flutterEngine.dartExecutor.binaryMessenger, BATTERY_STREAM_CHANNEL)
         batteryEventChannel?.setStreamHandler(object : EventChannel.StreamHandler {
+            private var lastPct: Int = -999
+            private var lastCharging: Boolean? = null
+
             override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
                 if (events == null) return
                 // Emit current status immediately on listen
-                events.success(getBatteryInfo())
+                val initial = getBatteryInfo()
+                lastPct = (initial["batteryLevel"] as? Int) ?: -1
+                lastCharging = initial["isCharging"] as? Boolean
+                events.success(initial)
 
                 batteryReceiver = object : BroadcastReceiver() {
                     override fun onReceive(context: Context?, intent: Intent?) {
                         try {
-                            events.success(getBatteryInfo())
+                            val info = getBatteryInfo()
+                            val pct = (info["batteryLevel"] as? Int) ?: -1
+                            val charging = info["isCharging"] as? Boolean
+                            // Deduplicate: only forward to Flutter if pct or charging state changed!
+                            if (pct != lastPct || charging != lastCharging) {
+                                lastPct = pct
+                                lastCharging = charging
+                                events.success(info)
+                            }
                         } catch (_: Exception) {}
                     }
                 }

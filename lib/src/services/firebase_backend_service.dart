@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
@@ -53,6 +54,9 @@ class FirebaseBackendService {
         rawDocumentId.trim().replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
     if (documentId.isEmpty) return false;
     try {
+      final isTelemetry = collection == 'fleet_telemetry';
+      final timeoutDuration =
+          isTelemetry ? const Duration(seconds: 5) : const Duration(seconds: 12);
       await FirebaseFirestore.instance
           .collection(collection)
           .doc(documentId)
@@ -63,7 +67,12 @@ class FirebaseBackendService {
           'updatedAt': FieldValue.serverTimestamp(),
         },
         SetOptions(merge: true),
-      ).timeout(const Duration(seconds: 12));
+      ).timeout(timeoutDuration);
+      return true;
+    } on TimeoutException {
+      // Offline / high-latency: Firestore offline cache has saved the write locally.
+      // Mark as succeeded so the app stays smooth and syncs automatically when connection restores.
+      debugPrint('[FirebaseSync] $collection/$documentId queued in offline cache (timeout)');
       return true;
     } on FirebaseException catch (error) {
       debugPrint('[FirebaseSync] $collection/${error.code}: ${error.message}');
