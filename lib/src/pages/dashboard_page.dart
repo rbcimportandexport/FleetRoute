@@ -49,8 +49,8 @@ class _DashboardPageState extends State<DashboardPage>
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
 
-    // Update time and relative time strings periodically
-    _timeUpdateTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+    // Update time and relative time strings periodically (60s interval to prevent continuous Chrome jank/lag)
+    _timeUpdateTimer = Timer.periodic(const Duration(seconds: 60), (_) {
       if (mounted) {
         setState(() {
           _currentTime = DateTime.now();
