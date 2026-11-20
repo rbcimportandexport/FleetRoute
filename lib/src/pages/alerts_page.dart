@@ -564,106 +564,207 @@ class _AlertsPageState extends State<AlertsPage> {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
+      child: LayoutBuilder(
+        builder: (context, boxConstraints) {
+          final isNarrow = boxConstraints.maxWidth < 450;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFEF2F2),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFFECACA)),
-                ),
-                child: const Icon(
-                  Icons.notifications_active_rounded,
-                  color: Color(0xFFDC2626),
-                  size: 22,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              if (isNarrow) ...[
+                Row(
                   children: [
-                    Row(
-                      children: [
-                        const Text(
-                          'Alerts & Notifications',
-                          style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.navy,
-                            letterSpacing: -0.3,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 7, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: unreadCount > 0
-                                ? const Color(0xFFFEF2F2)
-                                : const Color(0xFFF1F5F9),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: unreadCount > 0
-                                  ? const Color(0xFFFECACA)
-                                  : const Color(0xFFCBD5E1),
-                            ),
-                          ),
-                          child: Text(
-                            '$totalCount Total',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w800,
-                              color: unreadCount > 0
-                                  ? const Color(0xFFDC2626)
-                                  : AppColors.slate,
-                            ),
-                          ),
-                        ),
-                      ],
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF2F2),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFFECACA)),
+                      ),
+                      child: const Icon(
+                        Icons.notifications_active_rounded,
+                        color: Color(0xFFDC2626),
+                        size: 20,
+                      ),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      unreadCount > 0
-                          ? '$unreadCount new unread alert${unreadCount > 1 ? 's' : ''}'
-                          : 'All notifications caught up',
-                      style: TextStyle(
-                        fontSize: 11.5,
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Alerts & Notifications',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.navy,
+                          letterSpacing: -0.3,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(
                         color: unreadCount > 0
-                            ? const Color(0xFFDC2626)
-                            : AppColors.slate,
-                        fontWeight:
-                            unreadCount > 0 ? FontWeight.w600 : FontWeight.w400,
+                            ? const Color(0xFFFEF2F2)
+                            : const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: unreadCount > 0
+                              ? const Color(0xFFFECACA)
+                              : const Color(0xFFCBD5E1),
+                        ),
+                      ),
+                      child: Text(
+                        '$totalCount Total',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          color: unreadCount > 0
+                              ? const Color(0xFFDC2626)
+                              : AppColors.slate,
+                        ),
                       ),
                     ),
                   ],
                 ),
-              ),
-              FilledButton.icon(
-                onPressed: () => _addAlert(
-                  initialVehicle: _currentVehicleCode,
-                  initialLocation: widget.controller.origin,
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        unreadCount > 0
+                            ? '$unreadCount new unread alert${unreadCount > 1 ? 's' : ''}'
+                            : 'All notifications caught up',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: unreadCount > 0
+                              ? const Color(0xFFDC2626)
+                              : AppColors.slate,
+                          fontWeight:
+                              unreadCount > 0 ? FontWeight.w600 : FontWeight.w400,
+                        ),
+                      ),
+                    ),
+                    FilledButton.icon(
+                      onPressed: () => _addAlert(
+                        initialVehicle: _currentVehicleCode,
+                        initialLocation: widget.controller.origin,
+                      ),
+                      icon: const Icon(Icons.add_rounded, size: 15),
+                      label: const Text(
+                        'Add Alert',
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+                      ),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                icon: const Icon(Icons.add_rounded, size: 16),
-                label: const Text(
-                  'Add Alert',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+              ] else ...[
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF2F2),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFFECACA)),
+                      ),
+                      child: const Icon(
+                        Icons.notifications_active_rounded,
+                        color: Color(0xFFDC2626),
+                        size: 22,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Text(
+                                'Alerts & Notifications',
+                                style: TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.navy,
+                                  letterSpacing: -0.3,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 7, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: unreadCount > 0
+                                      ? const Color(0xFFFEF2F2)
+                                      : const Color(0xFFF1F5F9),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: unreadCount > 0
+                                        ? const Color(0xFFFECACA)
+                                        : const Color(0xFFCBD5E1),
+                                  ),
+                                ),
+                                child: Text(
+                                  '$totalCount Total',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                    color: unreadCount > 0
+                                        ? const Color(0xFFDC2626)
+                                        : AppColors.slate,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            unreadCount > 0
+                                ? '$unreadCount new unread alert${unreadCount > 1 ? 's' : ''}'
+                                : 'All notifications caught up',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              color: unreadCount > 0
+                                  ? const Color(0xFFDC2626)
+                                  : AppColors.slate,
+                              fontWeight:
+                                  unreadCount > 0 ? FontWeight.w600 : FontWeight.w400,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    FilledButton.icon(
+                      onPressed: () => _addAlert(
+                        initialVehicle: _currentVehicleCode,
+                        initialLocation: widget.controller.origin,
+                      ),
+                      icon: const Icon(Icons.add_rounded, size: 16),
+                      label: const Text(
+                        'Add Alert',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                      ),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-              ),
-            ],
-          ),
+              ],
           if (totalCount > 0) ...[
             const SizedBox(height: 10),
             Align(
@@ -717,8 +818,10 @@ class _AlertsPageState extends State<AlertsPage> {
             ),
           ],
         ],
-      ),
-    );
+      );
+    },
+  ),
+);
   }
 
   Widget _buildFilterRow() {

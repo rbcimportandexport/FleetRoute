@@ -90,11 +90,17 @@ void main() {
     );
 
     await tester.tap(find.byTooltip('Seatbelt Photos'));
-    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
 
     expect(find.text('Admin (All Drivers)'), findsNothing);
     expect(find.text('Driver Account'), findsOneWidget);
-    expect(tester.takeException(), isNull);
+    final exception = tester.takeException();
+    if (exception != null) {
+      if (exception is FlutterError) {
+        fail('Seatbelt gallery opened with exception:\n${exception.toStringDeep()}');
+      }
+      fail('Seatbelt gallery opened with exception: $exception');
+    }
   });
 
   testWidgets(

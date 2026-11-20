@@ -807,7 +807,10 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                       ],
                     ),
                     const SizedBox(height: 3),
-                    Row(
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         Text(
                           phone.isNotEmpty ? 'Mob: $phone' : 'Fleet Active Driver',
@@ -860,7 +863,6 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                                       : const Color(0xFF334155));
 
                               return Container(
-                                margin: const EdgeInsets.only(left: 8),
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 6, vertical: 1.5),
                                 decoration: BoxDecoration(
@@ -3371,20 +3373,25 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                             ),
                           ),
                           const SizedBox(height: 4),
-                          const Row(
-                            children: [
-                              Icon(Icons.upload_file_rounded,
-                                  size: 11, color: AppColors.primary),
-                              SizedBox(width: 3),
-                              Text(
-                                'Upload Photo',
-                                style: TextStyle(
-                                  fontSize: 9.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.primary,
+                          const FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.upload_file_rounded,
+                                    size: 11, color: AppColors.primary),
+                                SizedBox(width: 3),
+                                Text(
+                                  'Upload Photo',
+                                  style: TextStyle(
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.primary,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ],
                       ),
@@ -3448,20 +3455,25 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                             ),
                           ),
                           const SizedBox(height: 4),
-                          const Row(
-                            children: [
-                              Icon(Icons.upload_file_rounded,
-                                  size: 11, color: AppColors.primary),
-                              SizedBox(width: 3),
-                              Text(
-                                'Upload Photo',
-                                style: TextStyle(
-                                  fontSize: 9.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.primary,
+                          const FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.upload_file_rounded,
+                                    size: 11, color: AppColors.primary),
+                                SizedBox(width: 3),
+                                Text(
+                                  'Upload Photo',
+                                  style: TextStyle(
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.primary,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ],
                       ),

@@ -428,16 +428,21 @@ class _SeatbeltGalleryPageState extends State<SeatbeltGalleryPage> {
             ),
             title: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text(
-                      'Seatbelt Verification Records',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                        letterSpacing: -0.2,
+                    const Flexible(
+                      child: Text(
+                        'Seatbelt Verification Records',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                          letterSpacing: -0.2,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -463,9 +468,10 @@ class _SeatbeltGalleryPageState extends State<SeatbeltGalleryPage> {
                 const Text(
                   'Driver cabin safety photos with AI detection logs',
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: 10,
                     color: Color(0xFF94A3B8),
                   ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
