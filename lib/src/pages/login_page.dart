@@ -661,6 +661,205 @@ class _LoginPageState extends State<LoginPage> {
                                     const SizedBox(height: 16),
                                   ],
 
+                                  if (!_isSignUp && !_isForgotPasswordMode) ...[
+                                    // Mode Selector Tab (WhatsApp OTP vs Password / PIN)
+                                    Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFF1F5F9),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Expanded(
+                                            child: InkWell(
+                                              onTap: () {
+                                                setState(() {
+                                                  _useOtpMode = true;
+                                                  _errorMessage = null;
+                                                  // If currently showing email or empty, fill with default mobile number
+                                                  if (_phoneController.text.contains('@') ||
+                                                      _phoneController.text.isEmpty) {
+                                                    _phoneController.text = '9157661886';
+                                                  } else {
+                                                    // Keep digits only
+                                                    final digits =
+                                                        _phoneController.text
+                                                            .replaceAll(
+                                                                RegExp(r'\D'),
+                                                                '');
+                                                    if (digits.length >= 10) {
+                                                      _phoneController.text =
+                                                          digits.substring(
+                                                              digits.length -
+                                                                  10);
+                                                    }
+                                                  }
+                                                });
+                                              },
+                                              borderRadius:
+                                                  BorderRadius.circular(9),
+                                              child: Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        vertical: 8),
+                                                decoration: BoxDecoration(
+                                                  color: _useOtpMode
+                                                      ? Colors.white
+                                                      : Colors.transparent,
+                                                  borderRadius:
+                                                      BorderRadius.circular(9),
+                                                  boxShadow: _useOtpMode
+                                                      ? const [
+                                                          BoxShadow(
+                                                            color: Color(
+                                                                0x14000000),
+                                                            blurRadius: 4,
+                                                            offset:
+                                                                Offset(0, 1),
+                                                          ),
+                                                        ]
+                                                      : null,
+                                                ),
+                                                child: Center(
+                                                  child: Row(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .center,
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
+                                                    children: [
+                                                      Icon(
+                                                        Icons
+                                                            .chat_bubble_outline_rounded,
+                                                        size: 14,
+                                                        color: _useOtpMode
+                                                            ? const Color(
+                                                                0xFF25D366)
+                                                            : const Color(
+                                                                0xFF64748B),
+                                                      ),
+                                                      const SizedBox(width: 4),
+                                                      Flexible(
+                                                        child: Text(
+                                                          AppLocalizationService
+                                                              .instance
+                                                              .tr('whatsapp_otp'),
+                                                          style: TextStyle(
+                                                            fontSize: 11.5,
+                                                            fontWeight:
+                                                                _useOtpMode
+                                                                    ? FontWeight
+                                                                        .w700
+                                                                    : FontWeight
+                                                                        .w500,
+                                                            color: _useOtpMode
+                                                                ? AppColors.navy
+                                                                : const Color(
+                                                                    0xFF64748B),
+                                                          ),
+                                                          overflow: TextOverflow
+                                                              .ellipsis,
+                                                          maxLines: 1,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          Expanded(
+                                            child: InkWell(
+                                              onTap: () {
+                                                setState(() {
+                                                  _useOtpMode = false;
+                                                  _errorMessage = null;
+                                                  // If currently showing phone number or empty, restore default email
+                                                  if (!_phoneController.text.contains('@')) {
+                                                    _phoneController.text =
+                                                        'rbcsaurabhyadav@gmail.com';
+                                                  }
+                                                  _passwordController.clear();
+                                                });
+                                              },
+                                              borderRadius:
+                                                  BorderRadius.circular(9),
+                                              child: Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        vertical: 8),
+                                                decoration: BoxDecoration(
+                                                  color: !_useOtpMode
+                                                      ? Colors.white
+                                                      : Colors.transparent,
+                                                  borderRadius:
+                                                      BorderRadius.circular(9),
+                                                  boxShadow: !_useOtpMode
+                                                      ? const [
+                                                          BoxShadow(
+                                                            color: Color(
+                                                                0x14000000),
+                                                            blurRadius: 4,
+                                                            offset:
+                                                                Offset(0, 1),
+                                                          ),
+                                                        ]
+                                                      : null,
+                                                ),
+                                                child: Center(
+                                                  child: Row(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .center,
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
+                                                    children: [
+                                                      Icon(
+                                                        Icons
+                                                            .lock_outline_rounded,
+                                                        size: 14,
+                                                        color: !_useOtpMode
+                                                            ? AppColors.blue
+                                                            : const Color(
+                                                                0xFF64748B),
+                                                      ),
+                                                      const SizedBox(width: 4),
+                                                      Flexible(
+                                                        child: Text(
+                                                          AppLocalizationService
+                                                              .instance
+                                                              .tr('password_pin'),
+                                                          style: TextStyle(
+                                                            fontSize: 11.5,
+                                                            fontWeight:
+                                                                !_useOtpMode
+                                                                    ? FontWeight
+                                                                        .w700
+                                                                    : FontWeight
+                                                                        .w500,
+                                                            color: !_useOtpMode
+                                                                ? AppColors.navy
+                                                                : const Color(
+                                                                    0xFF64748B),
+                                                          ),
+                                                          overflow: TextOverflow
+                                                              .ellipsis,
+                                                          maxLines: 1,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(height: 18),
+                                  ],
+
                                   if (!_isSignUp && _isForgotPasswordMode) ...[
                                     Container(
                                       padding: const EdgeInsets.symmetric(
@@ -1399,7 +1598,9 @@ class _LoginPageState extends State<LoginPage> {
                                                             ? 'Save New Password & Login'
                                                             : (_useOtpMode
                                                                 ? (_otpSent
-                                                                    ? 'Verify OTP'
+                                                                    ? AppLocalizationService
+                                                                        .instance
+                                                                        .tr('verify_and_sign_in')
                                                                     : AppLocalizationService
                                                                         .instance
                                                                         .tr(

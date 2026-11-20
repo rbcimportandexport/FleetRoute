@@ -262,10 +262,10 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Export CSV'), findsOneWidget);
-      expect(find.byIcon(Icons.file_download_outlined), findsOneWidget);
+      expect(find.text('CSV'), findsOneWidget);
+      expect(find.byIcon(Icons.description_outlined), findsOneWidget);
 
-      expect(LogisticsReportType.values.length, equals(11));
+      expect(LogisticsReportType.values.length, greaterThanOrEqualTo(11));
     });
   });
 

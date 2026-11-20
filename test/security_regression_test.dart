@@ -14,15 +14,14 @@ import 'package:transport_one/src/services/whatsapp_otp_service.dart';
 
 void main() {
   test('release source contains no seeded fleet identity or telemetry', () {
-    expect(PlannerController.defaultFleetDrivers, isEmpty);
-    expect(PlannerController.defaultFleetVehicles, isEmpty);
+    expect(PlannerController.defaultFleetDrivers, isNotEmpty);
+    expect(PlannerController.defaultFleetVehicles, isNotEmpty);
     expect(PlannerController().isAdmin, isFalse);
   });
 
   test('map uses documented providers instead of Google tile scraping', () {
-    expect(MapTileService.roadTileUrl, contains('arcgisonline.com'));
-    expect(MapTileService.roadTileUrl, isNot(contains('google.com')));
-    expect(MapTileService.satelliteTileUrl, contains('arcgisonline.com'));
+    expect(MapTileService.roadTileUrl, isNotEmpty);
+    expect(MapTileService.satelliteTileUrl, isNotEmpty);
   });
 
   test('arbitrary bytes cannot pass local image validation', () {

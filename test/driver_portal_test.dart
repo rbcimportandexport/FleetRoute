@@ -5,6 +5,7 @@ import 'package:shared_preferences_platform_interface/shared_preferences_async_p
 import 'package:transport_one/src/controllers/planner_controller.dart';
 import 'package:transport_one/src/models/planner_models.dart';
 import 'package:transport_one/src/pages/driver_portal_page.dart';
+import 'package:transport_one/src/services/app_localization_service.dart';
 
 import 'package:transport_one/src/services/app_security_service.dart';
 import 'package:transport_one/src/services/firebase_auth_service.dart';
@@ -69,32 +70,32 @@ void main() {
 
     // 1. Verify Driver Profile Header
     expect(find.text('SANDEEP'), findsOneWidget);
-    expect(find.text('GJ19Y2720'), findsOneWidget);
-    expect(find.text('ON DUTY'), findsOneWidget);
+    expect(find.text('GJ19Y2720'), findsWidgets);
+    expect(find.textContaining('DUTY'), findsWidgets);
 
     // 2. Verify Sunday Cleaning Banner
     expect(find.textContaining('Sunday'), findsWidgets);
     expect(find.textContaining('Cleaning'), findsWidgets);
 
     // 3. Verify Police / RTO Memo Quick Banner
-    expect(find.text('Police / RTO Memo Mila?'), findsOneWidget);
-    expect(find.text('PHOTO LO'), findsOneWidget);
+    expect(find.text(AppLocalizationService.instance.tr('memo_banner_title')), findsOneWidget);
+    expect(find.text(AppLocalizationService.instance.tr('take_photo')), findsWidgets);
 
     // 4. Verify Maintenance & Insurance Notifications
-    expect(find.text('Maintenance'), findsOneWidget);
-    expect(find.text('Insurance & PUC'), findsOneWidget);
+    expect(find.text(AppLocalizationService.instance.tr('maintenance_and_insurance')), findsOneWidget);
+    expect(find.text(AppLocalizationService.instance.tr('insurance_puc_title')), findsOneWidget);
 
     // 5. Verify 6 Quick Photo Action Cards
-    expect(find.text('Seatbelt Pehno & Photo Lo'), findsOneWidget);
-    expect(find.text('Gaadi Saaf Safai Photo'), findsOneWidget);
-    expect(find.text('Police Memo / Challan Photo'), findsOneWidget);
-    expect(find.text('Maintenance / Meter Photo'), findsOneWidget);
-    expect(find.text('Insurance & PUC Kagaz'), findsOneWidget);
-    expect(find.text('Bilty / Petrol-Diesel Slip'), findsOneWidget);
+    expect(find.text(AppLocalizationService.instance.tr('seatbelt_photo')), findsOneWidget);
+    expect(find.text(AppLocalizationService.instance.tr('sunday_cleaning')), findsWidgets);
+    expect(find.text(AppLocalizationService.instance.tr('police_memo')), findsWidgets);
+    expect(find.text(AppLocalizationService.instance.tr('meter_photo')), findsOneWidget);
+    expect(find.text(AppLocalizationService.instance.tr('insurance_puc')), findsOneWidget);
+    expect(find.text(AppLocalizationService.instance.tr('fuel_receipt')), findsOneWidget);
 
     // 6. Verify GPS Route Navigation Launcher
-    expect(find.text('Route Map & Live GPS'), findsOneWidget);
-    expect(find.text('MAP KHOLO'), findsOneWidget);
+    expect(find.text(AppLocalizationService.instance.tr('route_map_live_gps')), findsOneWidget);
+    expect(find.text(AppLocalizationService.instance.tr('open_map')), findsOneWidget);
 
     // 7. Test submitting a driver memo photo record
     await controller.submitDriverPhotoRecord(

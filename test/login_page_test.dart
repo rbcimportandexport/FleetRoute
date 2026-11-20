@@ -102,8 +102,8 @@ void main() {
     await tester.pumpAndSettle();
 
     // Tap Register link at bottom
-    await tester.ensureVisible(find.text('Naya account banana hai? Register karein'));
-    await tester.tap(find.text('Naya account banana hai? Register karein'));
+    await tester.ensureVisible(find.text('Sign up'));
+    await tester.tap(find.text('Sign up'));
     await tester.pumpAndSettle();
 
     expect(find.text('Full Name (पूरा नाम)'), findsOneWidget);

@@ -565,6 +565,10 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                           driver?.phone ?? '', isOnDuty),
                       const SizedBox(height: 14),
 
+                      // Complete registered vehicle information for this driver.
+                      _buildCompleteVehicleDetails(_activeTruck, vehicleNumber),
+                      const SizedBox(height: 14),
+
                       // 1A. Highlighted Alert: New Ride Assigned by Admin (Accept & Start Actions)
                       if (activeTrip != null &&
                           (activeTrip.status == 'assigned' ||
@@ -668,6 +672,10 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
 
                       // 7. GPS Navigation Quick Launcher (Same Green Icon Badge)
                       _buildNavigationLauncher(activeTrip),
+                      const SizedBox(height: 18),
+
+                      // 8. Recent Uploaded Photos History
+                      _buildRecentPhotosGallery(driverRecords),
                       const SizedBox(height: 18),
                     ],
                   ),

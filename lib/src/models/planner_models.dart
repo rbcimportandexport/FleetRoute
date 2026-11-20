@@ -441,6 +441,12 @@ class TruckModel {
   DateTime? get lastGpsTime => lastGpsDateTime;
 
   bool get isGpsStale {
+    // GPS is stale if:
+    // 1. No valid GPS fix has ever been confirmed, OR
+    // 2. The last GPS timestamp is missing or older than 5 minutes.
+    // Battery-only telemetry does NOT satisfy GPS freshness — hasValidGpsFix
+    // must also be true.
+    if (!hasValidGpsFix) return true;
     final dt = lastGpsDateTime;
     if (dt == null) return true;
     return DateTime.now().difference(dt) > const Duration(minutes: 5);

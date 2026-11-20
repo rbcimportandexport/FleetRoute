@@ -139,6 +139,11 @@ class FirebaseBackendService {
   }) {
     final cleanCode = vehicleCode.trim().toUpperCase();
     if (cleanCode.isEmpty) return Future<bool>.value(false);
+    // NOTE: We intentionally do NOT update 'lastUpdate' here.
+    // 'lastUpdate' is the GPS telemetry timestamp and must only be written
+    // when real GPS coordinates are present (syncVehicleTelemetry).
+    // Updating it from a battery-only push would make isGpsStale return false
+    // even when there is no actual GPS fix, causing a fake ⚡ bolt to appear.
     return _put(
         'fleet_telemetry',
         cleanCode,
@@ -146,7 +151,7 @@ class FirebaseBackendService {
           'vehicleCode': cleanCode,
           'phoneBatteryLevel': phoneBatteryLevel,
           'isPhoneCharging': isPhoneCharging,
-          'lastUpdate': FieldValue.serverTimestamp(),
+          'batteryLastUpdate': FieldValue.serverTimestamp(),
         },
         client: client);
   }

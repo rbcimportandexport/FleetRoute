@@ -2105,30 +2105,43 @@ class PlannerController extends ChangeNotifier {
           ? rawBattery.toInt()
           : int.tryParse(rawBattery?.toString() ?? '');
       
-      // Determine if telemetry timestamp is fresh. If older than 5 minutes or missing,
-      // we must NOT display a stale or fake active charging bolt (⚡).
+      // GPS timestamp: only use 'lastUpdate' field (written by syncVehicleTelemetry
+      // with real coordinates). Battery-only pushes write 'batteryLastUpdate' instead,
+      // so rawLastUpdate stays null for battery-only docs — GPS staleness is preserved.
       final rawLastUpdate = data['lastUpdate']?.toString();
-      DateTime? telemetryTime;
+      final hasGpsCoords = lat is num && lng is num;
+
+      // isFresh is only true when a REAL GPS coordinate arrived recently.
+      DateTime? gpsTelemetryTime;
       if (rawLastUpdate != null && rawLastUpdate.isNotEmpty) {
-        telemetryTime = DateTime.tryParse(rawLastUpdate);
+        gpsTelemetryTime = DateTime.tryParse(rawLastUpdate);
       }
-      final isFresh = telemetryTime != null &&
-          now.difference(telemetryTime).inMinutes.abs() <= 5;
+      // If this doc has no GPS coords at all, fall back to the existing
+      // truck's lastGpsDateTime to decide freshness (don't reset it).
+      final effectiveTelemetryTime =
+          gpsTelemetryTime ?? (hasGpsCoords ? null : truckModels[index].lastGpsDateTime);
+      final isFresh = effectiveTelemetryTime != null &&
+          now.difference(effectiveTelemetryTime).inMinutes.abs() <= 5;
 
       final rawCharging = data['isPhoneCharging'] == true;
-      // Charging is only considered actively true if the driver's telemetry is fresh
-      final isCharging = isFresh ? rawCharging : false;
+      // Charging bolt (⚡) only shown when GPS telemetry is ALSO fresh.
+      // Battery-only updates must NOT make isCharging true if GPS is stale.
+      final isCharging = (isFresh && hasGpsCoords) ? rawCharging : false;
 
-      // Update battery/charging even if lat/lng are unchanged or null
+      // Update battery/charging even if lat/lng are unchanged or null.
+      // lastGpsUpdate is ONLY refreshed when real GPS coordinates are present.
       truckModels[index] = truckModels[index].copyWith(
-        currentLat: (lat is num) ? lat.toDouble() : truckModels[index].currentLat,
-        currentLng: (lng is num) ? lng.toDouble() : truckModels[index].currentLng,
+        currentLat: hasGpsCoords ? lat.toDouble() : truckModels[index].currentLat,
+        currentLng: hasGpsCoords ? lng.toDouble() : truckModels[index].currentLng,
         currentSpeed: (data['speed'] as num?)?.toDouble() ?? truckModels[index].currentSpeed,
         isIgnitionOn: data.containsKey('isIgnitionOn') ? (data['isIgnitionOn'] == true) : truckModels[index].isIgnitionOn,
         phoneBatteryLevel: phoneBattery ?? truckModels[index].phoneBatteryLevel,
-        isPhoneCharging: data.containsKey('isPhoneCharging') ? isCharging : (isFresh && truckModels[index].isPhoneCharging),
-        lastGpsUpdate: rawLastUpdate ?? truckModels[index].lastGpsUpdate,
-        hasValidGpsFix: (lat is num && lng is num) ? true : truckModels[index].hasValidGpsFix,
+        isPhoneCharging: data.containsKey('isPhoneCharging') ? isCharging : false,
+        // Only advance GPS timestamp when real coordinates were received.
+        lastGpsUpdate: (hasGpsCoords && rawLastUpdate != null)
+            ? rawLastUpdate
+            : truckModels[index].lastGpsUpdate,
+        hasValidGpsFix: hasGpsCoords ? true : truckModels[index].hasValidGpsFix,
         isDemoTelemetry: false,
       );
       changed = true;
