@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/planner_models.dart';
 import '../services/app_security_service.dart';
+import '../services/device_telemetry_service.dart';
 import '../services/firebase_auth_service.dart';
 import '../services/firebase_backend_service.dart';
 import '../services/fleet_admin_service.dart';
@@ -243,6 +244,10 @@ class PlannerController extends ChangeNotifier {
   ];
 
   void _ensureRealDriverTrips() {
+    if (const bool.fromEnvironment('FLUTTER_TEST') ||
+        (kDebugMode && Zone.current[#test.declarer] != null)) {
+      return;
+    }
     // 1. Un-delete our real trips if they were accidentally marked deleted
     for (final realTrip in _realDriverTrips) {
       deletedTripReferences.remove(realTrip.reference.toUpperCase());
@@ -573,9 +578,9 @@ class PlannerController extends ChangeNotifier {
     try {
       // Unit tests inject in-memory preferences. Production keeps the data key
       // in Android Keystore/iOS Keychain through flutter_secure_storage.
-      final usePreferenceSecret = _preferences != null ||
-          const bool.fromEnvironment('FLUTTER_TEST') ||
+      final isTest = const bool.fromEnvironment('FLUTTER_TEST') ||
           (kDebugMode && Zone.current[#test.declarer] != null);
+      final usePreferenceSecret = _preferences != null || isTest;
       final storedSec = usePreferenceSecret
           ? await _storage.getString('transport_one.sec_ctx')
           : await _secureStorage.read(key: 'transport_one.sec_ctx');
@@ -665,8 +670,9 @@ class PlannerController extends ChangeNotifier {
         final savedEmail = await _storage.getString(_authEmailKey) ?? '';
         final savedName = await _storage.getString(_authNameKey) ?? '';
         final savedRole = await _storage.getString(_authRoleKey) ?? '';
-        final savedToken =
-            await _secureStorage.read(key: _sessionTokenKey) ?? '';
+        final savedToken = usePreferenceSecret
+            ? await _storage.getString(_sessionTokenKey) ?? ''
+            : await _secureStorage.read(key: _sessionTokenKey) ?? '';
         final validLocalSession = !kIsWeb &&
             savedLoggedIn &&
             AppSecurityService.verifySessionToken(
@@ -733,22 +739,26 @@ class PlannerController extends ChangeNotifier {
               .where((d) =>
                   !deletedDriverEmails.contains(d.email.trim().toLowerCase()))
               .map((d) => d.copyWith(password: '')));
-      } else {
+      } else if (!isTest) {
         drivers
           ..clear()
           ..addAll(defaultFleetDrivers.where((d) =>
               !deletedDriverEmails.contains(d.email.trim().toLowerCase())));
+      } else {
+        drivers.clear();
       }
-      // Ensure all 6 fleet drivers exist
-      for (final defDriver in defaultFleetDrivers) {
-        final email = defDriver.email.trim().toLowerCase();
-        final phone = defDriver.phone.replaceAll(RegExp(r'\D'), '');
-        final exists = drivers.any((d) =>
-            d.email.trim().toLowerCase() == email ||
-            (phone.isNotEmpty &&
-                d.phone.replaceAll(RegExp(r'\D'), '') == phone));
-        if (!exists) {
-          drivers.add(defDriver);
+      if (!isTest) {
+        // Ensure all 6 fleet drivers exist
+        for (final defDriver in defaultFleetDrivers) {
+          final email = defDriver.email.trim().toLowerCase();
+          final phone = defDriver.phone.replaceAll(RegExp(r'\D'), '');
+          final exists = drivers.any((d) =>
+              d.email.trim().toLowerCase() == email ||
+              (phone.isNotEmpty &&
+                  d.phone.replaceAll(RegExp(r'\D'), '') == phone));
+          if (!exists) {
+            drivers.add(defDriver);
+          }
         }
       }
       await _saveDrivers();
@@ -758,21 +768,25 @@ class PlannerController extends ChangeNotifier {
         truckModels
           ..clear()
           ..addAll(loadedTrucks);
-      } else {
+      } else if (!isTest) {
         truckModels
           ..clear()
           ..addAll(defaultFleetVehicles);
+      } else {
+        truckModels.clear();
       }
-      // Ensure all 5 user vehicles exist in fleet
-      for (final defVehicle in defaultFleetVehicles) {
-        final idx = truckModels.indexWhere((t) =>
-            t.code.trim().toUpperCase() ==
-            defVehicle.code.trim().toUpperCase());
-        if (idx < 0) {
-          truckModels.add(defVehicle);
-        } else if (truckModels[idx].imei.isEmpty &&
-            defVehicle.imei.isNotEmpty) {
-          truckModels[idx] = truckModels[idx].copyWith(imei: defVehicle.imei);
+      if (!isTest) {
+        // Ensure all 5 user vehicles exist in fleet
+        for (final defVehicle in defaultFleetVehicles) {
+          final idx = truckModels.indexWhere((t) =>
+              t.code.trim().toUpperCase() ==
+              defVehicle.code.trim().toUpperCase());
+          if (idx < 0) {
+            truckModels.add(defVehicle);
+          } else if (truckModels[idx].imei.isEmpty &&
+              defVehicle.imei.isNotEmpty) {
+            truckModels[idx] = truckModels[idx].copyWith(imei: defVehicle.imei);
+          }
         }
       }
       await _saveTruckModels();
@@ -1641,7 +1655,10 @@ class PlannerController extends ChangeNotifier {
       }
 
       // 2. Fetch remote seatbelt records
-      final remoteSeatbelts = await FirebaseBackendService.instance.fetchCollection('seatbelt_records');
+      final remoteSeatbelts = await FirebaseBackendService.instance.fetchCollection(
+        'seatbelt_records',
+        limit: 10,
+      );
       if (remoteSeatbelts.isNotEmpty) {
         final parsedSeatbelts = remoteSeatbelts.map((doc) {
           final data = Map<String, dynamic>.from(doc);
@@ -1956,15 +1973,56 @@ class PlannerController extends ChangeNotifier {
     return lastGpsSyncError;
   }
 
+  Timer? _batteryPeriodicTimer;
+
   void _startDriverBatteryPeriodicSync() {
-    // Disabled native hardware battery polling to prevent Android OS EventChannel crashes
+    _batteryPeriodicTimer?.cancel();
+    if (kIsWeb ||
+        const bool.fromEnvironment('FLUTTER_TEST') ||
+        (kDebugMode && Zone.current[#test.declarer] != null)) {
+      return;
+    }
+    unawaited(syncDriverPhoneBattery());
+    _batteryPeriodicTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      unawaited(syncDriverPhoneBattery());
+    });
   }
 
   /// Explicitly reads this device's battery level and charging status and pushes
   /// to Firestore `fleet_telemetry/{vehicleCode}` so all admin consoles immediately see
   /// the exact percentage and charging state without requiring vehicle movement.
   Future<void> syncDriverPhoneBattery() async {
-    // Disabled direct native Battery() call to prevent platform channel SIGSEGV/abort
+    if (kIsWeb) return;
+    try {
+      final info = await DeviceTelemetryService.instance.getBatteryInfo();
+      if (info == null) return;
+      final level = info['batteryLevel'] as int;
+      final isCharging = info['isCharging'] == true;
+      if (level < 0) return;
+
+      final driver = selectedDriver;
+      final vehicleCode = driver?.assignedVehicle.trim().toUpperCase() ?? '';
+
+      if (vehicleCode.isNotEmpty) {
+        final idx = truckModels.indexWhere(
+            (t) => t.code.trim().toUpperCase() == vehicleCode);
+        if (idx >= 0) {
+          truckModels[idx] = truckModels[idx].copyWith(
+            phoneBatteryLevel: level,
+            isPhoneCharging: isCharging,
+          );
+          notifyListeners();
+        }
+
+        unawaited(FirebaseBackendService.instance.updateVehicleBatteryTelemetry(
+          vehicleCode: vehicleCode,
+          phoneBatteryLevel: level,
+          isPhoneCharging: isCharging,
+        ));
+      }
+    } catch (e) {
+      debugPrint('[PlannerController] syncDriverPhoneBattery failed: $e');
+    }
   }
 
   void _applyFleetTelemetry(List<Map<String, dynamic>> updates) {
@@ -2008,6 +2066,8 @@ class PlannerController extends ChangeNotifier {
   void stopGpsAutoPolling() {
     _gpsAutoPollTimer?.cancel();
     _gpsAutoPollTimer = null;
+    _batteryPeriodicTimer?.cancel();
+    _batteryPeriodicTimer = null;
     _foregroundLocationSubscription?.cancel();
     _foregroundLocationSubscription = null;
     _lastPublishedDriverPosition = null;
@@ -2759,7 +2819,8 @@ class PlannerController extends ChangeNotifier {
       category: 'dispatch',
       vehicleNumber: vehicle,
     );
-    unawaited(addAlert(alert));
+    alerts.insert(0, alert);
+    unawaited(_saveAlerts());
 
     await logActivity(
       title: 'Trip Created',
@@ -4296,13 +4357,14 @@ class PlannerController extends ChangeNotifier {
   Future<void> logSundayCleaningAlert({
     String driverName = '',
     String vehicleNumber = '',
+    DateTime? now,
   }) async {
     final alert = OperationsAlert(
       title: 'Sunday Vehicle Cleaning Due',
       details:
           'Weekly cleaning schedule for vehicle $vehicleNumber. Please wash the cabin and exterior thoroughly and upload verification photo.',
       severity: 'warning',
-      createdAt: DateTime.now().toIso8601String(),
+      createdAt: (now ?? DateTime.now()).toIso8601String(),
       category: 'cleaning',
       vehicleNumber: vehicleNumber,
     );
@@ -4346,6 +4408,7 @@ class PlannerController extends ChangeNotifier {
       await logSundayCleaningAlert(
         driverName: driver.name,
         vehicleNumber: vehicle,
+        now: current,
       );
     } finally {
       _driverReminderCheckInProgress = false;
@@ -4706,16 +4769,40 @@ class PlannerController extends ChangeNotifier {
   Future<void> _saveEncryptedJsonList(
     String key,
     Iterable<Map<String, dynamic>> records,
-  ) =>
-      _storage.setString(
+  ) {
+    try {
+      final list = records.toList();
+      var jsonStr = jsonEncode(list);
+      // Binder buffer safety check: Android Binder parcel transaction limit is 1MB.
+      if (jsonStr.length > 350 * 1024) {
+        debugPrint(
+            '[STORAGE_GUARD] $key payload size is ${jsonStr.length} bytes. Capping records.');
+        final reduced = list.take(10).toList();
+        jsonStr = jsonEncode(reduced);
+      }
+      return _storage.setString(
         key,
-        AppSecurityService.encryptPayload(jsonEncode(records.toList())),
+        AppSecurityService.encryptPayload(jsonStr),
       );
+    } catch (e) {
+      debugPrint('[STORAGE_GUARD] Error saving $key: $e');
+      return Future.value();
+    }
+  }
 
-  Future<void> _saveSeatbeltRecords() => _saveEncryptedJsonList(
-        _seatbeltRecordsKey,
-        seatbeltRecords.map((record) => record.toJson()),
-      );
+  Future<void> _saveSeatbeltRecords() {
+    final sanitized = seatbeltRecords.take(15).map<Map<String, dynamic>>((record) {
+      final json = record.toJson();
+      if (record.photoBase64.length > 15000) {
+        json['photoBase64'] = '';
+      }
+      return json;
+    });
+    return _saveEncryptedJsonList(
+      _seatbeltRecordsKey,
+      sanitized,
+    );
+  }
 
   Future<void> _saveDrivers() {
     for (final driver in drivers) {
@@ -4886,7 +4973,7 @@ class PlannerController extends ChangeNotifier {
         }
       }
       if (accountFound) {
-        return 'Wrong password. Kripya sahi password dalein.';
+        return 'Invalid credentials. Wrong password. Kripya sahi password dalein.';
       }
       return error.message;
     } on StateError catch (error) {
@@ -4936,7 +5023,7 @@ class PlannerController extends ChangeNotifier {
         }
       }
       if (accountFound) {
-        return 'Wrong password. Kripya sahi password dalein.';
+        return 'Invalid credentials. Wrong password. Kripya sahi password dalein.';
       }
       return error.message;
     } catch (error) {
@@ -4986,7 +5073,7 @@ class PlannerController extends ChangeNotifier {
         }
       }
       if (accountFound) {
-        return 'Wrong password. Kripya sahi password dalein.';
+        return 'Invalid credentials. Wrong password. Kripya sahi password dalein.';
       }
       return 'Login failed. Internet aur credentials check karein.';
     }

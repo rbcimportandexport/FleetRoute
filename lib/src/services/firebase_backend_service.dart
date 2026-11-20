@@ -119,7 +119,7 @@ class FirebaseBackendService {
     return FirebaseFirestore.instance
         .collection('seatbelt_records')
         .orderBy('timestamp', descending: true)
-        .limit(100)
+        .limit(10)
         .snapshots()
         .map((snapshot) => snapshot.docs.map((doc) {
               final data = <String, dynamic>{'id': doc.id, ...doc.data()};

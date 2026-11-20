@@ -1,6 +1,8 @@
 package com.transportone.transport_one
 
 import android.content.Intent
+import android.content.IntentFilter
+import android.os.BatteryManager
 import android.os.Bundle
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -8,8 +10,10 @@ import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
     private val CHANNEL = "com.transportone.transport_one/location_intent"
+    private val TELEMETRY_CHANNEL = "com.transportone.transport_one/device_telemetry"
     private var initialIntentData: String? = null
     private var methodChannel: MethodChannel? = null
+    private var telemetryChannel: MethodChannel? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -27,6 +31,42 @@ class MainActivity : FlutterActivity() {
                 result.notImplemented()
             }
         }
+
+        telemetryChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, TELEMETRY_CHANNEL)
+        telemetryChannel?.setMethodCallHandler { call, result ->
+            if (call.method == "getBatteryInfo") {
+                try {
+                    val batteryInfo = getBatteryInfo()
+                    result.success(batteryInfo)
+                } catch (e: Exception) {
+                    result.error("BATTERY_ERROR", e.localizedMessage, null)
+                }
+            } else {
+                result.notImplemented()
+            }
+        }
+    }
+
+    private fun getBatteryInfo(): Map<String, Any> {
+        val intentFilter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+        val batteryStatus: Intent? = registerReceiver(null, intentFilter)
+
+        val level = batteryStatus?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
+        val scale = batteryStatus?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
+        val batteryPct = if (level >= 0 && scale > 0) {
+            (level * 100 / scale.toFloat()).toInt()
+        } else {
+            -1
+        }
+
+        val status = batteryStatus?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1
+        val isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING ||
+                status == BatteryManager.BATTERY_STATUS_FULL
+
+        return mapOf(
+            "batteryLevel" to batteryPct,
+            "isCharging" to isCharging
+        )
     }
 
     override fun onNewIntent(intent: Intent) {

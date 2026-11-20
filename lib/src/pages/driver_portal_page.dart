@@ -808,6 +808,84 @@ class _DriverPortalPageState extends State<DriverPortalPage> {
                             fontFamily: 'sans-serif',
                           ),
                         ),
+                        if (!kIsWeb) ...[
+                          Builder(
+                            builder: (context) {
+                              final vehicleKey = (_activeDriver?.assignedVehicle ?? '')
+                                  .replaceAll(RegExp(r'[\s\-]'), '')
+                                  .toUpperCase();
+                              final driverTruck = vehicleKey.isEmpty
+                                  ? null
+                                  : widget.controller.truckModels
+                                      .where((t) =>
+                                          t.code
+                                              .replaceAll(RegExp(r'[\s\-]'), '')
+                                              .toUpperCase() ==
+                                          vehicleKey)
+                                      .firstOrNull;
+                              final level = driverTruck?.phoneBatteryLevel;
+                              final isCharging = driverTruck?.isPhoneCharging ?? false;
+
+                              if (level == null) return const SizedBox.shrink();
+
+                              final isLow = level <= 20 && !isCharging;
+                              final bgColor = isCharging
+                                  ? const Color(0xFFDCFCE7)
+                                  : (isLow
+                                      ? const Color(0xFFFEE2E2)
+                                      : const Color(0xFFF1F5F9));
+                              final borderColor = isCharging
+                                  ? const Color(0xFF86EFAC)
+                                  : (isLow
+                                      ? const Color(0xFFFCA5A5)
+                                      : const Color(0xFFCBD5E1));
+                              final iconColor = isCharging
+                                  ? const Color(0xFF16A34A)
+                                  : (isLow
+                                      ? const Color(0xFFDC2626)
+                                      : const Color(0xFF2563EB));
+                              final textColor = isCharging
+                                  ? const Color(0xFF16A34A)
+                                  : (isLow
+                                      ? const Color(0xFFDC2626)
+                                      : const Color(0xFF334155));
+
+                              return Container(
+                                margin: const EdgeInsets.only(left: 8),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 1.5),
+                                decoration: BoxDecoration(
+                                  color: bgColor,
+                                  borderRadius: BorderRadius.circular(5),
+                                  border: Border.all(color: borderColor),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      isCharging
+                                          ? Icons.bolt_rounded
+                                          : (isLow
+                                              ? Icons.battery_alert_rounded
+                                              : Icons.battery_std_rounded),
+                                      size: 13,
+                                      color: iconColor,
+                                    ),
+                                    const SizedBox(width: 2),
+                                    Text(
+                                      isCharging ? '$level% (⚡)' : '$level%',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w700,
+                                        color: textColor,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                        ],
                       ],
                     ),
                   ],

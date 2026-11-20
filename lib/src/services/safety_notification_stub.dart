@@ -76,7 +76,6 @@ void triggerExternalSafetyNotification({
         importance: Importance.max,
         priority: Priority.high,
         icon: '@drawable/ic_stat_transport',
-        largeIcon: const DrawableResourceAndroidBitmap('@drawable/ic_launcher'),
         color: isRejected ? const Color(0xFFDC2626) : const Color(0xFF16A34A),
       );
       final details = NotificationDetails(android: androidDetails);
