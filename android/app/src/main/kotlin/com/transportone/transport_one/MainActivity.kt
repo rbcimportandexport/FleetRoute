@@ -110,34 +110,45 @@ class MainActivity : FlutterActivity() {
         var batteryPct = -1
         var isCharging = false
 
+        // 1. Primary check: Intent.ACTION_BATTERY_CHANGED sticky broadcast is the most accurate
+        // and instantly updated by Android Linux kernel power supply subsystem.
         try {
-            val bm = getSystemService(Context.BATTERY_SERVICE) as? BatteryManager
-            if (bm != null) {
-                batteryPct = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    isCharging = bm.isCharging
+            val intentFilter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+            val batteryStatus: Intent? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                registerReceiver(null, intentFilter, Context.RECEIVER_NOT_EXPORTED)
+            } else {
+                registerReceiver(null, intentFilter)
+            }
+
+            if (batteryStatus != null) {
+                val level = batteryStatus.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+                val scale = batteryStatus.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
+                if (level >= 0 && scale > 0) {
+                    batteryPct = (level * 100 / scale.toFloat()).toInt()
                 }
+
+                val status = batteryStatus.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
+                val plugged = batteryStatus.getIntExtra(BatteryManager.EXTRA_PLUGGED, -1)
+                val isPlugged = plugged == BatteryManager.BATTERY_PLUGGED_AC ||
+                        plugged == BatteryManager.BATTERY_PLUGGED_USB ||
+                        plugged == BatteryManager.BATTERY_PLUGGED_WIRELESS
+
+                // Only consider charging if either explicitly in charging status OR actively plugged into power source.
+                // Disconnected chargers immediately set plugged = 0 and status = DISCHARGING / NOT_CHARGING.
+                isCharging = isPlugged && (status == BatteryManager.BATTERY_STATUS_CHARGING ||
+                        status == BatteryManager.BATTERY_STATUS_FULL)
             }
         } catch (_: Exception) {}
 
-        if (batteryPct < 0 || Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+        // 2. Secondary fallback: BatteryManager service if sticky intent wasn't available
+        if (batteryPct < 0) {
             try {
-                val intentFilter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
-                val batteryStatus: Intent? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    registerReceiver(null, intentFilter, Context.RECEIVER_NOT_EXPORTED)
-                } else {
-                    registerReceiver(null, intentFilter)
-                }
-
-                if (batteryStatus != null) {
-                    val level = batteryStatus.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
-                    val scale = batteryStatus.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
-                    if (level >= 0 && scale > 0) {
-                        batteryPct = (level * 100 / scale.toFloat()).toInt()
+                val bm = getSystemService(Context.BATTERY_SERVICE) as? BatteryManager
+                if (bm != null) {
+                    batteryPct = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        isCharging = bm.isCharging
                     }
-                    val status = batteryStatus.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
-                    isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING ||
-                            status == BatteryManager.BATTERY_STATUS_FULL
                 }
             } catch (_: Exception) {}
         }
