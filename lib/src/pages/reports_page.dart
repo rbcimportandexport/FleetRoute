@@ -2057,40 +2057,45 @@ class _ReportsPageState extends State<ReportsPage> {
                               ),
                             ],
                             const SizedBox(height: 3),
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  (vehicle.phoneBatteryLevel != null && vehicle.isPhoneCharging)
-                                      ? Icons.bolt_rounded
-                                      : ((vehicle.phoneBatteryLevel ?? 100) <= 20
-                                          ? Icons.battery_alert_rounded
-                                          : Icons.battery_std_rounded),
-                                  size: 13,
-                                  color: (vehicle.phoneBatteryLevel != null && vehicle.isPhoneCharging)
-                                      ? const Color(0xFF059669)
-                                      : ((vehicle.phoneBatteryLevel ?? 100) <= 20
-                                          ? const Color(0xFFDC2626)
-                                          : const Color(0xFF2563EB)),
-                                ),
-                                const SizedBox(width: 2),
-                                Text(
-                                  vehicle.phoneBatteryLevel != null
-                                      ? (vehicle.isPhoneCharging
-                                          ? '${vehicle.phoneBatteryLevel}% ⚡ Charging'
-                                          : '${vehicle.phoneBatteryLevel}% Not Charging')
-                                      : (isOnline ? 'Phone Online' : 'Battery: Offline'),
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w700,
-                                    color: (vehicle.phoneBatteryLevel != null && vehicle.isPhoneCharging)
-                                        ? const Color(0xFF059669)
-                                        : ((vehicle.phoneBatteryLevel ?? 100) <= 20
-                                            ? const Color(0xFFDC2626)
-                                            : AppColors.slate),
-                                  ),
-                                ),
-                              ],
+                            Builder(
+                              builder: (context) {
+                                final isCharging = vehicle.isPhoneCharging && isOnline && !vehicle.isGpsStale;
+                                return Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      (vehicle.phoneBatteryLevel != null && isCharging)
+                                          ? Icons.bolt_rounded
+                                          : ((vehicle.phoneBatteryLevel ?? 100) <= 20
+                                              ? Icons.battery_alert_rounded
+                                              : Icons.battery_std_rounded),
+                                      size: 13,
+                                      color: (vehicle.phoneBatteryLevel != null && isCharging)
+                                          ? const Color(0xFF059669)
+                                          : ((vehicle.phoneBatteryLevel ?? 100) <= 20
+                                              ? const Color(0xFFDC2626)
+                                              : const Color(0xFF2563EB)),
+                                    ),
+                                    const SizedBox(width: 2),
+                                    Text(
+                                      vehicle.phoneBatteryLevel != null
+                                          ? (isCharging
+                                              ? '${vehicle.phoneBatteryLevel}% ⚡ Charging'
+                                              : '${vehicle.phoneBatteryLevel}% Not Charging')
+                                          : (isOnline ? 'Phone Online' : 'Battery: Offline'),
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w700,
+                                        color: (vehicle.phoneBatteryLevel != null && isCharging)
+                                            ? const Color(0xFF059669)
+                                            : ((vehicle.phoneBatteryLevel ?? 100) <= 20
+                                                ? const Color(0xFFDC2626)
+                                                : AppColors.slate),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
                             ),
                           ],
                         ),

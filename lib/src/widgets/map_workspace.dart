@@ -4588,55 +4588,61 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                     if (truck.phoneBatteryLevel != null) ...[
                       Container(
                           height: 24, width: 1, color: const Color(0xFFCBD5E1)),
-                      Column(
-                        children: [
-                          const Text('Phone Batt',
-                              style: TextStyle(
-                                  fontSize: 11, color: AppColors.slate)),
-                          const SizedBox(height: 2),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
+                      Builder(
+                        builder: (context) {
+                          final isOnline = _isVehicleOnline(truck);
+                          final isCharging = truck.isPhoneCharging && isOnline && !truck.isGpsStale;
+                          return Column(
                             children: [
-                              Icon(
-                                truck.isPhoneCharging
-                                    ? Icons.bolt_rounded
-                                    : (truck.phoneBatteryLevel! <= 20
-                                        ? Icons.battery_alert_rounded
-                                        : Icons.battery_std_rounded),
-                                size: 15,
-                                color: truck.isPhoneCharging
-                                    ? const Color(0xFF16A34A)
-                                    : (truck.phoneBatteryLevel! <= 20
-                                        ? const Color(0xFFDC2626)
-                                        : const Color(0xFF2563EB)),
+                              const Text('Phone Batt',
+                                  style: TextStyle(
+                                      fontSize: 11, color: AppColors.slate)),
+                              const SizedBox(height: 2),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    isCharging
+                                        ? Icons.bolt_rounded
+                                        : (truck.phoneBatteryLevel! <= 20
+                                            ? Icons.battery_alert_rounded
+                                            : Icons.battery_std_rounded),
+                                    size: 15,
+                                    color: isCharging
+                                        ? const Color(0xFF16A34A)
+                                        : (truck.phoneBatteryLevel! <= 20
+                                            ? const Color(0xFFDC2626)
+                                            : const Color(0xFF2563EB)),
+                                  ),
+                                  const SizedBox(width: 2),
+                                  Text(
+                                    '${truck.phoneBatteryLevel}%',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: truck.phoneBatteryLevel! <= 20
+                                          ? const Color(0xFFDC2626)
+                                          : const Color(0xFF1E293B),
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 2),
+                              const SizedBox(height: 1),
                               Text(
-                                '${truck.phoneBatteryLevel}%',
+                                isCharging
+                                    ? '⚡ Charging'
+                                    : 'Not Charging',
                                 style: TextStyle(
-                                  fontSize: 13,
+                                  fontSize: 9.5,
                                   fontWeight: FontWeight.w700,
-                                  color: truck.phoneBatteryLevel! <= 20
-                                      ? const Color(0xFFDC2626)
-                                      : const Color(0xFF1E293B),
+                                  color: isCharging
+                                      ? const Color(0xFF16A34A)
+                                      : AppColors.slate,
                                 ),
                               ),
                             ],
-                          ),
-                          const SizedBox(height: 1),
-                          Text(
-                            truck.isPhoneCharging
-                                ? '⚡ Charging'
-                                : 'Not Charging',
-                            style: TextStyle(
-                              fontSize: 9.5,
-                              fontWeight: FontWeight.w700,
-                              color: truck.isPhoneCharging
-                                  ? const Color(0xFF16A34A)
-                                  : AppColors.slate,
-                            ),
-                          ),
-                        ],
+                          );
+                        },
                       ),
                     ],
                   ],

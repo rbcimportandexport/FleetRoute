@@ -611,7 +611,8 @@ class _DashboardPageState extends State<DashboardPage>
                         : widget.controller.truckModels.where((t) => t.code.replaceAll(RegExp(r'[\s\-]'), '').toUpperCase() == vKey).firstOrNull;
                     if (truck != null && truck.phoneBatteryLevel != null) {
                       final bLevel = truck.phoneBatteryLevel!;
-                      final isCharging = truck.isPhoneCharging;
+                      final isOnline = widget.controller.isVehicleOnline(truck.code);
+                      final isCharging = truck.isPhoneCharging && isOnline && !truck.isGpsStale;
                       final bColor = isCharging
                           ? const Color(0xFF16A34A)
                           : (bLevel <= 20 ? const Color(0xFFDC2626) : const Color(0xFF0F766E));
