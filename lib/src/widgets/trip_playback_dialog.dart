@@ -495,7 +495,8 @@ class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
       _currentProgress = 0.0;
     }
 
-    final intervalMs = (400 / _playbackSpeed).round().clamp(40, 500);
+    // Balanced smooth interval: 100ms min to avoid flooding Android frame pipeline
+    final intervalMs = (400 / _playbackSpeed).round().clamp(100, 600);
     _playbackTimer = Timer.periodic(Duration(milliseconds: intervalMs), (timer) {
       if (!mounted) {
         timer.cancel();
@@ -508,11 +509,13 @@ class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
           _currentProgress = _currentIndex / (_timeline.length - 1);
         });
 
-        // Center map occasionally or keep vehicle in view
-        final currentPoint = _timeline[_currentIndex].position;
-        try {
-          _mapController.move(currentPoint, _mapController.camera.zoom);
-        } catch (_) {}
+        // Center map smoothly without overwhelming FlutterMap internal renderer
+        if (_currentIndex % 3 == 0) {
+          final currentPoint = _timeline[_currentIndex].position;
+          try {
+            _mapController.move(currentPoint, _mapController.camera.zoom);
+          } catch (_) {}
+        }
       } else {
         timer.cancel();
         setState(() => _isPlaying = false);
@@ -739,22 +742,6 @@ class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
                               maxZoom: 21.0,
                               userAgentPackageName: MapTileService.userAgent,
                             ),
-                            if (_mapStyle == MapViewStyle.satellite) ...[
-                              TileLayer(
-                                key: const ValueKey('playback_satellite_roads'),
-                                urlTemplate: MapTileService.satelliteRoadsTileUrl,
-                                maxNativeZoom: 18,
-                                maxZoom: 21.0,
-                                userAgentPackageName: MapTileService.userAgent,
-                              ),
-                              TileLayer(
-                                key: const ValueKey('playback_satellite_labels'),
-                                urlTemplate: MapTileService.satelliteLabelsTileUrl,
-                                maxNativeZoom: 18,
-                                maxZoom: 21.0,
-                                userAgentPackageName: MapTileService.userAgent,
-                              ),
-                            ],
 
                             // 1. Full Planned / Actual Route Polyline (grey/faded)
                             if (_routeGeometry.length >= 2)
