@@ -1,5 +1,6 @@
 package com.transportone.transport_one
 
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -8,14 +9,18 @@ import android.os.Build
 import android.os.Bundle
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
     private val CHANNEL = "com.transportone.transport_one/location_intent"
     private val TELEMETRY_CHANNEL = "com.transportone.transport_one/device_telemetry"
+    private val BATTERY_STREAM_CHANNEL = "com.transportone.transport_one/battery_stream"
     private var initialIntentData: String? = null
     private var methodChannel: MethodChannel? = null
     private var telemetryChannel: MethodChannel? = null
+    private var batteryEventChannel: EventChannel? = null
+    private var batteryReceiver: BroadcastReceiver? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -49,6 +54,56 @@ class MainActivity : FlutterActivity() {
                 result.notImplemented()
             }
         }
+
+        batteryEventChannel = EventChannel(flutterEngine.dartExecutor.binaryMessenger, BATTERY_STREAM_CHANNEL)
+        batteryEventChannel?.setStreamHandler(object : EventChannel.StreamHandler {
+            override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
+                if (events == null) return
+                // Emit current status immediately on listen
+                events.success(getBatteryInfo())
+
+                batteryReceiver = object : BroadcastReceiver() {
+                    override fun onReceive(context: Context?, intent: Intent?) {
+                        try {
+                            events.success(getBatteryInfo())
+                        } catch (_: Exception) {}
+                    }
+                }
+
+                val filter = IntentFilter().apply {
+                    addAction(Intent.ACTION_BATTERY_CHANGED)
+                    addAction(Intent.ACTION_POWER_CONNECTED)
+                    addAction(Intent.ACTION_POWER_DISCONNECTED)
+                }
+
+                try {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        registerReceiver(batteryReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+                    } else {
+                        registerReceiver(batteryReceiver, filter)
+                    }
+                } catch (_: Exception) {}
+            }
+
+            override fun onCancel(arguments: Any?) {
+                try {
+                    if (batteryReceiver != null) {
+                        unregisterReceiver(batteryReceiver)
+                        batteryReceiver = null
+                    }
+                } catch (_: Exception) {}
+            }
+        })
+    }
+
+    override fun onDestroy() {
+        try {
+            if (batteryReceiver != null) {
+                unregisterReceiver(batteryReceiver)
+                batteryReceiver = null
+            }
+        } catch (_: Exception) {}
+        super.onDestroy()
     }
 
     private fun getBatteryInfo(): Map<String, Any> {

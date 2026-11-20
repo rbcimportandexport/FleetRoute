@@ -2000,15 +2000,46 @@ class PlannerController extends ChangeNotifier {
   }
 
   Timer? _batteryPeriodicTimer;
+  StreamSubscription<Map<String, dynamic>>? _nativeBatterySub;
 
   void _startDriverBatteryPeriodicSync() {
     _batteryPeriodicTimer?.cancel();
+    _nativeBatterySub?.cancel();
     if (kIsWeb ||
         const bool.fromEnvironment('FLUTTER_TEST') ||
         (kDebugMode && Zone.current[#test.declarer] != null)) {
       return;
     }
     unawaited(syncDriverPhoneBattery());
+    // Hardware battery broadcast stream: instantly triggers when phone is plugged/unplugged
+    // or when the OS emits a battery level change event.
+    _nativeBatterySub = DeviceTelemetryService.instance.batteryStream.listen((info) {
+      final level = (info['batteryLevel'] as num?)?.toInt() ?? -1;
+      final isCharging = info['isCharging'] == true;
+      if (level >= 0) {
+        final driver = selectedDriver;
+        final vehicleCode = driver?.assignedVehicle.trim().toUpperCase() ?? '';
+        if (vehicleCode.isNotEmpty) {
+          final idx = truckModels.indexWhere(
+              (t) => t.code.trim().toUpperCase() == vehicleCode);
+          if (idx >= 0) {
+            truckModels[idx] = truckModels[idx].copyWith(
+              phoneBatteryLevel: level,
+              isPhoneCharging: isCharging,
+            );
+            notifyListeners();
+          }
+          unawaited(FirebaseBackendService.instance.updateVehicleBatteryTelemetry(
+            vehicleCode: vehicleCode,
+            phoneBatteryLevel: level,
+            isPhoneCharging: isCharging,
+          ));
+        }
+      }
+    }, onError: (e) {
+      debugPrint('[PlannerController] native batteryStream error: $e');
+    });
+
     _batteryPeriodicTimer = Timer.periodic(const Duration(seconds: 30), (_) {
       unawaited(syncDriverPhoneBattery());
     });
@@ -2094,6 +2125,8 @@ class PlannerController extends ChangeNotifier {
     _gpsAutoPollTimer = null;
     _batteryPeriodicTimer?.cancel();
     _batteryPeriodicTimer = null;
+    _nativeBatterySub?.cancel();
+    _nativeBatterySub = null;
     _foregroundLocationSubscription?.cancel();
     _foregroundLocationSubscription = null;
     _lastPublishedDriverPosition = null;
