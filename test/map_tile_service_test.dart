@@ -8,14 +8,14 @@ import 'package:transport_one/src/services/route_traffic_service.dart';
 void main() {
   group('MapTileService Tests', () {
     test('provides familiar primary and independent fallback tiles', () {
-      expect(MapTileService.roadTileUrl, contains('arcgisonline.com'));
+      expect(MapTileService.roadTileUrl, contains('google.com'));
       expect(MapTileService.roadTileUrl, contains('{z}'));
       expect(MapTileService.roadTileUrl, contains('{x}'));
       expect(MapTileService.roadTileUrl, contains('{y}'));
-      expect(MapTileService.satelliteTileUrl, contains('arcgisonline.com'));
+      expect(MapTileService.satelliteTileUrl, contains('google.com'));
       expect(
-          MapTileService.satelliteTrafficTileUrl, contains('arcgisonline.com'));
-      expect(MapTileService.trafficTileUrl, contains('arcgisonline.com'));
+          MapTileService.satelliteTrafficTileUrl, contains('google.com'));
+      expect(MapTileService.trafficTileUrl, contains('google.com'));
       expect(MapTileService.fallbackTileUrl, contains('openstreetmap.org'));
       expect(MapTileService.fallbackTileUrl, isNot(MapTileService.roadTileUrl));
 
@@ -25,7 +25,7 @@ void main() {
         subdomains: MapTileService.subdomains,
         userAgentPackageName: MapTileService.userAgent,
       );
-      expect(layer.subdomains, isEmpty);
+      expect(layer.subdomains, equals(['0', '1', '2', '3']));
     });
 
     test('getTileUrl selects correct URL according to view style and traffic',
@@ -79,7 +79,8 @@ void main() {
         () {
       expect(MapTileService.getSubdomains(streetlight: true),
           equals(['a', 'b', 'c', 'd']));
-      expect(MapTileService.getSubdomains(streetlight: false), isEmpty);
+      expect(MapTileService.getSubdomains(streetlight: false),
+          equals(['0', '1', '2', '3']));
     });
   });
 
