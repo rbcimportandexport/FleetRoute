@@ -4644,8 +4644,8 @@ class PlannerController extends ChangeNotifier {
     // safety evidence locally or in Firestore.
     seatbeltRecords.removeWhere((existing) => existing.id == record.id);
     seatbeltRecords.insert(0, record);
-    if (seatbeltRecords.length > 50) {
-      seatbeltRecords.removeRange(50, seatbeltRecords.length);
+    if (seatbeltRecords.length > 15) {
+      seatbeltRecords.removeRange(15, seatbeltRecords.length);
     }
     notifyListeners();
     // Browser storage has a small quota. A failed local write must not discard
@@ -4714,7 +4714,7 @@ class PlannerController extends ChangeNotifier {
 
   Future<void> _saveSeatbeltRecords() => _saveEncryptedJsonList(
         _seatbeltRecordsKey,
-        seatbeltRecords.map((record) => record.toJson()),
+        seatbeltRecords.take(15).map((record) => record.toJson()),
       );
 
   Future<void> _saveDrivers() {

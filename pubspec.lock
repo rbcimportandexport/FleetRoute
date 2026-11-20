@@ -41,22 +41,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.2.9"
-  battery_plus:
-    dependency: "direct main"
-    description:
-      name: battery_plus
-      sha256: "49f75523cd5461a44202d67c5e1c73b790f16a822475b6f116d50714cd64a0ab"
-      url: "https://pub.dev"
-    source: hosted
-    version: "7.1.2"
-  battery_plus_platform_interface:
-    dependency: transitive
-    description:
-      name: battery_plus_platform_interface
-      sha256: e8342c0f32de4b1dfd0223114b6785e48e579bfc398da9471c9179b907fa4910
-      url: "https://pub.dev"
-    source: hosted
-    version: "2.0.1"
   bidi:
     dependency: transitive
     description:
@@ -326,14 +310,6 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
-  flutter_compass:
-    dependency: "direct main"
-    description:
-      name: flutter_compass
-      sha256: "1b4d7e6c95a675ec8482b5c9c9ccf1ebf0ced3dbec59dce28ad609da953de850"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.8.1"
   flutter_lints:
     dependency: "direct dev"
     description:
@@ -824,14 +800,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "9.5.0"
-  ota_update:
-    dependency: "direct main"
-    description:
-      name: ota_update
-      sha256: "1f4c7c3c4f306729a6c00b84435096ce2d8b28439013f7237173acc699b2abc8"
-      url: "https://pub.dev"
-    source: hosted
-    version: "7.1.0"
   package_config:
     dependency: transitive
     description:
@@ -1032,22 +1000,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.2.0"
-  sensors_plus:
-    dependency: "direct main"
-    description:
-      name: sensors_plus
-      sha256: "50a01f66846bff68de947bd5df225c3627c923c467f758867f3916350be059ac"
-      url: "https://pub.dev"
-    source: hosted
-    version: "7.1.1"
-  sensors_plus_platform_interface:
-    dependency: transitive
-    description:
-      name: sensors_plus_platform_interface
-      sha256: "9e12a92569bf14ae04b2f086c3e087177a47e527b7666ae1bbe5f70f8450ab19"
-      url: "https://pub.dev"
-    source: hosted
-    version: "2.0.2"
   shared_preferences:
     dependency: "direct main"
     description:
@@ -1189,14 +1141,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.3.1"
-  upower:
-    dependency: transitive
-    description:
-      name: upower
-      sha256: cf042403154751180affa1d15614db7fa50234bc2373cd21c3db666c38543ebf
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.7.0"
   url_launcher:
     dependency: "direct main"
     description:

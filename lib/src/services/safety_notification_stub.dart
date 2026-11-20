@@ -2,8 +2,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:timezone/data/latest.dart' as tz_data;
-import 'package:timezone/timezone.dart' as tz;
 
 typedef PhotoPickerHandler = void Function({
   required bool useCamera,
@@ -22,7 +20,6 @@ final List<NotificationHandler> _notificationHandlers = [];
 FlutterLocalNotificationsPlugin? _notificationsPlugin;
 bool _notificationsInitialized = false;
 bool _notificationPermissionRequested = false;
-bool _timeZonesInitialized = false;
 int _nextNotificationId =
     DateTime.now().millisecondsSinceEpoch.remainder(0x7fffffff);
 
@@ -139,9 +136,9 @@ void pickDriverPhotoWeb({
       final picker = ImagePicker();
       final file = await picker.pickImage(
         source: useCamera ? ImageSource.camera : ImageSource.gallery,
-        maxWidth: 1024,
-        maxHeight: 1024,
-        imageQuality: 85,
+        maxWidth: 640,
+        maxHeight: 640,
+        imageQuality: 60,
       );
 
       if (file != null) {

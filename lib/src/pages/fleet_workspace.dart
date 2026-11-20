@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 
 import '../controllers/planner_controller.dart';
 import '../services/app_localization_service.dart';
-import '../services/app_update_service.dart';
 import '../services/incoming_intent_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/seatbelt_records_dialog.dart';

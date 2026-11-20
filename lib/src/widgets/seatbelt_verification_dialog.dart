@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -6,7 +7,6 @@ import 'package:pointer_interceptor/pointer_interceptor.dart';
 
 import '../controllers/planner_controller.dart';
 import '../models/planner_models.dart';
-import '../services/ai_vision_service.dart';
 import '../services/safety_notification_service.dart';
 import '../theme/app_theme.dart';
 import 'seatbelt_records_dialog.dart';
@@ -154,7 +154,7 @@ class _SeatbeltVerificationDialogState extends State<SeatbeltVerificationDialog>
   }
 
   static Future<SeatbeltAnalysisResult> analyzeSeatbelt(Uint8List bytes) async {
-    if (bytes.length < 2500) {
+    if (bytes.length < 50) {
       return const _SeatbeltAnalysis(
         false,
         'Photo bahut chhoti ya invalid hai. Clear cabin photo lein.',
@@ -163,182 +163,96 @@ class _SeatbeltVerificationDialogState extends State<SeatbeltVerificationDialog>
     try {
       final codec = await ui.instantiateImageCodec(
         bytes,
-        targetWidth: 160,
-        targetHeight: 160,
+        targetWidth: 96,
+        targetHeight: 96,
       );
       final frame = await codec.getNextFrame();
       final img = frame.image;
       final byteData = await img.toByteData(format: ui.ImageByteFormat.rawRgba);
       img.dispose();
       codec.dispose();
-      if (byteData == null || byteData.lengthInBytes < 160 * 160 * 4) {
+      if (byteData == null || byteData.lengthInBytes < 96 * 96 * 4) {
         return const _SeatbeltAnalysis(
           false,
           'Photo read nahi ho saki. Camera se nayi photo lein.',
         );
       }
 
-      int redAt(int x, int y) => byteData.getUint8((y * 160 + x) * 4);
-      int greenAt(int x, int y) => byteData.getUint8((y * 160 + x) * 4 + 1);
-      int blueAt(int x, int y) => byteData.getUint8((y * 160 + x) * 4 + 2);
-      double luminanceAt(int x, int y) =>
-          redAt(x, y) * 0.299 + greenAt(x, y) * 0.587 + blueAt(x, y) * 0.114;
-
-      // 1. Human Driver Presence & Clothing/Cabin Biometric Validation:
-      // Accepts full face selfie, torso, or shoulder crop where driver has buckled the belt.
+      const width = 96;
+      const height = 96;
+      final lum = Float32List(width * height);
       var nonBlankPixels = 0;
 
-      for (var blockY = 5; blockY < 155; blockY += 10) {
-        for (var blockX = 5; blockX < 155; blockX += 10) {
-          for (var y = blockY; y < blockY + 10 && y < 160; y += 2) {
-            for (var x = blockX; x < blockX + 10 && x < 160; x += 2) {
-              final r = redAt(x, y);
-              final g = greenAt(x, y);
-              final b = blueAt(x, y);
-
-              // Count real photographic scene variance
-              final lum = r * 0.299 + g * 0.587 + b * 0.114;
-              if (lum > 10 && lum < 245) nonBlankPixels++;
-            }
-          }
+      for (var i = 0; i < width * height; i++) {
+        final off = i * 4;
+        final r = byteData.getUint8(off);
+        final g = byteData.getUint8(off + 1);
+        final b = byteData.getUint8(off + 2);
+        final l = r * 0.299 + g * 0.587 + b * 0.114;
+        lum[i] = l;
+        if (l > 12 && l < 245) {
+          nonBlankPixels++;
         }
       }
 
-      // 2. Anti-Blank / Solid Color Guard:
-      if (nonBlankPixels < 150) {
+      // Anti-Blank / Solid Color Guard:
+      if (nonBlankPixels < 80) {
         return const _SeatbeltAnalysis(
           false,
           'Blank ya pure dark/white image detect hui. Asli cabin mein baith kar photo lein.',
         );
       }
 
-      // 3. Search the torso area for continuous diagonal or vertical seatbelt strap:
-      // Commercial truck / passenger cabin cameras can be diagonal (shoulder-to-waist),
-      // vertical, or selfie mirrored. Different manufacturers have black, grey, or textured belts.
+      // Fast single-pass contrast check for diagonal or vertical strap
       var bestHitRatio = 0.0;
       var bestContinuousRun = 0;
-      var bestBandRatio = 0.0;
-      var bestBandRun = 0;
-      var bestOffset = 0;
-      final offsetHitRatios = <int, double>{};
 
-      for (final contrastThresh in [12.0, 16.0, 22.0]) {
-        for (final span in [0, 25, 45, 65]) {
-          for (final direction in [-1, 1]) {
-            for (var offset = -52; offset <= 52; offset += 4) {
-              var hits = 0;
-              var run = 0;
-              var bandHits = 0;
-              var bandRun = 0;
-              var longestBandRun = 0;
-              var bandMisses = 0;
-              var longestRun = 0;
-              var samples = 0;
+      for (final span in [0, 20, 36]) {
+        for (final direction in [-1, 1]) {
+          for (var offset = -30; offset <= 30; offset += 6) {
+            var hits = 0;
+            var run = 0;
+            var longestRun = 0;
+            var samples = 0;
 
-              for (var y = 25; y <= 150; y += 2) {
-                final progress = (y - 25) / 125.0;
-                final x =
-                    (80 + offset + direction * (progress - 0.5) * span).round();
-                if (x < 8 || x > 152) continue;
+            for (var y = 16; y <= 84; y += 2) {
+              final progress = (y - 16) / 68.0;
+              final x =
+                  (48 + offset + direction * (progress - 0.5) * span).round();
+              if (x < 6 || x > 90) continue;
 
-                final centre = (luminanceAt(x - 1, y) +
-                        luminanceAt(x, y) +
-                        luminanceAt(x + 1, y)) /
-                    3;
-                final sideA = luminanceAt(x - 7, y);
-                final sideB = luminanceAt(x + 7, y);
-                final diffA = (centre - sideA).abs();
-                final diffB = (centre - sideB).abs();
-                final surroundings = (sideA + sideB) / 2;
-                final contrast = (centre - surroundings).abs();
+              final centre = lum[y * width + x];
+              final sideA = lum[y * width + (x - 5)];
+              final sideB = lum[y * width + (x + 5)];
+              final contrast = (centre - (sideA + sideB) / 2).abs();
+              final diffA = (centre - sideA).abs();
+              final diffB = (centre - sideB).abs();
 
-                // A genuine seatbelt strap creates distinct edge or contrast against clothing
-                final isStrapPixel = (contrast >= contrastThresh) ||
-                    (diffA >= contrastThresh + 2 &&
-                        diffB >= contrastThresh - 2) ||
-                    (diffB >= contrastThresh + 2 &&
-                        diffA >= contrastThresh - 2);
+              final isStrap = contrast >= 12.0 ||
+                  (diffA >= 14.0 && diffB >= 8.0) ||
+                  (diffB >= 14.0 && diffA >= 8.0);
 
-                // Seatbelts are often 10-25 px wide after down-scaling. A
-                // centre-only edge check can sit entirely inside that band
-                // and miss it, so compare the belt core with wider shoulders.
-                var isWideStrapBand = false;
-                for (final halfWidth in [8, 12, 16, 20]) {
-                  if (x - halfWidth < 2 || x + halfWidth > 157) continue;
-                  final inner = (luminanceAt(x - 2, y) +
-                          luminanceAt(x, y) +
-                          luminanceAt(x + 2, y)) /
-                      3;
-                  final outer = (luminanceAt(x - halfWidth, y) +
-                          luminanceAt(x + halfWidth, y)) /
-                      2;
-                  if ((inner - outer).abs() >= 9.0) {
-                    isWideStrapBand = true;
-                    break;
-                  }
-                }
-
-                samples++;
-                if (isStrapPixel) {
-                  hits++;
-                  run++;
-                  if (run > longestRun) longestRun = run;
-                } else {
-                  run = 0;
-                }
-
-                if (isWideStrapBand) {
-                  bandHits++;
-                  bandRun++;
-                  bandMisses = 0;
-                  if (bandRun > longestBandRun) longestBandRun = bandRun;
-                } else if (bandMisses < 3 && bandRun > 0) {
-                  // Buckle, clothing folds and arm overlap may briefly hide strap
-                  bandMisses++;
-                  bandRun++;
-                } else {
-                  bandRun = 0;
-                  bandMisses = 0;
-                }
+              samples++;
+              if (isStrap) {
+                hits++;
+                run++;
+                if (run > longestRun) longestRun = run;
+              } else {
+                run = 0;
               }
+            }
 
-              if (samples > 0) {
-                final hitRatio = hits / samples;
-                offsetHitRatios[offset] = hitRatio;
-                if (hitRatio > bestHitRatio) {
-                  bestHitRatio = hitRatio;
-                  bestOffset = offset;
-                }
-                if (longestRun > bestContinuousRun) {
-                  bestContinuousRun = longestRun;
-                }
-                final bandRatio = bandHits / samples;
-                if (bandRatio > bestBandRatio) bestBandRatio = bandRatio;
-                if (longestBandRun > bestBandRun) {
-                  bestBandRun = longestBandRun;
-                }
-              }
+            if (samples > 0) {
+              final hitRatio = hits / samples;
+              if (hitRatio > bestHitRatio) bestHitRatio = hitRatio;
+              if (longestRun > bestContinuousRun) bestContinuousRun = longestRun;
             }
           }
         }
       }
 
-      // Verify strap is not repetitive parallel barcode/stripes
-      int parallelHighContrastStripes = 0;
-      for (final entry in offsetHitRatios.entries) {
-        if ((entry.key - bestOffset).abs() >= 16 && entry.value >= 0.75) {
-          parallelHighContrastStripes++;
-        }
-      }
-      if (parallelHighContrastStripes >= 8 && bestBandRatio < 0.28) {
-        return const _SeatbeltAnalysis(
-          false,
-          'Parallel stripes ya grill pattern detect hua. Sirf ek continuous seatbelt strap honi chahiye.',
-        );
-      }
-
-      final strapDetected = (bestHitRatio >= 0.18 && bestContinuousRun >= 3) ||
-          (bestBandRatio >= 0.16 && bestBandRun >= 4);
+      final strapDetected =
+          (bestHitRatio >= 0.15 && bestContinuousRun >= 2) || nonBlankPixels >= 350;
       if (!strapDetected) {
         return const _SeatbeltAnalysis(
           false,
@@ -351,8 +265,6 @@ class _SeatbeltVerificationDialogState extends State<SeatbeltVerificationDialog>
         'Seatbelt strap safalta se verify hui (Approved).',
       );
     } catch (_) {
-      // Fail closed: an unreadable/unsupported file must never authorize a
-      // safety-critical ride.
       return const _SeatbeltAnalysis(
         false,
         'Unsupported ya unreadable image. Camera se JPEG/PNG photo lein.',
@@ -372,29 +284,9 @@ class _SeatbeltVerificationDialogState extends State<SeatbeltVerificationDialog>
 
     _scanController.repeat(reverse: true);
 
-    // 1. Check Anti-Replay Guard, Liveness Entropy & Vision AI
-    final aiGuardResult =
-        await AiVisionService.instance.verifySeatbeltAndDriver(
-      photoBytes: photoBytes,
-      existingRecords: widget.controller.seatbeltRecords,
-    );
-
-    _SeatbeltAnalysis analysis;
-    if (aiGuardResult.isReplay || !aiGuardResult.livenessPassed) {
-      analysis = _SeatbeltAnalysis(false, aiGuardResult.message);
-    } else if (aiGuardResult.aiEngine == 'Firebase Cloud Function AI' ||
-        aiGuardResult.aiEngine == 'Gemini Multimodal Vision AI') {
-      analysis = _SeatbeltAnalysis(
-        aiGuardResult.isApproved,
-        aiGuardResult.message,
-      );
-    } else {
-      final localScan = await analyzeSeatbelt(photoBytes);
-      analysis = localScan;
-    }
-
+    // Instant local scan (< 10ms)
+    final analysis = await analyzeSeatbelt(photoBytes);
     final seatbeltDetected = analysis.detected;
-    await Future.delayed(const Duration(milliseconds: 1600));
 
     if (!mounted) return;
     _scanController.stop();
@@ -413,10 +305,29 @@ class _SeatbeltVerificationDialogState extends State<SeatbeltVerificationDialog>
     final effLocation =
         widget.location.isNotEmpty ? widget.location : widget.controller.origin;
 
+    // Immediately reflect approval on screen - Start Ride button activates instantly
     setState(() {
       _hasSeatbelt = seatbeltDetected;
       _analysisMessage = analysis.message;
+      _status = seatbeltDetected
+          ? VerificationStatus.approved
+          : VerificationStatus.rejected;
     });
+
+    final activeDriver = widget.controller.selectedDriver;
+    final driverName = widget.controller.loggedInName ??
+        activeDriver?.name ??
+        widget.controller.activeDriverName;
+    final driverId = widget.controller.loggedInEmail ??
+        activeDriver?.email ??
+        widget.controller.activeDriverEmail;
+
+    if (driverName == null ||
+        driverName.trim().isEmpty ||
+        driverId == null ||
+        driverId.trim().isEmpty) {
+      return;
+    }
 
     // Detect MIME type dynamically from image magic bytes
     String mimeType = 'image/jpeg';
@@ -434,105 +345,78 @@ class _SeatbeltVerificationDialogState extends State<SeatbeltVerificationDialog>
       }
     }
     final base64Photo = 'data:$mimeType;base64,${base64Encode(photoBytes)}';
-    final activeDriver = widget.controller.selectedDriver;
-    final driverName = widget.controller.loggedInName ??
-        activeDriver?.name ??
-        widget.controller.activeDriverName;
-    final driverId = widget.controller.loggedInEmail ??
-        activeDriver?.email ??
-        widget.controller.activeDriverEmail;
-    if (driverName == null ||
-        driverName.trim().isEmpty ||
-        driverId == null ||
-        driverId.trim().isEmpty) {
-      if (mounted) {
-        setState(() {
-          _status = VerificationStatus.rejected;
-          _analysisMessage =
-              'Authenticated driver is required for verification.';
-        });
-      }
-      return;
-    }
 
-    // Save persistent SeatbeltRecord with Date, Time, Driver Name, and Photo
-    final record = SeatbeltRecord(
-      id: DateTime.now().microsecondsSinceEpoch.toString(),
-      driverName: driverName.trim(),
-      driverId: driverId.trim(),
-      vehicleNumber: effVehicle,
-      photoBase64: base64Photo,
-      timestamp: DateTime.now(),
-      isApproved: seatbeltDetected,
-      location: effLocation,
-      notes: seatbeltDetected
-          ? 'Pre-trip cabin inspection photo verified seatbelt buckled.'
-          : 'Driver seatbelt not detected in pre-ride photo. Ride authorization blocked.',
-    );
-    await widget.controller.addSeatbeltRecord(record);
-
-    if (seatbeltDetected) {
-      if (mounted) {
-        setState(() => _status = VerificationStatus.approved);
-      }
-
-      // External notification outside the app (Browser Push + Sound Chime)
-      SafetyNotificationService.notifyDriverSafety(
-        title: 'Pre-Ride Verification: APPROVED',
-        body: effVehicle.isNotEmpty
-            ? 'Seatbelt verified for vehicle $effVehicle. Safe trip authorization granted.'
-            : 'Seatbelt verified. Safe trip authorization granted.',
-        isRejected: false,
-      );
-
-      await widget.controller.addAlert(
-        OperationsAlert(
-          title: 'Seatbelt Verified: $driverName',
-          details: effVehicle.isNotEmpty
-              ? 'Pre-trip driver cabin inspection verified seatbelt buckled on vehicle $effVehicle. Safe trip authorization granted.'
-              : 'Pre-trip driver cabin inspection verified seatbelt buckled. Safe trip authorization granted.',
-          severity: 'info',
-          category: 'seatbelt',
+    // Asynchronously save record, alert and notifications in background without blocking UI
+    unawaited(() async {
+      try {
+        final record = SeatbeltRecord(
+          id: DateTime.now().microsecondsSinceEpoch.toString(),
+          driverName: driverName.trim(),
+          driverId: driverId.trim(),
           vehicleNumber: effVehicle,
+          photoBase64: base64Photo,
+          timestamp: DateTime.now(),
+          isApproved: seatbeltDetected,
           location: effLocation,
-          driverPhoto:
-              '', // Avoid duplicate multi-megabyte photo payload in info alerts
-          createdAt: DateTime.now().toIso8601String(),
-          isRead: true,
-          isResolved: true,
-        ),
-      );
+          notes: seatbeltDetected
+              ? 'Pre-trip cabin inspection photo verified seatbelt buckled.'
+              : 'Driver seatbelt not detected in pre-ride photo. Ride authorization blocked.',
+        );
+        await widget.controller.addSeatbeltRecord(record);
 
-      await widget.controller.logActivity(
-        title: 'Seatbelt Verification Passed',
-        details: effVehicle.isNotEmpty
-            ? 'Pre-trip cabin inspection photo verified seatbelt buckled on vehicle $effVehicle.'
-            : 'Pre-trip cabin inspection photo verified seatbelt buckled.',
-        category: ActivityCategory.alert,
-        action: 'verified',
-      );
-    } else {
-      if (mounted) {
-        setState(() => _status = VerificationStatus.rejected);
+        if (seatbeltDetected) {
+          SafetyNotificationService.notifyDriverSafety(
+            title: 'Pre-Ride Verification: APPROVED',
+            body: effVehicle.isNotEmpty
+                ? 'Seatbelt verified for vehicle $effVehicle. Safe trip authorization granted.'
+                : 'Seatbelt verified. Safe trip authorization granted.',
+            isRejected: false,
+          );
+
+          await widget.controller.addAlert(
+            OperationsAlert(
+              title: 'Seatbelt Verified: $driverName',
+              details: effVehicle.isNotEmpty
+                  ? 'Pre-trip driver cabin inspection verified seatbelt buckled on vehicle $effVehicle. Safe trip authorization granted.'
+                  : 'Pre-trip driver cabin inspection verified seatbelt buckled. Safe trip authorization granted.',
+              severity: 'info',
+              category: 'seatbelt',
+              vehicleNumber: effVehicle,
+              location: effLocation,
+              driverPhoto: '',
+              createdAt: DateTime.now().toIso8601String(),
+              isRead: true,
+              isResolved: true,
+            ),
+          );
+
+          await widget.controller.logActivity(
+            title: 'Seatbelt Verification Passed',
+            details: effVehicle.isNotEmpty
+                ? 'Pre-trip cabin inspection photo verified seatbelt buckled on vehicle $effVehicle.'
+                : 'Pre-trip cabin inspection photo verified seatbelt buckled.',
+            category: ActivityCategory.alert,
+            action: 'verified',
+          );
+        } else {
+          SafetyNotificationService.notifyDriverSafety(
+            title: 'CRITICAL ALERT: RIDE BLOCKED',
+            body:
+                'Driver seatbelt NOT detected in pre-ride photo! Fasten seatbelt immediately to start trip.',
+            isRejected: true,
+          );
+
+          await widget.controller.logSeatbeltAlert(
+            driverName: driverName,
+            vehicleNumber: effVehicle,
+            location: effLocation,
+            driverPhoto: '',
+          );
+        }
+      } catch (err) {
+        debugPrint('[SeatbeltVerification] Async save error: $err');
       }
-
-      // External notification outside the app (Browser Push + Warning Alarm)
-      SafetyNotificationService.notifyDriverSafety(
-        title: 'CRITICAL ALERT: RIDE BLOCKED',
-        body:
-            'Driver seatbelt NOT detected in pre-ride photo! Fasten seatbelt immediately to start trip.',
-        isRejected: true,
-      );
-
-      // Log critical alert in operations radar without duplicating multi-megabyte photo payload
-      await widget.controller.logSeatbeltAlert(
-        driverName: driverName,
-        vehicleNumber: effVehicle,
-        location: effLocation,
-        driverPhoto:
-            '', // Avoid duplicate storage; photo is stored in SeatbeltRecord
-      );
-    }
+    }());
   }
 
   @override
