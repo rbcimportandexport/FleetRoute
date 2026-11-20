@@ -1979,7 +1979,7 @@ class PlannerController extends ChangeNotifier {
     _foregroundLocationSubscription = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
         accuracy: LocationAccuracy.high,
-        distanceFilter: 5,
+        distanceFilter: 0,
       ),
     ).listen((position) {
       unawaited(publish(position).catchError((Object error) {
@@ -2045,7 +2045,7 @@ class PlannerController extends ChangeNotifier {
       debugPrint('[PlannerController] native batteryStream error: $e');
     });
 
-    _batteryPeriodicTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+    _batteryPeriodicTimer = Timer.periodic(const Duration(seconds: 10), (_) {
       if (!isDriver) return;
       unawaited(syncDriverPhoneBattery());
     });
