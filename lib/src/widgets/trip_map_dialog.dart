@@ -301,22 +301,6 @@ class _TripMapDialogState extends State<TripMapDialog> {
                 panBuffer: 1,
                 tileProvider: MapTileService.createFastTileProvider(),
               ),
-              if (_satellite) ...[
-                TileLayer(
-                  key: const ValueKey('satellite_roads_overlay'),
-                  urlTemplate: MapTileService.satelliteRoadsTileUrl,
-                  maxNativeZoom: 19,
-                  userAgentPackageName: MapTileService.userAgent,
-                  maxZoom: 19,
-                ),
-                TileLayer(
-                  key: const ValueKey('satellite_labels_overlay'),
-                  urlTemplate: MapTileService.satelliteLabelsTileUrl,
-                  maxNativeZoom: 19,
-                  userAgentPackageName: MapTileService.userAgent,
-                  maxZoom: 19,
-                ),
-              ],
               PolylineLayer(
                 polylines: [
                   if (_pickup != null && _destination != null)

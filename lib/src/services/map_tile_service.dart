@@ -1,3 +1,6 @@
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart';
+import 'package:flutter/painting.dart';
 import 'package:flutter_map/flutter_map.dart';
 
 /// Map tile endpoints used by the route planner.
@@ -9,10 +12,10 @@ class MapTileService {
   static const List<String> subdomains = ['0', '1', '2', '3'];
   static const List<String> cartoSubdomains = ['a', 'b', 'c', 'd'];
 
-  // Authentic Google Maps standard light mode street map (mt0-mt3)
   // Official Carto Voyager tile URL
   static const String cartoVoyagerTileUrl =
       'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png';
+  // Authentic Google Maps standard light mode street map (mt0-mt3)
   static const String roadTileUrl =
       'https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}';
 
@@ -53,14 +56,26 @@ class MapTileService {
 
   static const String userAgent = 'com.transportone.transport_one';
 
-  /// High-speed persistent TileProvider with browser headers for instant tile response
+  /// High-speed persistent TileProvider with browser headers for instant tile response.
+  /// Uses [DirectNetworkTileProvider] on devices/browsers for lightning-fast native image loading,
+  /// and [NetworkTileProvider] in test environments with silenced exceptions.
   static TileProvider createFastTileProvider() {
-    return NetworkTileProvider(headers: <String, String>{
+    final headers = <String, String>{
       'User-Agent':
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       'Accept':
-          'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
-    });
+          'image/webp,image/png,image/*,*/*;q=0.8',
+    };
+
+    if (!kIsWeb && Platform.environment.containsKey('FLUTTER_TEST')) {
+      return NetworkTileProvider(
+        headers: headers,
+        cachingProvider: const DisabledMapCachingProvider(),
+        silenceExceptions: true,
+      );
+    }
+
+    return DirectNetworkTileProvider(headers: headers);
   }
 
   // Provider-specific max zoom levels
@@ -101,3 +116,19 @@ class MapTileService {
     return subdomains;
   }
 }
+
+/// Direct Flutter-engine-backed Network Tile Provider.
+/// Utilizes Flutter's built-in [NetworkImage] and [PaintingBinding.instance.imageCache],
+/// bypassing isolate IPC, Completer lockups, and unneeded disk cache serialization.
+class DirectNetworkTileProvider extends TileProvider {
+  DirectNetworkTileProvider({super.headers});
+
+  @override
+  ImageProvider getImage(TileCoordinates coordinates, TileLayer options) {
+    return NetworkImage(
+      getTileUrl(coordinates, options),
+      headers: headers,
+    );
+  }
+}
+

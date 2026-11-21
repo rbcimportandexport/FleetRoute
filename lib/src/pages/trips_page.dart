@@ -1083,22 +1083,6 @@ class _TripsPageState extends State<TripsPage> {
                     panBuffer: 1,
                     tileProvider: MapTileService.createFastTileProvider(),
                   ),
-                  if (satellite) ...[
-                    fm.TileLayer(
-                      key: const ValueKey('trips_sat_roads'),
-                      urlTemplate: MapTileService.satelliteRoadsTileUrl,
-                      maxNativeZoom: 19,
-                      userAgentPackageName: MapTileService.userAgent,
-                      maxZoom: 19,
-                    ),
-                    fm.TileLayer(
-                      key: const ValueKey('trips_sat_labels'),
-                      urlTemplate: MapTileService.satelliteLabelsTileUrl,
-                      maxNativeZoom: 19,
-                      userAgentPackageName: MapTileService.userAgent,
-                      maxZoom: 19,
-                    ),
-                  ],
                   fm.PolylineLayer(
                     polylines: [
                       if (origin != null && destination != null)

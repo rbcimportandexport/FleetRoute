@@ -1038,9 +1038,8 @@ class _MapWorkspaceState extends State<MapWorkspace> {
     final battLevel = vehicle.phoneBatteryLevel;
     // Real charging bolt: ONLY display ⚡ if vehicle is online, GPS/telemetry is not stale, and isPhoneCharging is actively true.
     final isCharging = vehicle.isPhoneCharging && online && !vehicle.isGpsStale;
-    final battSnippet = battLevel != null
-        ? ' · $battLevel%${isCharging ? " ⚡" : ""}'
-        : '';
+    final battSnippet =
+        battLevel != null ? ' · $battLevel%${isCharging ? " ⚡" : ""}' : '';
     return ListTile(
       leading: Icon(Icons.person_pin_circle_rounded,
           color: online ? Colors.green : Colors.red),
@@ -1257,15 +1256,16 @@ class _MapWorkspaceState extends State<MapWorkspace> {
 
     // Prefer the vehicle's position (Protrack or Driver phone telemetry).
     final liveTruck = _selectedLiveTruck;
-    final hasVehicleFix = liveTruck != null &&
-        liveTruck.hasCoordinates &&
-        !liveTruck.isGpsStale;
+    final hasVehicleFix =
+        liveTruck != null && liveTruck.hasCoordinates && !liveTruck.isGpsStale;
     // When driver is on device, phone GPS takes absolute active precedence for instantaneous navigation!
     const mayUsePhoneGps = true;
     if (hasVehicleFix && !widget.controller.isDriver) {
       initialPos = LatLng(liveTruck.latitude!, liveTruck.longitude!);
       initialBearing = liveTruck.course;
-      initialSpeed = (liveTruck.currentSpeed < 1.0) ? 0.0 : liveTruck.currentSpeed.clamp(0.0, 180.0);
+      initialSpeed = (liveTruck.currentSpeed < 1.0)
+          ? 0.0
+          : liveTruck.currentSpeed.clamp(0.0, 180.0);
       initialNavIndex = RouteTrafficService.findClosestPointIndex(
         _routePoints,
         initialPos,
@@ -1378,7 +1378,8 @@ class _MapWorkspaceState extends State<MapWorkspace> {
         locationSettings: AndroidSettings(
           accuracy: LocationAccuracy.bestForNavigation,
           distanceFilter: 0, // Instantaneous movement tracking without wait
-          intervalDuration: const Duration(milliseconds: 250), // Ultra-fast 250ms stream
+          intervalDuration:
+              const Duration(milliseconds: 250), // Ultra-fast 250ms stream
         ),
       ).listen(
         _updateGpsLocation,
@@ -1456,7 +1457,8 @@ class _MapWorkspaceState extends State<MapWorkspace> {
         : _currentNavBearing;
     final rawSpeed = truck.currentSpeed;
     // Show real speed from 1 km/h onwards directly without jumping
-    final speed = (rawSpeed < 1.0 || truck.isGpsStale) ? 0.0 : rawSpeed.clamp(0.0, 180.0);
+    final speed =
+        (rawSpeed < 1.0 || truck.isGpsStale) ? 0.0 : rawSpeed.clamp(0.0, 180.0);
 
     setState(() {
       _usingVehicleTracker = true;
@@ -4169,7 +4171,9 @@ class _MapWorkspaceState extends State<MapWorkspace> {
 
   Future<void> _handleMapTap(LatLng point) async {
     if (_isVerifyingSeatbelt) return;
-    if (_isNavigating && !widget.controller.pinMode && _activePinMode != 'stop') {
+    if (_isNavigating &&
+        !widget.controller.pinMode &&
+        _activePinMode != 'stop') {
       return;
     }
 
@@ -4615,7 +4619,9 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                       Builder(
                         builder: (context) {
                           final isOnline = _isVehicleOnline(truck);
-                          final isCharging = truck.isPhoneCharging && isOnline && !truck.isGpsStale;
+                          final isCharging = truck.isPhoneCharging &&
+                              isOnline &&
+                              !truck.isGpsStale;
                           return Column(
                             children: [
                               const Text('Phone Batt',
@@ -4653,9 +4659,7 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                               ),
                               const SizedBox(height: 1),
                               Text(
-                                isCharging
-                                    ? '⚡ Charging'
-                                    : 'Not Charging',
+                                isCharging ? '⚡ Charging' : 'Not Charging',
                                 style: TextStyle(
                                   fontSize: 9.5,
                                   fontWeight: FontWeight.w700,
