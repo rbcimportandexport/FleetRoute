@@ -17,7 +17,8 @@ class FirebaseBackendService {
 
   bool get isConfigured => FirebaseBootstrapService.isInitialized;
 
-  String? get currentUid => FirebaseAuth.instance.currentUser?.uid ?? 'fleet_user';
+  String? get currentUid =>
+      FirebaseAuth.instance.currentUser?.uid ?? 'fleet_user';
 
   String? get currentEmail => FirebaseAuth.instance.currentUser?.email;
 
@@ -55,8 +56,9 @@ class FirebaseBackendService {
     if (documentId.isEmpty) return false;
     try {
       final isTelemetry = collection == 'fleet_telemetry';
-      final timeoutDuration =
-          isTelemetry ? const Duration(seconds: 5) : const Duration(seconds: 12);
+      final timeoutDuration = isTelemetry
+          ? const Duration(seconds: 5)
+          : const Duration(seconds: 12);
       await FirebaseFirestore.instance
           .collection(collection)
           .doc(documentId)
@@ -72,7 +74,8 @@ class FirebaseBackendService {
     } on TimeoutException {
       // Offline / high-latency: Firestore offline cache has saved the write locally.
       // Mark as succeeded so the app stays smooth and syncs automatically when connection restores.
-      debugPrint('[FirebaseSync] $collection/$documentId queued in offline cache (timeout)');
+      debugPrint(
+          '[FirebaseSync] $collection/$documentId queued in offline cache (timeout)');
       return true;
     } on FirebaseException catch (error) {
       debugPrint('[FirebaseSync] $collection/${error.code}: ${error.message}');
@@ -119,7 +122,8 @@ class FirebaseBackendService {
             'timestamp': Timestamp.fromDate(record.timestamp.toUtc()),
             'location': record.location,
             'notes': record.notes,
-            if (record.photoBase64.isNotEmpty) 'photoBase64': record.photoBase64,
+            if (record.photoBase64.isNotEmpty)
+              'photoBase64': record.photoBase64,
           },
           client: client);
 
@@ -205,6 +209,7 @@ class FirebaseBackendService {
     if (!isConfigured) return const Stream.empty();
     return FirebaseFirestore.instance
         .collection('fleet_telemetry')
+        .limit(500)
         .snapshots()
         .map((snapshot) => snapshot.docs.map((doc) {
               final data = <String, dynamic>{'id': doc.id, ...doc.data()};
@@ -226,6 +231,7 @@ class FirebaseBackendService {
     if (!isConfigured) return const Stream.empty();
     return FirebaseFirestore.instance
         .collection('attendance_records')
+        .limit(500)
         .snapshots()
         .map((snapshot) => snapshot.docs
             .map((doc) => AttendanceRecord.fromJson(
@@ -244,6 +250,7 @@ class FirebaseBackendService {
     if (!isConfigured) return const Stream.empty();
     return FirebaseFirestore.instance
         .collection('trips')
+        .limit(500)
         .snapshots()
         .map((snapshot) => snapshot.docs
             .map((doc) => TripRecord.fromJson(
@@ -300,6 +307,7 @@ class FirebaseBackendService {
     if (!isConfigured) return const Stream.empty();
     return FirebaseFirestore.instance
         .collection('expenses')
+        .limit(500)
         .snapshots()
         .map((snapshot) => snapshot.docs
             .map((doc) => ExpenseRecord.fromJson(
@@ -338,6 +346,7 @@ class FirebaseBackendService {
     if (!isConfigured) return const Stream.empty();
     return FirebaseFirestore.instance
         .collection('billing_records')
+        .limit(500)
         .snapshots()
         .map((snapshot) => snapshot.docs
             .map((doc) => BillingRecord.fromJson(
@@ -361,6 +370,7 @@ class FirebaseBackendService {
     if (!isConfigured) return const Stream.empty();
     return FirebaseFirestore.instance
         .collection('delivery_proofs')
+        .limit(100)
         .snapshots()
         .map((snapshot) => snapshot.docs
             .map((doc) => DeliveryProofRecord.fromJson(
@@ -399,6 +409,7 @@ class FirebaseBackendService {
         .snapshots()
         .map((doc) => doc.data() ?? <String, dynamic>{});
   }
+
   // --- Customers Firestore Sync ---
   Future<bool> syncCustomerRecord({
     required CustomerRecord record,
@@ -424,6 +435,7 @@ class FirebaseBackendService {
     if (!isConfigured) return const Stream.empty();
     return FirebaseFirestore.instance
         .collection('customers')
+        .limit(500)
         .snapshots()
         .map((snapshot) => snapshot.docs
             .map((doc) => CustomerRecord.fromJson(
@@ -447,6 +459,7 @@ class FirebaseBackendService {
     if (!isConfigured) return const Stream.empty();
     return FirebaseFirestore.instance
         .collection('drivers')
+        .limit(500)
         .snapshots()
         .map((snapshot) => snapshot.docs
             .map((doc) => DriverProfile.fromJson(
@@ -474,7 +487,7 @@ class FirebaseBackendService {
   }
 
   // --- Fleet Vehicles Firestore Sync ---
-    Future<bool> deleteFleetVehicle(String vehicleCode) async {
+  Future<bool> deleteFleetVehicle(String vehicleCode) async {
     if (!isConfigured) return true;
     final documentId = vehicleCode.trim().toUpperCase();
     if (documentId.isEmpty) return false;
@@ -500,6 +513,7 @@ class FirebaseBackendService {
     if (!isConfigured) return const Stream.empty();
     return FirebaseFirestore.instance
         .collection('fleet_vehicles')
+        .limit(500)
         .snapshots()
         .map((snapshot) => snapshot.docs
             .map((doc) => TruckModel.fromJson(
@@ -541,6 +555,7 @@ class FirebaseBackendService {
     if (!isConfigured) return const Stream.empty();
     return FirebaseFirestore.instance
         .collection('operations_alerts')
+        .limit(100)
         .snapshots()
         .map((snapshot) => snapshot.docs
             .map((doc) => OperationsAlert.fromJson(
@@ -551,7 +566,7 @@ class FirebaseBackendService {
 
   Future<List<Map<String, dynamic>>> fetchCollection(
     String collection, {
-    int limit = 500,
+    int limit = 100,
   }) async {
     if (!isConfigured) return const [];
     try {
@@ -564,7 +579,8 @@ class FirebaseBackendService {
         final data = <String, dynamic>{'id': doc.id, ...doc.data()};
         for (final entry in data.entries.toList()) {
           if (entry.value is Timestamp) {
-            data[entry.key] = (entry.value as Timestamp).toDate().toUtc().toIso8601String();
+            data[entry.key] =
+                (entry.value as Timestamp).toDate().toUtc().toIso8601String();
           }
         }
         return data;

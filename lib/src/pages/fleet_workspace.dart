@@ -84,6 +84,7 @@ class FleetWorkspace extends StatefulWidget {
 
 class _FleetWorkspaceState extends State<FleetWorkspace> {
   late final PlannerController controller;
+  late final Widget _plannerPage = RoutePlannerPage(controller: controller);
   bool _ownsController = false;
   WorkspaceSection selected = WorkspaceSection.dashboard;
   StreamSubscription<IncomingLocationData>? _intentSubscription;
@@ -170,7 +171,7 @@ class _FleetWorkspaceState extends State<FleetWorkspace> {
             controller: controller,
             onNavigate: _select,
           ),
-        WorkspaceSection.planner => RoutePlannerPage(controller: controller),
+        WorkspaceSection.planner => _plannerPage,
         WorkspaceSection.trips => TripsPage(
             controller: controller,
             onOpenPlanner: () => _select(WorkspaceSection.planner),
@@ -189,7 +190,7 @@ class _FleetWorkspaceState extends State<FleetWorkspace> {
           controller: controller,
           onNavigate: _select,
         ),
-      WorkspaceSection.planner => RoutePlannerPage(controller: controller),
+      WorkspaceSection.planner => _plannerPage,
       WorkspaceSection.trips => TripsPage(
           controller: controller,
           onOpenPlanner: () => _select(WorkspaceSection.planner),
@@ -216,6 +217,23 @@ class _FleetWorkspaceState extends State<FleetWorkspace> {
           mode: DocumentGalleryMode.vehicle,
         ),
     };
+  }
+
+  Widget _buildBodyContent(bool isNavigatingOnPlanner) {
+    return Stack(
+      children: [
+        // Keep the map alive in background so tab switching has 0ms load time
+        Offstage(
+          offstage: selected != WorkspaceSection.planner,
+          child: TickerMode(
+            enabled: selected == WorkspaceSection.planner,
+            child: _plannerPage,
+          ),
+        ),
+        if (selected != WorkspaceSection.planner)
+          _page,
+      ],
+    );
   }
 
   void _select(WorkspaceSection value) {
@@ -346,7 +364,7 @@ class _FleetWorkspaceState extends State<FleetWorkspace> {
                               _select(value);
                             },
                           ),
-                    body: _page,
+                    body: _buildBodyContent(isNavigatingOnPlanner),
                     bottomNavigationBar: isNavigatingOnPlanner
                         ? null
                         : SafeArea(
@@ -370,7 +388,7 @@ class _FleetWorkspaceState extends State<FleetWorkspace> {
                           onLogout: _confirmLogout,
                           onSelected: _select,
                         ),
-                        Expanded(child: _page),
+                        Expanded(child: _buildBodyContent(false)),
                       ],
                     ),
                   ),

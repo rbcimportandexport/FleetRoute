@@ -19,23 +19,34 @@ PhotoPickerHandler? _customPhotoPicker;
 final List<NotificationHandler> _notificationHandlers = [];
 FlutterLocalNotificationsPlugin? _notificationsPlugin;
 bool _notificationsInitialized = false;
+// A plugin can be unavailable on desktop, widget tests, or an emulator whose
+// native channel is not ready. Remember that failure so every alert does not
+// retry the same initialization and flood the error log.
+bool _notificationInitializationAttempted = false;
 bool _notificationPermissionRequested = false;
 int _nextNotificationId =
     DateTime.now().millisecondsSinceEpoch.remainder(0x7fffffff);
 
 Future<void> _ensureNotificationsInitialized() async {
-  if (_notificationsInitialized) return;
+  if (_notificationsInitialized || _notificationInitializationAttempted) return;
+  _notificationInitializationAttempted = true;
   try {
     WidgetsFlutterBinding.ensureInitialized();
     _notificationsPlugin = FlutterLocalNotificationsPlugin();
-    const androidSettings =
-        AndroidInitializationSettings('ic_stat_transport');
+    const androidSettings = AndroidInitializationSettings('ic_stat_transport');
     const initSettings = InitializationSettings(
       android: androidSettings,
     );
-    await _notificationsPlugin?.initialize(settings: initSettings);
+    final initialized = await _notificationsPlugin?.initialize(
+      settings: initSettings,
+    );
+    if (initialized != true) {
+      _notificationsPlugin = null;
+      return;
+    }
     _notificationsInitialized = true;
   } catch (e) {
+    _notificationsPlugin = null;
     debugPrint('[SafetyNotification] Notification init warning: $e');
   }
 }
@@ -58,7 +69,8 @@ void triggerExternalSafetyNotification({
   required bool isRejected,
 }) {
   debugPrint('[SafetyNotification] $title: $body (rejected: $isRejected)');
-  for (final handler in _notificationHandlers) {
+  // A handler may unregister itself while processing the event.
+  for (final handler in List<NotificationHandler>.of(_notificationHandlers)) {
     try {
       handler(title: title, body: body, isRejected: isRejected);
     } catch (_) {}
@@ -68,6 +80,7 @@ void triggerExternalSafetyNotification({
   () async {
     try {
       await _ensureNotificationsInitialized();
+      if (!_notificationsInitialized || _notificationsPlugin == null) return;
       final androidDetails = AndroidNotificationDetails(
         'transport_safety_channel',
         'Transport One Alerts & Reminders',
@@ -82,7 +95,7 @@ void triggerExternalSafetyNotification({
       // A seconds-based ID caused alerts created together (for example several
       // compliance reminders at startup) to replace one another in the tray.
       _nextNotificationId = (_nextNotificationId + 1) & 0x7fffffff;
-      await _notificationsPlugin?.show(
+      await _notificationsPlugin!.show(
         id: _nextNotificationId,
         title: title,
         body: body,

@@ -44,12 +44,16 @@ class FirebaseBootstrapService {
         await FirebaseAuth.instance.setPersistence(Persistence.SESSION);
       }
       try {
+        // Keep the on-device Firestore cache bounded. Unlimited persistence
+        // lets large fleet/photo collections grow until Android kills the
+        // process under native memory pressure.
         FirebaseFirestore.instance.settings = const Settings(
           persistenceEnabled: true,
-          cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+          cacheSizeBytes: 50 * 1024 * 1024,
         );
       } catch (settingsError) {
-        debugPrint('[FirebaseBootstrap] Firestore offline persistence: $settingsError');
+        debugPrint(
+            '[FirebaseBootstrap] Firestore offline persistence: $settingsError');
       }
       _initialized = true;
       _initializationError = null;

@@ -4,6 +4,7 @@ import 'dart:js_interop_unsafe' as js_util;
 typedef PhotoPickerHandler = void Function({
   required bool useCamera,
   required void Function(String base64Data) onPhotoSelected,
+  void Function(String errorMessage)? onError,
 });
 
 typedef NotificationHandler = void Function({
@@ -67,9 +68,7 @@ void pickDriverPhotoWeb({
         jsCallback,
       );
     } else {
-      if (onError != null) {
-        onError('Web camera / photo interface is initializing.');
-      }
+      onError?.call('Web camera / photo interface is initializing.');
     }
   } catch (e) {
     if (onError != null) {

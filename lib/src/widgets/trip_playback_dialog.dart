@@ -129,7 +129,7 @@ class _PlaybackPoint {
 
 class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
   final MapController _mapController = MapController();
-  final TileProvider _tileProvider = NetworkTileProvider();
+  final TileProvider _tileProvider = MapTileService.createFastTileProvider();
   List<_PlaybackPoint> _timeline = [];
   List<LatLng> _routeGeometry = [];
   List<LatLng> _allPositions = [];
@@ -759,11 +759,11 @@ class _TripPlaybackDialogState extends State<TripPlaybackDialog> {
                               subdomains: MapTileService.getSubdomains(
                                 streetlight: false,
                               ),
-                              fallbackUrl: MapTileService.fallbackTileUrl,
                               maxNativeZoom: 18,
                               maxZoom: 18.0,
+                              keepBuffer: 3,
+                              panBuffer: 1,
                               tileProvider: _tileProvider,
-                              userAgentPackageName: MapTileService.userAgent,
                             ),
 
                             // 1. Full Planned / Actual Route Polyline (grey/faded, static)

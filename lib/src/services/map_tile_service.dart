@@ -1,3 +1,5 @@
+import 'package:flutter_map/flutter_map.dart';
+
 /// Map tile endpoints used by the route planner.
 ///
 /// Direct high-speed Google Maps Tile Engine & OpenStreetMap fallback.
@@ -50,6 +52,16 @@ class MapTileService {
       'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 
   static const String userAgent = 'com.transportone.transport_one';
+
+  /// High-speed persistent TileProvider with browser headers for instant tile response
+  static TileProvider createFastTileProvider() {
+    return NetworkTileProvider(headers: <String, String>{
+      'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept':
+          'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+    });
+  }
 
   // Provider-specific max zoom levels
   static const double maxZoomOsm = 19.0;

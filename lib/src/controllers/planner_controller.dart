@@ -196,8 +196,7 @@ class PlannerController extends ChangeNotifier {
       reference: 'TRIP-2026-082',
       tripNumber: 'TRIP-2026-082',
       origin: 'Mota, Bardoli Taluka (21.174901, 73.052134)',
-      destination:
-          'RBC SALON FURNITURE, Jolwa (21.17065, 73.00425)',
+      destination: 'RBC SALON FURNITURE, Jolwa (21.17065, 73.00425)',
       assignedVehicle: 'GJ19Y2720',
       assignedDriver: 'Sandeep',
       customerName: 'RBC Salon Furniture',
@@ -217,13 +216,13 @@ class PlannerController extends ChangeNotifier {
       plannedDurationMinutes: 15,
       averageSpeedKmh: 23.2,
       freightAmount: 3500.0,
-      trafficSummary: 'Completed night trip: Mota to Jolwa in 15 mins (non-stop)',
+      trafficSummary:
+          'Completed night trip: Mota to Jolwa in 15 mins (non-stop)',
     ),
     TripRecord(
       reference: 'TRIP-2026-083',
       tripNumber: 'TRIP-2026-083',
-      origin:
-          'RBC SALON FURNITURE, Jolwa (21.17065, 73.00425)',
+      origin: 'RBC SALON FURNITURE, Jolwa (21.17065, 73.00425)',
       destination: 'Mota, Bardoli Taluka (21.174901, 73.052134)',
       assignedVehicle: 'GJ19Y2720',
       assignedDriver: 'Sandeep',
@@ -244,7 +243,8 @@ class PlannerController extends ChangeNotifier {
       plannedDurationMinutes: 15,
       averageSpeedKmh: 23.2,
       freightAmount: 3500.0,
-      trafficSummary: 'Completed morning return trip: Jolwa to Mota in 15 mins (non-stop)',
+      trafficSummary:
+          'Completed morning return trip: Jolwa to Mota in 15 mins (non-stop)',
     ),
   ];
 
@@ -261,10 +261,9 @@ class PlannerController extends ChangeNotifier {
 
     // 2. Remove all fake / dummy / old test trips for this vehicle completely
     trips.removeWhere((t) {
-      final isOurTruck = t.assignedVehicle
-              .replaceAll(RegExp(r'[\s\-]'), '')
-              .toUpperCase() ==
-          'GJ19Y2720';
+      final isOurTruck =
+          t.assignedVehicle.replaceAll(RegExp(r'[\s\-]'), '').toUpperCase() ==
+              'GJ19Y2720';
       if (!isOurTruck) return false;
       // Keep only our two genuine trips (TRIP-2026-082 and TRIP-2026-083)
       final ref = t.reference.trim().toUpperCase();
@@ -289,8 +288,14 @@ class PlannerController extends ChangeNotifier {
     }
     // Keep sorted by most recent first
     trips.sort((a, b) {
-      final aDate = DateTime.tryParse(a.completedAt.isNotEmpty ? a.completedAt : (a.startedAt.isNotEmpty ? a.startedAt : a.createdAt)) ?? DateTime(1970);
-      final bDate = DateTime.tryParse(b.completedAt.isNotEmpty ? b.completedAt : (b.startedAt.isNotEmpty ? b.startedAt : b.createdAt)) ?? DateTime(1970);
+      final aDate = DateTime.tryParse(a.completedAt.isNotEmpty
+              ? a.completedAt
+              : (a.startedAt.isNotEmpty ? a.startedAt : a.createdAt)) ??
+          DateTime(1970);
+      final bDate = DateTime.tryParse(b.completedAt.isNotEmpty
+              ? b.completedAt
+              : (b.startedAt.isNotEmpty ? b.startedAt : b.createdAt)) ??
+          DateTime(1970);
       return bDate.compareTo(aDate);
     });
   }
@@ -326,6 +331,7 @@ class PlannerController extends ChangeNotifier {
   final List<ExpenseRecord> expenses = [];
   final List<BillingRecord> billingRecords = [];
   final List<DeliveryProofRecord> deliveryProofs = [];
+  bool _cloudSyncInFlight = false;
 
   // Authentication State
   bool isLoggedIn = false;
@@ -845,7 +851,10 @@ class PlannerController extends ChangeNotifier {
         final isOnDuty = isVehicleDriverOnDuty(t.code);
         final isOnline = isVehicleOnline(t.code);
         final shouldClearCoordinates = t.isDemoTelemetry ||
-            (!isOnDuty && !isOnline && t.currentLat != null && t.imei.trim().isEmpty);
+            (!isOnDuty &&
+                !isOnline &&
+                t.currentLat != null &&
+                t.imei.trim().isEmpty);
         final shouldClearCapacity =
             t.capacity.contains('Ton') || t.payloadCapacity.contains('Ton');
         truckModels[i] = t.copyWith(
@@ -882,7 +891,7 @@ class PlannerController extends ChangeNotifier {
       trips.clear();
       final legacyTripReferences = <String>{};
       if (loadedTrips != null && loadedTrips.isNotEmpty) {
-        trips.addAll(loadedTrips.where((t) =>
+        trips.addAll(loadedTrips.take(100).where((t) =>
             !deletedTripReferences.contains(t.reference.trim().toUpperCase()) &&
             !deletedTripReferences
                 .contains(t.effectiveTripNumber.trim().toUpperCase())));
@@ -922,7 +931,7 @@ class PlannerController extends ChangeNotifier {
       if (loadedAlerts != null) {
         alerts
           ..clear()
-          ..addAll(loadedAlerts);
+          ..addAll(loadedAlerts.take(100));
         alerts.removeWhere((a) =>
             a.title.toLowerCase().contains('mock') ||
             a.details.toLowerCase().contains('mock'));
@@ -934,6 +943,7 @@ class PlannerController extends ChangeNotifier {
         seatbeltRecords
           ..clear()
           ..addAll(loadedSeatbeltRecords
+              .take(50)
               .where((r) => !deletedSeatbeltIds.contains(r.id)));
       }
 
@@ -942,7 +952,7 @@ class PlannerController extends ChangeNotifier {
       if (loadedActivities != null) {
         activities
           ..clear()
-          ..addAll(loadedActivities);
+          ..addAll(loadedActivities.take(250));
         activities.removeWhere((a) =>
             a.id.startsWith('init-') ||
             a.id.startsWith('mock-') ||
@@ -956,7 +966,7 @@ class PlannerController extends ChangeNotifier {
           _decodeRecords(attendanceJson, AttendanceRecord.fromJson);
       attendanceRecords.clear();
       if (loadedAttendance != null && loadedAttendance.isNotEmpty) {
-        attendanceRecords.addAll(loadedAttendance);
+        attendanceRecords.addAll(loadedAttendance.take(500));
         attendanceRecords.removeWhere((a) {
           if (a.id == 'ATT-2026-10-21-001' ||
               a.id == 'ATT-2026-10-20-002' ||
@@ -987,7 +997,7 @@ class PlannerController extends ChangeNotifier {
           _decodeRecords(customerJson, CustomerRecord.fromJson);
       customers.clear();
       if (loadedCustomers != null && loadedCustomers.isNotEmpty) {
-        customers.addAll(loadedCustomers);
+        customers.addAll(loadedCustomers.take(500));
         customers.removeWhere((c) =>
             c.id == 'CUST-001' ||
             c.id == 'CUST-002' ||
@@ -1005,7 +1015,7 @@ class PlannerController extends ChangeNotifier {
           _decodeRecords(expenseJson, ExpenseRecord.fromJson);
       expenses.clear();
       if (loadedExpenses != null && loadedExpenses.isNotEmpty) {
-        expenses.addAll(loadedExpenses);
+        expenses.addAll(loadedExpenses.take(500));
         expenses.removeWhere((e) =>
             e.id == 'EXP-101' ||
             e.id == 'EXP-102' ||
@@ -1019,7 +1029,7 @@ class PlannerController extends ChangeNotifier {
       final loadedBilling = _decodeRecords(billingJson, BillingRecord.fromJson);
       billingRecords.clear();
       if (loadedBilling != null && loadedBilling.isNotEmpty) {
-        billingRecords.addAll(loadedBilling);
+        billingRecords.addAll(loadedBilling.take(500));
         billingRecords.removeWhere((b) =>
             b.id == 'BILL-2026-081' ||
             b.id == 'BILL-2026-079' ||
@@ -1034,7 +1044,7 @@ class PlannerController extends ChangeNotifier {
       if (loadedProofs != null) {
         deliveryProofs
           ..clear()
-          ..addAll(loadedProofs);
+          ..addAll(loadedProofs.take(100));
       }
     } catch (_) {
       // Storage failures must not leave the application on its loading screen.
@@ -1445,15 +1455,16 @@ class PlannerController extends ChangeNotifier {
       debugPrint('Live trips sync failed: $error');
     });
     // Listen to real-time vehicles synchronization from Firestore
-    _driversSubscription = FirebaseBackendService.instance
-        .watchDrivers()
-        .listen((remoteDrivers) {
+    _driversSubscription =
+        FirebaseBackendService.instance.watchDrivers().listen((remoteDrivers) {
       if (remoteDrivers.isNotEmpty) {
         var changed = false;
         for (final rd in remoteDrivers) {
           final idx = drivers.indexWhere((d) =>
               d.email.trim().toLowerCase() == rd.email.trim().toLowerCase() ||
-              (d.phone.isNotEmpty && rd.phone.isNotEmpty && d.phone == rd.phone));
+              (d.phone.isNotEmpty &&
+                  rd.phone.isNotEmpty &&
+                  d.phone == rd.phone));
           if (idx < 0) {
             drivers.add(rd);
             changed = true;
@@ -1510,7 +1521,9 @@ class PlannerController extends ChangeNotifier {
         .listen((remoteAlerts) {
       if (remoteAlerts.isNotEmpty) {
         if (alerts.length != remoteAlerts.length ||
-            (alerts.isNotEmpty && remoteAlerts.isNotEmpty && alerts.first.id != remoteAlerts.first.id)) {
+            (alerts.isNotEmpty &&
+                remoteAlerts.isNotEmpty &&
+                alerts.first.id != remoteAlerts.first.id)) {
           alerts
             ..clear()
             ..addAll(remoteAlerts);
@@ -1588,10 +1601,13 @@ class PlannerController extends ChangeNotifier {
         try {
           final list = jsonDecode(val);
           if (list is List) {
-            deletedTripReferences.addAll(list.map((e) => e.toString().trim().toUpperCase()));
+            deletedTripReferences
+                .addAll(list.map((e) => e.toString().trim().toUpperCase()));
             trips.removeWhere((t) =>
-                deletedTripReferences.contains(t.reference.trim().toUpperCase()) ||
-                deletedTripReferences.contains(t.effectiveTripNumber.trim().toUpperCase()));
+                deletedTripReferences
+                    .contains(t.reference.trim().toUpperCase()) ||
+                deletedTripReferences
+                    .contains(t.effectiveTripNumber.trim().toUpperCase()));
             notifyListeners();
           }
         } catch (_) {}
@@ -1606,8 +1622,10 @@ class PlannerController extends ChangeNotifier {
         try {
           final list = jsonDecode(val);
           if (list is List) {
-            deletedDriverEmails.addAll(list.map((e) => e.toString().trim().toLowerCase()));
-            drivers.removeWhere((d) => deletedDriverEmails.contains(d.email.trim().toLowerCase()));
+            deletedDriverEmails
+                .addAll(list.map((e) => e.toString().trim().toLowerCase()));
+            drivers.removeWhere((d) =>
+                deletedDriverEmails.contains(d.email.trim().toLowerCase()));
             notifyListeners();
           }
         } catch (_) {}
@@ -1704,24 +1722,30 @@ class PlannerController extends ChangeNotifier {
     notifyListeners();
   }
 
-    /// Actively pulls latest data from Firestore so Phone APK immediately shows
+  /// Actively pulls latest data from Firestore so Phone APK immediately shows
   /// all trips, seatbelt photos, attendance, and alerts created on Web/PC.
   Future<void> syncAllDataFromCloud() async {
+    if (_cloudSyncInFlight) return;
+    _cloudSyncInFlight = true;
     try {
       await FirebaseBackendService.instance.ensureAuthSession();
-      
+
       // 1. Fetch remote trips
-      final remoteTrips = await FirebaseBackendService.instance.fetchCollection('trips');
+      final remoteTrips =
+          await FirebaseBackendService.instance.fetchCollection('trips');
       if (remoteTrips.isNotEmpty) {
-        final parsedTrips = remoteTrips.map((doc) => TripRecord.fromJson({
-          'reference': doc['id'] ?? doc['reference'] ?? '',
-          ...doc,
-        })).toList();
+        final parsedTrips = remoteTrips
+            .map((doc) => TripRecord.fromJson({
+                  'reference': doc['id'] ?? doc['reference'] ?? '',
+                  ...doc,
+                }))
+            .toList();
         _applyRemoteTrips(parsedTrips);
       }
 
       // 2. Fetch remote seatbelt records
-      final remoteSeatbelts = await FirebaseBackendService.instance.fetchCollection(
+      final remoteSeatbelts =
+          await FirebaseBackendService.instance.fetchCollection(
         'seatbelt_records',
         limit: 10,
       );
@@ -1734,16 +1758,20 @@ class PlannerController extends ChangeNotifier {
       }
 
       // 3. Fetch remote attendance
-      final remoteAtt = await FirebaseBackendService.instance.fetchCollection('attendance');
+      final remoteAtt =
+          await FirebaseBackendService.instance.fetchCollection('attendance');
       if (remoteAtt.isNotEmpty) {
-        final parsedAtt = remoteAtt.map((doc) => AttendanceRecord.fromJson(doc)).toList();
+        final parsedAtt =
+            remoteAtt.map((doc) => AttendanceRecord.fromJson(doc)).toList();
         _applyRemoteAttendance(parsedAtt);
       }
 
       // 4. Fetch remote operations alerts
-      final remoteAlerts = await FirebaseBackendService.instance.fetchCollection('operations_alerts');
+      final remoteAlerts = await FirebaseBackendService.instance
+          .fetchCollection('operations_alerts');
       if (remoteAlerts.isNotEmpty) {
-        final parsedAlerts = remoteAlerts.map((doc) => OperationsAlert.fromJson(doc)).toList();
+        final parsedAlerts =
+            remoteAlerts.map((doc) => OperationsAlert.fromJson(doc)).toList();
         alerts
           ..clear()
           ..addAll(parsedAlerts);
@@ -1751,20 +1779,25 @@ class PlannerController extends ChangeNotifier {
       }
 
       // 5. Fetch remote live fleet telemetry (Battery, Charging, Speed)
-      final remoteTelemetry = await FirebaseBackendService.instance.fetchCollection('fleet_telemetry');
+      final remoteTelemetry = await FirebaseBackendService.instance
+          .fetchCollection('fleet_telemetry');
       if (remoteTelemetry.isNotEmpty) {
         _applyFleetTelemetry(remoteTelemetry);
       }
 
       // 6. Fetch remote drivers from Firestore
-      final remoteDrivers = await FirebaseBackendService.instance.fetchCollection('drivers');
+      final remoteDrivers =
+          await FirebaseBackendService.instance.fetchCollection('drivers');
       if (remoteDrivers.isNotEmpty) {
         for (final doc in remoteDrivers) {
           try {
-            final rd = DriverProfile.fromJson({'email': doc['id'] ?? doc['email'], ...doc});
+            final rd = DriverProfile.fromJson(
+                {'email': doc['id'] ?? doc['email'], ...doc});
             final idx = drivers.indexWhere((d) =>
                 d.email.trim().toLowerCase() == rd.email.trim().toLowerCase() ||
-                (d.phone.isNotEmpty && rd.phone.isNotEmpty && d.phone == rd.phone));
+                (d.phone.isNotEmpty &&
+                    rd.phone.isNotEmpty &&
+                    d.phone == rd.phone));
             if (idx < 0) {
               drivers.add(rd);
             } else {
@@ -1775,11 +1808,13 @@ class PlannerController extends ChangeNotifier {
       }
 
       // 7. Fetch remote fleet vehicles from Firestore
-      final remoteVehicles = await FirebaseBackendService.instance.fetchCollection('fleet_vehicles');
+      final remoteVehicles = await FirebaseBackendService.instance
+          .fetchCollection('fleet_vehicles');
       if (remoteVehicles.isNotEmpty) {
         for (final doc in remoteVehicles) {
           try {
-            final rv = TruckModel.fromJson({'code': doc['id'] ?? doc['code'], ...doc});
+            final rv =
+                TruckModel.fromJson({'code': doc['id'] ?? doc['code'], ...doc});
             final idx = truckModels.indexWhere((t) => t.code == rv.code);
             if (idx < 0) {
               truckModels.add(rv);
@@ -1791,7 +1826,8 @@ class PlannerController extends ChangeNotifier {
       }
 
       // 8. Fetch remote expenses from Firestore
-      final remoteExp = await FirebaseBackendService.instance.fetchCollection('expenses');
+      final remoteExp =
+          await FirebaseBackendService.instance.fetchCollection('expenses');
       if (remoteExp.isNotEmpty) {
         for (final doc in remoteExp) {
           try {
@@ -1807,7 +1843,8 @@ class PlannerController extends ChangeNotifier {
       }
 
       // 9. Fetch remote billing records from Firestore
-      final remoteBill = await FirebaseBackendService.instance.fetchCollection('billing_records');
+      final remoteBill = await FirebaseBackendService.instance
+          .fetchCollection('billing_records');
       if (remoteBill.isNotEmpty) {
         for (final doc in remoteBill) {
           try {
@@ -1823,7 +1860,8 @@ class PlannerController extends ChangeNotifier {
       }
 
       // 10. Fetch remote customers from Firestore
-      final remoteCust = await FirebaseBackendService.instance.fetchCollection('customers');
+      final remoteCust =
+          await FirebaseBackendService.instance.fetchCollection('customers');
       if (remoteCust.isNotEmpty) {
         for (final doc in remoteCust) {
           try {
@@ -1839,33 +1877,42 @@ class PlannerController extends ChangeNotifier {
       }
 
       // 11. Fetch deleted settings from Firestore
-      final delTripsVal = await FirebaseBackendService.instance.getAppSetting('deleted_trips');
+      final delTripsVal =
+          await FirebaseBackendService.instance.getAppSetting('deleted_trips');
       if (delTripsVal is String && delTripsVal.isNotEmpty) {
         try {
           final list = jsonDecode(delTripsVal);
           if (list is List) {
-            deletedTripReferences.addAll(list.map((e) => e.toString().trim().toUpperCase()));
+            deletedTripReferences
+                .addAll(list.map((e) => e.toString().trim().toUpperCase()));
             trips.removeWhere((t) =>
-                deletedTripReferences.contains(t.reference.trim().toUpperCase()) ||
-                deletedTripReferences.contains(t.effectiveTripNumber.trim().toUpperCase()));
+                deletedTripReferences
+                    .contains(t.reference.trim().toUpperCase()) ||
+                deletedTripReferences
+                    .contains(t.effectiveTripNumber.trim().toUpperCase()));
           }
         } catch (_) {}
       }
 
-      final delDriversVal = await FirebaseBackendService.instance.getAppSetting('deleted_drivers');
+      final delDriversVal = await FirebaseBackendService.instance
+          .getAppSetting('deleted_drivers');
       if (delDriversVal is String && delDriversVal.isNotEmpty) {
         try {
           final list = jsonDecode(delDriversVal);
           if (list is List) {
-            deletedDriverEmails.addAll(list.map((e) => e.toString().trim().toLowerCase()));
-            drivers.removeWhere((d) => deletedDriverEmails.contains(d.email.trim().toLowerCase()));
+            deletedDriverEmails
+                .addAll(list.map((e) => e.toString().trim().toLowerCase()));
+            drivers.removeWhere((d) =>
+                deletedDriverEmails.contains(d.email.trim().toLowerCase()));
           }
         } catch (_) {}
       }
 
       notifyListeners();
     } catch (e) {
-      debugPrint('[CloudSync] syncAllDataFromCloud failed: ');
+      debugPrint('[CloudSync] syncAllDataFromCloud failed: $e');
+    } finally {
+      _cloudSyncInFlight = false;
     }
   }
 
@@ -1981,8 +2028,8 @@ class PlannerController extends ChangeNotifier {
         _lastPublishedDriverPosition = position;
         lastPublishTime = now;
 
-        final idx = truckModels.indexWhere(
-            (t) => t.code.trim().toUpperCase() == vehicleCode);
+        final idx = truckModels
+            .indexWhere((t) => t.code.trim().toUpperCase() == vehicleCode);
         final currentTruck = idx >= 0 ? truckModels[idx] : null;
 
         // Publish live telemetry (GPS + Battery in ONE atomic operation)
@@ -1992,7 +2039,8 @@ class PlannerController extends ChangeNotifier {
           longitude: position.longitude,
           speed: speed,
           isIgnitionOn: hasRealMovement,
-          driverId: FirebaseBackendService.instance.currentEmail ?? driver.email,
+          driverId:
+              FirebaseBackendService.instance.currentEmail ?? driver.email,
           driverName: driver.name,
           phoneBatteryLevel: currentTruck?.phoneBatteryLevel,
           isPhoneCharging: currentTruck?.isPhoneCharging ?? false,
@@ -2087,7 +2135,8 @@ class PlannerController extends ChangeNotifier {
     unawaited(syncDriverPhoneBattery());
     // Hardware battery broadcast stream: instantly triggers when phone is plugged/unplugged
     // or when the OS emits a battery level change event.
-    _nativeBatterySub = DeviceTelemetryService.instance.batteryStream.listen((info) {
+    _nativeBatterySub =
+        DeviceTelemetryService.instance.batteryStream.listen((info) {
       if (!isDriver) return;
       final level = (info['batteryLevel'] as num?)?.toInt() ?? -1;
       final isCharging = info['isCharging'] == true;
@@ -2095,12 +2144,13 @@ class PlannerController extends ChangeNotifier {
         final driver = selectedDriver;
         final vehicleCode = driver?.assignedVehicle.trim().toUpperCase() ?? '';
         if (vehicleCode.isNotEmpty) {
-          final idx = truckModels.indexWhere(
-              (t) => t.code.trim().toUpperCase() == vehicleCode);
+          final idx = truckModels
+              .indexWhere((t) => t.code.trim().toUpperCase() == vehicleCode);
           if (idx >= 0) {
             final t = truckModels[idx];
             // Deduplicate: if battery % and charging state haven't changed, ignore!
-            if (t.phoneBatteryLevel == level && t.isPhoneCharging == isCharging) {
+            if (t.phoneBatteryLevel == level &&
+                t.isPhoneCharging == isCharging) {
               return;
             }
             truckModels[idx] = t.copyWith(
@@ -2109,7 +2159,8 @@ class PlannerController extends ChangeNotifier {
             );
             notifyListeners();
           }
-          unawaited(FirebaseBackendService.instance.updateVehicleBatteryTelemetry(
+          unawaited(
+              FirebaseBackendService.instance.updateVehicleBatteryTelemetry(
             vehicleCode: vehicleCode,
             phoneBatteryLevel: level,
             isPhoneCharging: isCharging,
@@ -2142,8 +2193,8 @@ class PlannerController extends ChangeNotifier {
       final vehicleCode = driver?.assignedVehicle.trim().toUpperCase() ?? '';
 
       if (vehicleCode.isNotEmpty) {
-        final idx = truckModels.indexWhere(
-            (t) => t.code.trim().toUpperCase() == vehicleCode);
+        final idx = truckModels
+            .indexWhere((t) => t.code.trim().toUpperCase() == vehicleCode);
         if (idx >= 0) {
           final t = truckModels[idx];
           // Deduplicate: ignore if identical
@@ -2184,7 +2235,7 @@ class PlannerController extends ChangeNotifier {
       final phoneBattery = rawBattery is num
           ? rawBattery.toInt()
           : int.tryParse(rawBattery?.toString() ?? '');
-      
+
       // GPS timestamp: only use 'lastUpdate' field (written by syncVehicleTelemetry
       // with real coordinates). Battery-only pushes write 'batteryLastUpdate' instead,
       // so rawLastUpdate stays null for battery-only docs — GPS staleness is preserved.
@@ -2198,8 +2249,8 @@ class PlannerController extends ChangeNotifier {
       }
       // If this doc has no GPS coords at all, fall back to the existing
       // truck's lastGpsDateTime to decide freshness (don't reset it).
-      final effectiveTelemetryTime =
-          gpsTelemetryTime ?? (hasGpsCoords ? null : truckModels[index].lastGpsDateTime);
+      final effectiveTelemetryTime = gpsTelemetryTime ??
+          (hasGpsCoords ? null : truckModels[index].lastGpsDateTime);
       final isFresh = effectiveTelemetryTime != null &&
           now.difference(effectiveTelemetryTime).inMinutes.abs() <= 5;
 
@@ -3057,11 +3108,18 @@ class PlannerController extends ChangeNotifier {
         : (currentDriver?.name ?? 'Assigned Driver');
     // Instant Notification ONLY if the active/logged in user is the assigned driver
     final currentDriverName = currentDriver?.name.trim().toLowerCase() ?? '';
-    final currentDriverVeh = currentDriver?.assignedVehicle.trim().replaceAll(RegExp(r'[\s\-]'), '').toUpperCase() ?? '';
-    final tripVeh = vehicle.trim().replaceAll(RegExp(r'[\s\-]'), '').toUpperCase();
+    final currentDriverVeh = currentDriver?.assignedVehicle
+            .trim()
+            .replaceAll(RegExp(r'[\s\-]'), '')
+            .toUpperCase() ??
+        '';
+    final tripVeh =
+        vehicle.trim().replaceAll(RegExp(r'[\s\-]'), '').toUpperCase();
     final tripDrv = driver.trim().toLowerCase();
 
-    if (!isDriver || (isDriver && (currentDriverName == tripDrv || currentDriverVeh == tripVeh))) {
+    if (!isDriver ||
+        (isDriver &&
+            (currentDriverName == tripDrv || currentDriverVeh == tripVeh))) {
       SafetyNotificationService.notifyDriverNewTrip(
         driverName: driver,
         vehicleNumber: vehicle,
@@ -3074,7 +3132,8 @@ class PlannerController extends ChangeNotifier {
     // Create immediate Operations Alert so it appears in Alerts & Driver Hub
     final alert = OperationsAlert(
       title: 'New Trip Assigned: ${trip.origin} -> ${trip.destination}',
-      details: 'Vehicle: $vehicle | Driver: $driver | Cargo: ${trip.cargoDescription} (${trip.customerName})',
+      details:
+          'Vehicle: $vehicle | Driver: $driver | Cargo: ${trip.cargoDescription} (${trip.customerName})',
       severity: 'info',
       createdAt: DateTime.now().toIso8601String(),
       category: 'dispatch',
@@ -3147,7 +3206,8 @@ class PlannerController extends ChangeNotifier {
   Future<void> _saveDeletedTrips() async {
     final payload = jsonEncode(deletedTripReferences.toList());
     await _storage.setString(_deletedTripsKey, payload);
-    unawaited(FirebaseBackendService.instance.saveAppSetting('deleted_trips', payload));
+    unawaited(FirebaseBackendService.instance
+        .saveAppSetting('deleted_trips', payload));
   }
 
   Future<void> updateTripStatus(int index, String status) async {
@@ -3453,11 +3513,20 @@ class PlannerController extends ChangeNotifier {
 
     // Instant Notification ONLY if the active/logged in user is the assigned driver
     final currentDriverName = currentDriver?.name.trim().toLowerCase() ?? '';
-    final currentDriverVeh = currentDriver?.assignedVehicle.trim().replaceAll(RegExp(r'[\s\-]'), '').toUpperCase() ?? '';
-    final tripVeh = newTrip.assignedVehicle.trim().replaceAll(RegExp(r'[\s\-]'), '').toUpperCase();
+    final currentDriverVeh = currentDriver?.assignedVehicle
+            .trim()
+            .replaceAll(RegExp(r'[\s\-]'), '')
+            .toUpperCase() ??
+        '';
+    final tripVeh = newTrip.assignedVehicle
+        .trim()
+        .replaceAll(RegExp(r'[\s\-]'), '')
+        .toUpperCase();
     final tripDrv = newTrip.assignedDriver.trim().toLowerCase();
 
-    if (!isDriver || (isDriver && (currentDriverName == tripDrv || currentDriverVeh == tripVeh))) {
+    if (!isDriver ||
+        (isDriver &&
+            (currentDriverName == tripDrv || currentDriverVeh == tripVeh))) {
       SafetyNotificationService.notifyDriverNewTrip(
         driverName: newTrip.assignedDriver,
         vehicleNumber: newTrip.assignedVehicle,
@@ -3469,9 +3538,9 @@ class PlannerController extends ChangeNotifier {
 
     // Create immediate Operations Alert so it appears in Alerts & Driver Hub
     final alert = OperationsAlert(
-      title:
-          'New Trip Assigned: ${newTrip.origin} -> ${newTrip.destination}',
-      details: 'Vehicle: ${newTrip.assignedVehicle} | Driver: ${newTrip.assignedDriver} | Cargo: ${newTrip.cargoDescription} (${newTrip.customerName})',
+      title: 'New Trip Assigned: ${newTrip.origin} -> ${newTrip.destination}',
+      details:
+          'Vehicle: ${newTrip.assignedVehicle} | Driver: ${newTrip.assignedDriver} | Cargo: ${newTrip.cargoDescription} (${newTrip.customerName})',
       severity: 'info',
       createdAt: DateTime.now().toIso8601String(),
       category: 'dispatch',
@@ -3654,7 +3723,9 @@ class PlannerController extends ChangeNotifier {
     await _saveTrips();
     await FirebaseBackendService.instance.syncTripRecord(record: updated);
     await logActivity(
-      title: hasReturnLoad ? 'Wapsi Maal (Return Load) Logged' : 'Empty Return Logged',
+      title: hasReturnLoad
+          ? 'Wapsi Maal (Return Load) Logged'
+          : 'Empty Return Logged',
       details: hasReturnLoad
           ? 'Trip ${updated.effectiveTripNumber}: Return load "$goodsDescription" from "$partyName". Freight: ₹$returnFreight, Driver Incentive: ₹$driverIncentive.'
           : 'Trip ${updated.effectiveTripNumber}: Driver returning empty (Khali Gadi).',
@@ -3869,7 +3940,8 @@ class PlannerController extends ChangeNotifier {
       attendanceRecords[index] = updated;
       notifyListeners();
       await _saveAttendance();
-      await FirebaseBackendService.instance.syncAttendanceRecord(record: updated);
+      await FirebaseBackendService.instance
+          .syncAttendanceRecord(record: updated);
     }
 
     await logActivity(
@@ -3899,7 +3971,10 @@ class PlannerController extends ChangeNotifier {
       final todayDateStr =
           '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
       return attendanceRecords.firstWhere(
-        (a) => a.driverId == driverId && a.endTime.isEmpty && a.date == todayDateStr,
+        (a) =>
+            a.driverId == driverId &&
+            a.endTime.isEmpty &&
+            a.date == todayDateStr,
       );
     } catch (_) {
       return null;
@@ -4093,7 +4168,8 @@ class PlannerController extends ChangeNotifier {
       customers[idx] = customers[idx].copyWith(isActive: false);
       notifyListeners();
       await _saveCustomers();
-      unawaited(FirebaseBackendService.instance.syncCustomerRecord(record: customers[idx]));
+      unawaited(FirebaseBackendService.instance
+          .syncCustomerRecord(record: customers[idx]));
     }
   }
 
@@ -4461,7 +4537,8 @@ class PlannerController extends ChangeNotifier {
     alerts.removeAt(index);
     notifyListeners();
     if (removed.id.isNotEmpty) {
-      unawaited(FirebaseBackendService.instance.deleteOperationsAlert(removed.id));
+      unawaited(
+          FirebaseBackendService.instance.deleteOperationsAlert(removed.id));
     }
     await _saveAlerts();
     await logActivity(
@@ -4477,7 +4554,8 @@ class PlannerController extends ChangeNotifier {
     final removedCount = alerts.length;
     for (final alert in alerts) {
       if (alert.id.isNotEmpty) {
-        unawaited(FirebaseBackendService.instance.deleteOperationsAlert(alert.id));
+        unawaited(
+            FirebaseBackendService.instance.deleteOperationsAlert(alert.id));
       }
     }
     alerts.clear();
@@ -4728,9 +4806,12 @@ class PlannerController extends ChangeNotifier {
     bool alertsChanged = false;
 
     // Filter trucks: If logged in as driver, ONLY check compliance for this driver's assigned vehicle!
-    final activeVehicle = currentDriver?.assignedVehicle.trim().toUpperCase() ?? '';
+    final activeVehicle =
+        currentDriver?.assignedVehicle.trim().toUpperCase() ?? '';
     final targetTrucks = isDriver && activeVehicle.isNotEmpty
-        ? truckModels.where((t) => t.code.trim().toUpperCase() == activeVehicle).toList()
+        ? truckModels
+            .where((t) => t.code.trim().toUpperCase() == activeVehicle)
+            .toList()
         : truckModels;
 
     for (final truck in targetTrucks) {
@@ -5002,7 +5083,8 @@ class PlannerController extends ChangeNotifier {
     await _saveSeatbeltRecords();
     final delSbJson = jsonEncode(deletedSeatbeltIds.toList());
     await _storage.setString(_deletedSeatbeltIdsKey, delSbJson);
-    unawaited(FirebaseBackendService.instance.saveAppSetting('deleted_seatbelts', delSbJson));
+    unawaited(FirebaseBackendService.instance
+        .saveAppSetting('deleted_seatbelts', delSbJson));
     try {
       await FirebaseBackendService.instance.deleteSeatbeltRecord(id);
     } catch (_) {}
@@ -5018,13 +5100,15 @@ class PlannerController extends ChangeNotifier {
     await _saveSeatbeltRecords();
     final delSbJson = jsonEncode(deletedSeatbeltIds.toList());
     await _storage.setString(_deletedSeatbeltIdsKey, delSbJson);
-    unawaited(FirebaseBackendService.instance.saveAppSetting('deleted_seatbelts', delSbJson));
+    unawaited(FirebaseBackendService.instance
+        .saveAppSetting('deleted_seatbelts', delSbJson));
   }
 
   Future<void> _saveDeletedDrivers() async {
     final payload = jsonEncode(deletedDriverEmails.toList());
     await _storage.setString(_deletedDriversKey, payload);
-    unawaited(FirebaseBackendService.instance.saveAppSetting('deleted_drivers', payload));
+    unawaited(FirebaseBackendService.instance
+        .saveAppSetting('deleted_drivers', payload));
   }
 
   Future<void> _saveEncryptedJsonList(
@@ -5052,7 +5136,8 @@ class PlannerController extends ChangeNotifier {
   }
 
   Future<void> _saveSeatbeltRecords() {
-    final sanitized = seatbeltRecords.take(15).map<Map<String, dynamic>>((record) {
+    final sanitized =
+        seatbeltRecords.take(15).map<Map<String, dynamic>>((record) {
       final json = record.toJson();
       if (record.photoBase64.length > 15000) {
         json['photoBase64'] = '';
@@ -5066,10 +5151,9 @@ class PlannerController extends ChangeNotifier {
   }
 
   Future<void> _saveDrivers() {
-    for (final driver in drivers) {
-      unawaited(
-          FirebaseBackendService.instance.syncDriverProfile(driver: driver));
-    }
+    // Local persistence must not fan out one Firestore write per record.
+    // Individual create/update actions perform their own remote sync; doing
+    // this here during startup creates hundreds of Firestore worker threads.
     return _saveEncryptedJsonList(
       _driversKey,
       drivers.map((driver) => driver.toJson()),
@@ -5077,10 +5161,6 @@ class PlannerController extends ChangeNotifier {
   }
 
   Future<void> _saveTruckModels() {
-    for (final vehicle in truckModels) {
-      unawaited(
-          FirebaseBackendService.instance.syncFleetVehicle(vehicle: vehicle));
-    }
     return _saveEncryptedJsonList(
       _truckModelsKey,
       truckModels.map((model) => model.toJson()),
@@ -5088,9 +5168,6 @@ class PlannerController extends ChangeNotifier {
   }
 
   Future<void> _saveTrips() {
-    for (final trip in trips) {
-      unawaited(FirebaseBackendService.instance.syncTripRecord(record: trip));
-    }
     return _saveEncryptedJsonList(
       _tripsKey,
       trips.map((trip) => trip.toJson()),
@@ -5098,10 +5175,6 @@ class PlannerController extends ChangeNotifier {
   }
 
   Future<void> _saveAlerts() {
-    for (final alert in alerts) {
-      unawaited(
-          FirebaseBackendService.instance.syncOperationsAlert(alert: alert));
-    }
     return _saveEncryptedJsonList(
       _alertsKey,
       alerts.map((alert) => alert.toJson()),
@@ -5109,9 +5182,6 @@ class PlannerController extends ChangeNotifier {
   }
 
   Future<void> _saveActivities() {
-    for (final act in activities.take(50)) {
-      unawaited(FirebaseBackendService.instance.saveAppSetting('activity_', act.toJson()));
-    }
     return _saveEncryptedJsonList(
       _activitiesKey,
       activities.map((activity) => activity.toJson()),
@@ -5119,10 +5189,6 @@ class PlannerController extends ChangeNotifier {
   }
 
   Future<void> _saveAttendance() {
-    for (final att in attendanceRecords) {
-      unawaited(
-          FirebaseBackendService.instance.syncAttendanceRecord(record: att));
-    }
     return _saveEncryptedJsonList(
       _attendanceKey,
       attendanceRecords.map((record) => record.toJson()),
@@ -5130,10 +5196,6 @@ class PlannerController extends ChangeNotifier {
   }
 
   Future<void> _saveCustomers() {
-    for (final cust in customers) {
-      unawaited(
-          FirebaseBackendService.instance.syncCustomerRecord(record: cust));
-    }
     return _saveEncryptedJsonList(
       _customersKey,
       customers.map((customer) => customer.toJson()),
@@ -5141,9 +5203,6 @@ class PlannerController extends ChangeNotifier {
   }
 
   Future<void> _saveExpenses() {
-    for (final exp in expenses) {
-      unawaited(FirebaseBackendService.instance.syncExpenseRecord(record: exp));
-    }
     return _saveEncryptedJsonList(
       _expensesKey,
       expenses.map((expense) => expense.toJson()),
@@ -5421,7 +5480,8 @@ class PlannerController extends ChangeNotifier {
         assignedVehicle: assignedVehicle,
         role: role,
       );
-      drivers.removeWhere((d) => d.email.trim().toLowerCase() == cleanEmail.toLowerCase());
+      drivers.removeWhere(
+          (d) => d.email.trim().toLowerCase() == cleanEmail.toLowerCase());
       drivers.add(newDriver);
       await _saveDrivers();
       await _completeFirebaseLogin(AuthenticatedFleetUser(
@@ -5441,7 +5501,8 @@ class PlannerController extends ChangeNotifier {
         assignedVehicle: assignedVehicle,
         role: role,
       );
-      drivers.removeWhere((d) => d.email.trim().toLowerCase() == cleanEmail.toLowerCase());
+      drivers.removeWhere(
+          (d) => d.email.trim().toLowerCase() == cleanEmail.toLowerCase());
       drivers.add(newDriver);
       await _saveDrivers();
       await _completeFirebaseLogin(AuthenticatedFleetUser(
@@ -5462,7 +5523,8 @@ class PlannerController extends ChangeNotifier {
         assignedVehicle: assignedVehicle,
         role: role,
       );
-      drivers.removeWhere((d) => d.email.trim().toLowerCase() == cleanEmail.toLowerCase());
+      drivers.removeWhere(
+          (d) => d.email.trim().toLowerCase() == cleanEmail.toLowerCase());
       drivers.add(newDriver);
       await _saveDrivers();
       await _completeFirebaseLogin(AuthenticatedFleetUser(
@@ -5826,7 +5888,8 @@ class PlannerController extends ChangeNotifier {
     // Check in defaultFleetDrivers if not in drivers
     for (final d in defaultFleetDrivers) {
       final dDigits = d.phone.replaceAll(RegExp(r'\D'), '');
-      if (dDigits.endsWith(cleanPhone) && !drivers.any((x) => x.phone == d.phone)) {
+      if (dDigits.endsWith(cleanPhone) &&
+          !drivers.any((x) => x.phone == d.phone)) {
         drivers.add(d.copyWith(password: normalizedPassword));
         updated = true;
       }
@@ -5837,7 +5900,8 @@ class PlannerController extends ChangeNotifier {
       notifyListeners();
       unawaited(logActivity(
         title: 'Password Reset',
-        details: 'Password updated via verified WhatsApp OTP for +91$cleanPhone',
+        details:
+            'Password updated via verified WhatsApp OTP for +91$cleanPhone',
         category: ActivityCategory.driver,
         action: 'reset_password',
       ));

@@ -1077,10 +1077,11 @@ class _TripsPageState extends State<TripsPage> {
                     subdomains: MapTileService.getSubdomains(
                       streetlight: false,
                     ),
-                    fallbackUrl: MapTileService.fallbackTileUrl,
                     maxNativeZoom: 19,
-                    userAgentPackageName: MapTileService.userAgent,
                     maxZoom: 19,
+                    keepBuffer: 3,
+                    panBuffer: 1,
+                    tileProvider: MapTileService.createFastTileProvider(),
                   ),
                   if (satellite) ...[
                     fm.TileLayer(

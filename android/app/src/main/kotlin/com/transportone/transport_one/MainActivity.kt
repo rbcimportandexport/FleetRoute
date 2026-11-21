@@ -62,35 +62,45 @@ class MainActivity : FlutterActivity() {
 
             override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
                 if (events == null) return
-                // Emit current status immediately on listen
-                val initial = getBatteryInfo()
-                lastPct = (initial["batteryLevel"] as? Int) ?: -1
-                lastCharging = initial["isCharging"] as? Boolean
-                events.success(initial)
+                try {
+                    // A plugin stream can be opened while the activity is
+                    // restoring. Any platform failure must become a harmless
+                    // sentinel value, never an uncaught native exception.
+                    val initial = getBatteryInfo()
+                    lastPct = (initial["batteryLevel"] as? Int) ?: -1
+                    lastCharging = initial["isCharging"] as? Boolean
+                    try {
+                        events.success(initial)
+                    } catch (_: Exception) {}
 
-                batteryReceiver = object : BroadcastReceiver() {
-                    override fun onReceive(context: Context?, intent: Intent?) {
+                    batteryReceiver?.let {
                         try {
-                            val info = getBatteryInfo()
-                            val pct = (info["batteryLevel"] as? Int) ?: -1
-                            val charging = info["isCharging"] as? Boolean
-                            // Deduplicate: only forward to Flutter if pct or charging state changed!
-                            if (pct != lastPct || charging != lastCharging) {
-                                lastPct = pct
-                                lastCharging = charging
-                                events.success(info)
-                            }
+                            unregisterReceiver(it)
                         } catch (_: Exception) {}
                     }
-                }
+                    batteryReceiver = object : BroadcastReceiver() {
+                        override fun onReceive(context: Context?, intent: Intent?) {
+                            try {
+                                val info = getBatteryInfo()
+                                val pct = (info["batteryLevel"] as? Int) ?: -1
+                                val charging = info["isCharging"] as? Boolean
+                                if (pct != lastPct || charging != lastCharging) {
+                                    lastPct = pct
+                                    lastCharging = charging
+                                    try {
+                                        events.success(info)
+                                    } catch (_: Exception) {}
+                                }
+                            } catch (_: Exception) {}
+                        }
+                    }
 
-                val filter = IntentFilter().apply {
-                    addAction(Intent.ACTION_BATTERY_CHANGED)
-                    addAction(Intent.ACTION_POWER_CONNECTED)
-                    addAction(Intent.ACTION_POWER_DISCONNECTED)
-                }
+                    val filter = IntentFilter().apply {
+                        addAction(Intent.ACTION_BATTERY_CHANGED)
+                        addAction(Intent.ACTION_POWER_CONNECTED)
+                        addAction(Intent.ACTION_POWER_DISCONNECTED)
+                    }
 
-                try {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                         registerReceiver(batteryReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
                     } else {

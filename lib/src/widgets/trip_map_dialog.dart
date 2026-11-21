@@ -295,10 +295,11 @@ class _TripMapDialogState extends State<TripMapDialog> {
                 subdomains: MapTileService.getSubdomains(
                   streetlight: _streetlight,
                 ),
-                fallbackUrl: MapTileService.fallbackTileUrl,
                 maxNativeZoom: 19,
-                userAgentPackageName: MapTileService.userAgent,
                 maxZoom: 19,
+                keepBuffer: 3,
+                panBuffer: 1,
+                tileProvider: MapTileService.createFastTileProvider(),
               ),
               if (_satellite) ...[
                 TileLayer(

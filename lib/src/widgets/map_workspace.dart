@@ -37,7 +37,7 @@ class MapWorkspace extends StatefulWidget {
 class _MapWorkspaceState extends State<MapWorkspace> {
   static const _india = LatLng(22.6, 79.0);
   final MapController _mapController = MapController();
-  final TileProvider _tileProvider = NetworkTileProvider();
+  final TileProvider _tileProvider = MapTileService.createFastTileProvider();
   gm.GoogleMapController? _googleMapController;
   gm.CameraPosition? _lastGoogleCameraPosition;
   final GlobalKey _mapViewKey = GlobalKey();
@@ -285,6 +285,29 @@ class _MapWorkspaceState extends State<MapWorkspace> {
           perm != LocationPermission.always) {
         return;
       }
+
+      // Fast-path: Immediately use cached last known position if available (0ms delay)
+      try {
+        final lastKnown = await Geolocator.getLastKnownPosition();
+        if (lastKnown != null && mounted) {
+          final fastPos = LatLng(lastKnown.latitude, lastKnown.longitude);
+          if (!widget.controller.canShowRoute) {
+            setState(() {
+              _userLocation = fastPos;
+              _pinnedOrigin = fastPos;
+            });
+            try {
+              _mapController.move(fastPos, 15.0);
+            } catch (_) {}
+            try {
+              _googleMapController?.animateCamera(
+                gm.CameraUpdate.newLatLngZoom(_googlePoint(fastPos), 15.0),
+              );
+            } catch (_) {}
+          }
+        }
+      } catch (_) {}
+
       final pos = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.medium,
@@ -4889,11 +4912,11 @@ class _MapWorkspaceState extends State<MapWorkspace> {
                       subdomains: MapTileService.getSubdomains(
                         streetlight: widget.controller.isStreetlight,
                       ),
-                      fallbackUrl: MapTileService.fallbackTileUrl,
                       maxNativeZoom: 18,
                       maxZoom: 21.0,
+                      keepBuffer: 3,
+                      panBuffer: 1,
                       tileProvider: _tileProvider,
-                      userAgentPackageName: MapTileService.userAgent,
                       errorTileCallback: (tile, error, stackTrace) =>
                           _handleMapTileError(),
                     ),
