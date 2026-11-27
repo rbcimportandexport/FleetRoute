@@ -1,0 +1,1550 @@
+import 'dart:async';
+import 'package:flutter/material.dart';
+
+import '../controllers/planner_controller.dart';
+import '../services/app_localization_service.dart';
+import '../services/whatsapp_otp_service.dart';
+import '../theme/app_theme.dart';
+
+class LoginPage extends StatefulWidget {
+  const LoginPage({
+    required this.controller,
+    this.onLoginSuccess,
+    this.initialUseOtpMode = false,
+    super.key,
+  });
+
+  final PlannerController controller;
+  final VoidCallback? onLoginSuccess;
+  final bool initialUseOtpMode;
+
+  @override
+  State<LoginPage> createState() => _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> {
+  final _phoneController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _otpController = TextEditingController();
+  final _newPasswordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+
+  // Registration controllers
+  final _nameController = TextEditingController();
+  final _regPhoneController = TextEditingController();
+  final _regVehicleController = TextEditingController();
+  String _selectedRole = 'driver'; // 'driver' or 'admin'
+
+  bool _isSignUp = false; // toggle between Sign In and Sign Up
+  bool _obscurePassword = true;
+  bool _obscureNewPassword = true;
+  bool _obscureConfirmPassword = true;
+  bool _isLoading = false;
+  String? _errorMessage;
+  String? _infoMessage;
+
+  // Firebase email/password is the production authentication path.
+  late bool _useOtpMode = false;
+  bool _otpSent = false;
+  bool _otpVerifiedForReset = false;
+  bool _isSendingOtp = false;
+  bool _isForgotPasswordMode = false;
+
+  Timer? _resendTimer;
+  int _resendCountdown = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _phoneController.text = '';
+    _passwordController.text = '';
+  }
+
+  void _startResendTimer() {
+    _resendTimer?.cancel();
+    _resendCountdown = 30;
+    _resendTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      setState(() {
+        if (_resendCountdown > 0) {
+          _resendCountdown--;
+        } else {
+          timer.cancel();
+        }
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _resendTimer?.cancel();
+    _phoneController.dispose();
+    _passwordController.dispose();
+    _otpController.dispose();
+    _newPasswordController.dispose();
+    _confirmPasswordController.dispose();
+    _nameController.dispose();
+    _regPhoneController.dispose();
+    _regVehicleController.dispose();
+    super.dispose();
+  }
+
+  void _enterForgotPasswordMode() {
+    setState(() {
+      _isForgotPasswordMode = true;
+      _useOtpMode = true;
+      _otpSent = false;
+      _otpVerifiedForReset = false;
+      _errorMessage = null;
+      _infoMessage = null;
+      _otpController.clear();
+      _newPasswordController.clear();
+      _confirmPasswordController.clear();
+      if (_phoneController.text.contains('@')) {
+        _phoneController.clear();
+      } else {
+        final digits = _phoneController.text.replaceAll(RegExp(r'\D'), '');
+        if (digits.length >= 10) {
+          _phoneController.text = digits.substring(digits.length - 10);
+        }
+      }
+    });
+  }
+
+  void _exitForgotPasswordMode() {
+    setState(() {
+      _isForgotPasswordMode = false;
+      _useOtpMode = false;
+      _otpSent = false;
+      _otpVerifiedForReset = false;
+      _errorMessage = null;
+      _infoMessage = null;
+      _otpController.clear();
+      _newPasswordController.clear();
+      _confirmPasswordController.clear();
+      _passwordController.clear();
+    });
+  }
+
+  Future<void> _handleRegister() async {
+    final name = _nameController.text.trim();
+    final email = _phoneController.text.trim();
+    final password = _passwordController.text.trim();
+    final phone = _regPhoneController.text.trim();
+    final vehicle = _regVehicleController.text.trim().toUpperCase();
+
+    if (name.isEmpty) {
+      setState(() {
+        _errorMessage = 'Kripya apna Pura Naam (Full Name) enter karein.';
+      });
+      return;
+    }
+
+    if (email.isEmpty) {
+      setState(() {
+        _errorMessage = 'Kripya apna Email ID ya Username enter karein.';
+      });
+      return;
+    }
+
+    if (password.length < 6) {
+      setState(() {
+        _errorMessage = 'Password kam se kam 6 characters ka hona chahiye.';
+      });
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+      _infoMessage = null;
+    });
+
+    try {
+      // By default any new user registered/logged in is strictly 'driver' role.
+      // Only authorized admin credentials (Saurabh / 9157661886) can access Admin Dashboard.
+      final enforcedRole = (email.toLowerCase() == 'rbcsaurabhyadav@gmail.com' ||
+              phone.replaceAll(RegExp(r'\D'), '').endsWith('9157661886'))
+          ? 'admin'
+          : 'driver';
+
+      final error = await widget.controller.register(
+        name: name,
+        email: email,
+        password: password,
+        phone: phone,
+        role: enforcedRole,
+        assignedVehicle: vehicle,
+      );
+
+      if (!mounted) return;
+
+      if (error != null) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = error;
+        });
+      } else {
+        setState(() {
+          _isLoading = false;
+          _isSignUp = false;
+          _useOtpMode = false;
+          _selectedRole = 'driver';
+          _errorMessage = null;
+          _infoMessage = 'Account ban gaya! Kripya Login karein.';
+        });
+        _phoneController.text = email;
+        _passwordController.text = password;
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Registration failed: ${e.toString()}';
+      });
+    }
+  }
+
+  Future<void> _handleSendSmsOtp() async {
+    final rawPhone = _phoneController.text.trim();
+    final digits = rawPhone.replaceAll(RegExp(r'\D'), '');
+    if (digits.length < 10) {
+      setState(() {
+        _errorMessage = 'Kripya apna 10-digit Phone Number enter karein.';
+      });
+      return;
+    }
+
+    final tenDigits = digits.substring(digits.length - 10);
+    _phoneController.text = tenDigits;
+
+    setState(() {
+      _isSendingOtp = true;
+      _errorMessage = null;
+      _infoMessage = null;
+    });
+
+    final result = await WhatsAppOtpService.instance.sendOtp(
+      phoneNumber: tenDigits,
+    );
+    if (!mounted) return;
+
+    setState(() {
+      _isSendingOtp = false;
+      if (result['success'] == true) {
+        _otpSent = true;
+        _infoMessage = result['message']?.toString() ??
+            'WhatsApp OTP +91$tenDigits par bheja gaya.';
+        _startResendTimer();
+      } else {
+        _errorMessage =
+            result['message']?.toString() ?? 'WhatsApp OTP send nahi hua.';
+      }
+    });
+  }
+
+  Future<void> _handleResetPassword() async {
+    final newPass = _newPasswordController.text.trim();
+    final confirmPass = _confirmPasswordController.text.trim();
+
+    if (newPass.isEmpty) {
+      setState(() {
+        _errorMessage = 'Naya password enter karein.';
+      });
+      return;
+    }
+
+    if (newPass.length < 6) {
+      setState(() {
+        _errorMessage = 'Password kam se kam 6 characters ka hona chahiye.';
+      });
+      return;
+    }
+
+    if (newPass != confirmPass) {
+      setState(() {
+        _errorMessage = 'Dono password match nahi ho rahe.';
+      });
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final phone = _phoneController.text.trim();
+      final error = await widget.controller.resetPasswordWithVerifiedPhone(
+        phone: phone,
+        newPassword: newPass,
+      );
+
+      if (!mounted) return;
+
+      if (error != null) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = error;
+        });
+      } else {
+        setState(() {
+          _isLoading = false;
+          _isForgotPasswordMode = false;
+          _useOtpMode = false;
+          _otpSent = false;
+          _otpVerifiedForReset = false;
+          _errorMessage = null;
+          _infoMessage = 'Password successfully badal gaya! Naye password se Login karein.';
+          _passwordController.text = newPass;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Password reset failed: ${e.toString()}';
+      });
+    }
+  }
+
+  Future<void> _handleVerifySmsOtp() async {
+    final otp = _otpController.text.trim();
+
+    if (otp.isEmpty) {
+      setState(() {
+        _errorMessage = 'Kripya WhatsApp me aaya OTP enter karein.';
+      });
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final result = await WhatsAppOtpService.instance.verifyOtpRemote(
+        phoneNumber: _phoneController.text,
+        enteredOtp: otp,
+      );
+
+      if (!mounted) return;
+
+      if (result['success'] != true) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = result['message']?.toString() ??
+              'WhatsApp OTP verification failed.';
+        });
+        return;
+      }
+
+      // If in Forgot Password Mode -> proceed to Set New Password screen
+      if (_isForgotPasswordMode) {
+        setState(() {
+          _isLoading = false;
+          _otpVerifiedForReset = true;
+          _errorMessage = null;
+          _infoMessage = 'OTP verified! Apna naya password dalein aur repeat karein.';
+        });
+        return;
+      }
+
+      final error = await widget.controller.loginWithTrustedWhatsAppOtp(result);
+      if (!mounted) return;
+
+      if (error != null) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = error;
+        });
+      } else {
+        setState(() {
+          _isLoading = false;
+        });
+        widget.onLoginSuccess?.call();
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Verification failed: ${e.toString()}';
+      });
+    }
+  }
+
+  Future<void> _handleLogin() async {
+    if (_isForgotPasswordMode && _otpVerifiedForReset) {
+      await _handleResetPassword();
+      return;
+    }
+
+    if (_useOtpMode) {
+      if (!_otpSent) {
+        await _handleSendSmsOtp();
+      } else {
+        await _handleVerifySmsOtp();
+      }
+      return;
+    }
+
+    final email = _phoneController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (email.isEmpty) {
+      setState(() {
+        _errorMessage = 'कृपया अपना 10 अंकों का मोबाइल नंबर दर्ज करें।';
+      });
+      return;
+    }
+
+    if (password.isEmpty) {
+      setState(() {
+        _errorMessage = 'कृपया अपना पासवर्ड दर्ज करें।';
+      });
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final error = await widget.controller.login(
+        email: email,
+        password: password,
+      );
+
+      if (!mounted) return;
+
+      if (error != null) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = error;
+        });
+      } else {
+        setState(() {
+          _isLoading = false;
+        });
+        widget.onLoginSuccess?.call();
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Login failed: ${e.toString()}';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<AppLanguage>(
+      valueListenable: AppLocalizationService.instance.currentLanguage,
+      builder: (context, currentLang, _) {
+        return Scaffold(
+          backgroundColor: const Color(0xFFF1F5F9),
+          body: SafeArea(
+            child: Column(
+              children: [
+                // Top Header Bar with Language Switcher (Full Upper Side)
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Align(
+                    alignment: Alignment.topRight,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x0A000000),
+                            blurRadius: 4,
+                            offset: Offset(0, 1),
+                          ),
+                        ],
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<AppLanguage>(
+                          value: currentLang,
+                          isDense: true,
+                          items: AppLanguage.values.map((lang) {
+                            return DropdownMenuItem(
+                              value: lang,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.language_rounded,
+                                      size: 15, color: Color(0xFF16A34A)),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    '${lang.code} (${lang.label})',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.navy,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (newLang) {
+                            if (newLang != null) {
+                              AppLocalizationService.instance
+                                  .setLanguage(newLang);
+                            }
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Main Content
+                Expanded(
+                  child: Center(
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 12),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 440),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            // App Brand Header
+                            Center(
+                              child: Container(
+                                width: 68,
+                                height: 68,
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [
+                                      Color(0xFF16A34A),
+                                      Color(0xFF15803D)
+                                    ],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  borderRadius: BorderRadius.circular(20),
+                                  boxShadow: const [
+                                    BoxShadow(
+                                      color: Color(0x3316A34A),
+                                      blurRadius: 18,
+                                      offset: Offset(0, 8),
+                                    ),
+                                  ],
+                                ),
+                                child: const Icon(
+                                  Icons.local_shipping_rounded,
+                                  color: Colors.white,
+                                  size: 36,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 18),
+                            const Center(
+                              child: Text(
+                                'TRANSPORT ONE',
+                                style: TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 1.2,
+                                  color: AppColors.navy,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            const Center(
+                              child: Text(
+                                'Fleet Operations & Route Intelligence',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Color(0xFF64748B),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 28),
+
+                            // Login Card (Light Theme)
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(20),
+                                border:
+                                    Border.all(color: const Color(0xFFE2E8F0)),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Color(0x120F2440),
+                                    blurRadius: 24,
+                                    offset: Offset(0, 8),
+                                  ),
+                                ],
+                              ),
+                              padding: const EdgeInsets.all(24),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  // Error Banner if present
+                                  if (_errorMessage != null) ...[
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 12, vertical: 10),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFFEF2F2),
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(
+                                            color: const Color(0xFFFCA5A5),
+                                            width: 1),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          const Icon(
+                                              Icons.error_outline_rounded,
+                                              color: Color(0xFFDC2626),
+                                              size: 18),
+                                          const SizedBox(width: 10),
+                                          Expanded(
+                                            child: Text(
+                                              _errorMessage!,
+                                              style: const TextStyle(
+                                                color: Color(0xFFDC2626),
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+
+                                    const SizedBox(height: 16),
+                                  ],
+
+                                  // Info / Success Banner if present
+                                  if (_infoMessage != null) ...[
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 12, vertical: 10),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFF0FDF4),
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(
+                                            color: const Color(0xFF86EFAC),
+                                            width: 1),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          const Icon(
+                                              Icons
+                                                  .check_circle_outline_rounded,
+                                              color: Color(0xFF16A34A),
+                                              size: 18),
+                                          const SizedBox(width: 10),
+                                          Expanded(
+                                            child: Text(
+                                              _infoMessage!,
+                                              style: const TextStyle(
+                                                color: Color(0xFF16A34A),
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+
+                                    const SizedBox(height: 16),
+                                  ],
+
+
+                                  if (!_isSignUp && _isForgotPasswordMode) ...[
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 14, vertical: 10),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFEFF6FF),
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(
+                                            color: const Color(0xFFBFDBFE)),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          const Icon(
+                                            Icons.lock_reset_rounded,
+                                            size: 20,
+                                            color: Color(0xFF2563EB),
+                                          ),
+                                          const SizedBox(width: 10),
+                                          const Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  'Forgot Password / Reset',
+                                                  style: TextStyle(
+                                                    fontSize: 13,
+                                                    fontWeight: FontWeight.w700,
+                                                    color: Color(0xFF1E3A8A),
+                                                  ),
+                                                ),
+                                                Text(
+                                                  'WhatsApp par OTP paane ke liye apna phone number dalein',
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    color: Color(0xFF475569),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          IconButton(
+                                            icon: const Icon(Icons.close_rounded,
+                                                size: 18,
+                                                color: Color(0xFF64748B)),
+                                            onPressed: _exitForgotPasswordMode,
+                                            tooltip: 'Cancel',
+                                            visualDensity:
+                                                VisualDensity.compact,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+
+                                    const SizedBox(height: 16),
+                                  ],
+
+                                  // Registration Fields
+                                  if (_isSignUp) ...[
+                                    Row(
+                                      children: [
+                                        IconButton(
+                                          icon: const Icon(
+                                              Icons.arrow_back_rounded,
+                                              color: AppColors.navy,
+                                              size: 20),
+                                          onPressed: () {
+                                            setState(() {
+                                              _isSignUp = false;
+                                              _errorMessage = null;
+                                              _infoMessage = null;
+                                            });
+                                          },
+                                          tooltip: 'Back to Login',
+                                        ),
+                                        const SizedBox(width: 4),
+                                        const Expanded(
+                                          child: Text(
+                                            'Sign up',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w700,
+                                              color: AppColors.navy,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 12),
+
+                                    // Full Name
+                                    const Text(
+                                      'Full Name (पूरा नाम)',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.navy,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    TextField(
+                                      controller: _nameController,
+                                      keyboardType: TextInputType.name,
+                                      style: const TextStyle(
+                                          color: AppColors.navy,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w500),
+                                      decoration: InputDecoration(
+                                        hintText: 'e.g. Ramesh Kumar',
+                                        hintStyle: const TextStyle(
+                                            color: Color(0xFF94A3B8),
+                                            fontSize: 13),
+                                        prefixIcon: const Icon(
+                                          Icons.badge_outlined,
+                                          color: Color(0xFF64748B),
+                                          size: 18,
+                                        ),
+                                        filled: true,
+                                        fillColor: const Color(0xFFF8FAFC),
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                                horizontal: 14, vertical: 12),
+                                        border: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                          borderSide: const BorderSide(
+                                              color: Color(0xFFE2E8F0)),
+                                        ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                          borderSide: const BorderSide(
+                                              color: Color(0xFFE2E8F0)),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                          borderSide: const BorderSide(
+                                              color: Color(0xFF16A34A),
+                                              width: 1.5),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 14),
+
+                                    // Phone Number
+                                    const Text(
+                                      'Mobile Number (मोबाइल नंबर)',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.navy,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    TextField(
+                                      controller: _regPhoneController,
+                                      keyboardType: TextInputType.phone,
+                                      style: const TextStyle(
+                                          color: AppColors.navy,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w500),
+                                      decoration: InputDecoration(
+                                        hintText: '10-digit Mobile',
+                                        hintStyle: const TextStyle(
+                                            color: Color(0xFF94A3B8),
+                                            fontSize: 13),
+                                        prefixIcon: const Icon(
+                                          Icons.phone_android_rounded,
+                                          color: Color(0xFF64748B),
+                                          size: 18,
+                                        ),
+                                        prefixText: '+91 ',
+                                        prefixStyle: const TextStyle(
+                                          color: AppColors.navy,
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 14,
+                                        ),
+                                        filled: true,
+                                        fillColor: const Color(0xFFF8FAFC),
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                                horizontal: 14, vertical: 12),
+                                        border: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                          borderSide: const BorderSide(
+                                              color: Color(0xFFE2E8F0)),
+                                        ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                          borderSide: const BorderSide(
+                                              color: Color(0xFFE2E8F0)),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                          borderSide: const BorderSide(
+                                              color: Color(0xFF16A34A),
+                                              width: 1.5),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 14),
+
+                                    // Assigned Vehicle (for driver role)
+                                    if (_selectedRole == 'driver') ...[
+                                      const Text(
+                                        'Assigned Vehicle / Truck (गाड़ी नंबर - Optional)',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700,
+                                          color: AppColors.navy,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      TextField(
+                                        controller: _regVehicleController,
+                                        textCapitalization:
+                                            TextCapitalization.characters,
+                                        style: const TextStyle(
+                                            color: AppColors.navy,
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w500),
+                                        decoration: InputDecoration(
+                                          hintText: 'e.g. MH-12-RN-8841',
+                                          hintStyle: const TextStyle(
+                                              color: Color(0xFF94A3B8),
+                                              fontSize: 13),
+                                          prefixIcon: const Icon(
+                                            Icons.directions_bus_outlined,
+                                            color: Color(0xFF64748B),
+                                            size: 18,
+                                          ),
+                                          filled: true,
+                                          fillColor: const Color(0xFFF8FAFC),
+                                          contentPadding:
+                                              const EdgeInsets.symmetric(
+                                                  horizontal: 14, vertical: 12),
+                                          border: OutlineInputBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(10),
+                                            borderSide: const BorderSide(
+                                                color: Color(0xFFE2E8F0)),
+                                          ),
+                                          enabledBorder: OutlineInputBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(10),
+                                            borderSide: const BorderSide(
+                                                color: Color(0xFFE2E8F0)),
+                                          ),
+                                          focusedBorder: OutlineInputBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(10),
+                                            borderSide: const BorderSide(
+                                                color: Color(0xFF16A34A),
+                                                width: 1.5),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 14),
+                                    ],
+                                  ],
+
+                                  // Phone Number Input (Only Phone Number)
+                                  const Text(
+                                    'मोबाइल नंबर (Phone Number)',
+                                    style: TextStyle(
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.navy,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  TextField(
+                                    controller: _phoneController,
+                                    autofillHints: const <String>[],
+                                    keyboardType: TextInputType.phone,
+                                    style: const TextStyle(
+                                        color: AppColors.navy,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600),
+                                    decoration: InputDecoration(
+                                      hintText: '10 अंकों का मोबाइल नंबर दर्ज करें (e.g. 6355583474)',
+                                      hintStyle: const TextStyle(
+                                          color: Color(0xFF94A3B8),
+                                          fontSize: 13),
+                                      prefixIcon: const Icon(
+                                        Icons.phone_android_rounded,
+                                        color: Color(0xFF2563EB),
+                                        size: 18,
+                                      ),
+                                      prefixText: '+91 ',
+                                      prefixStyle: const TextStyle(
+                                        color: AppColors.navy,
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 14,
+                                      ),
+                                      filled: true,
+                                      fillColor: const Color(0xFFF8FAFC),
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                              horizontal: 14, vertical: 12),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                        borderSide: const BorderSide(
+                                            color: Color(0xFFE2E8F0)),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                        borderSide: const BorderSide(
+                                            color: Color(0xFFE2E8F0)),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                        borderSide: BorderSide(
+                                            color: _isSignUp
+                                                ? const Color(0xFF16A34A)
+                                                : AppColors.blue,
+                                            width: 1.5),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+
+                                  // WhatsApp OTP Field (When in OTP mode and sent, but not yet verified)
+                                  if (!_isSignUp &&
+                                      _useOtpMode &&
+                                      _otpSent &&
+                                      !_otpVerifiedForReset) ...[
+                                    const Text(
+                                      'WhatsApp OTP Code',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.navy,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    TextField(
+                                      controller: _otpController,
+                                      keyboardType: TextInputType.number,
+                                      maxLength: 6,
+                                      style: const TextStyle(
+                                        color: AppColors.navy,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: 4,
+                                      ),
+                                      decoration: InputDecoration(
+                                        counterText: '',
+                                        hintText: '6-digit OTP',
+                                        hintStyle: const TextStyle(
+                                          color: Color(0xFF94A3B8),
+                                          fontSize: 13,
+                                          letterSpacing: 0,
+                                        ),
+                                        prefixIcon: const Icon(
+                                          Icons.verified_user_outlined,
+                                          color: Color(0xFF25D366),
+                                          size: 18,
+                                        ),
+                                        suffixIcon: TextButton(
+                                          onPressed: (_isSendingOtp ||
+                                                  _resendCountdown > 0)
+                                              ? null
+                                              : _handleSendSmsOtp,
+                                          child: Text(
+                                            _resendCountdown > 0
+                                                ? 'Resend in ${_resendCountdown}s'
+                                                : 'Resend',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w700,
+                                              color: (_isSendingOtp ||
+                                                      _resendCountdown > 0)
+                                                  ? const Color(0xFF94A3B8)
+                                                  : const Color(0xFF059669),
+                                            ),
+                                          ),
+                                        ),
+                                        filled: true,
+                                        fillColor: const Color(0xFFF8FAFC),
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                                horizontal: 14, vertical: 12),
+                                        border: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                          borderSide: const BorderSide(
+                                              color: Color(0xFFE2E8F0)),
+                                        ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                          borderSide: const BorderSide(
+                                              color: Color(0xFFE2E8F0)),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                          borderSide: const BorderSide(
+                                              color: Color(0xFF25D366),
+                                              width: 1.5),
+                                        ),
+                                      ),
+                                    ),
+
+                                    const SizedBox(height: 16),
+                                  ],
+
+                                  // New Password and Repeat Password Fields (When OTP is verified in Forgot Password mode)
+                                  if (!_isSignUp &&
+                                      _isForgotPasswordMode &&
+                                      _otpVerifiedForReset) ...[
+                                    const Text(
+                                      'New Password (नया पासवर्ड)',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.navy,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    TextField(
+                                      controller: _newPasswordController,
+                                      obscureText: _obscureNewPassword,
+                                      style: const TextStyle(
+                                          color: AppColors.navy,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w500),
+                                      decoration: InputDecoration(
+                                        hintText: 'Enter new password (min. 6 chars)',
+                                        hintStyle: const TextStyle(
+                                            color: Color(0xFF94A3B8),
+                                            fontSize: 13),
+                                        prefixIcon: const Icon(
+                                          Icons.lock_outline_rounded,
+                                          color: Color(0xFF64748B),
+                                          size: 18,
+                                        ),
+                                        suffixIcon: IconButton(
+                                          icon: Icon(
+                                            _obscureNewPassword
+                                                ? Icons.visibility_off_outlined
+                                                : Icons.visibility_outlined,
+                                            color: const Color(0xFF64748B),
+                                            size: 18,
+                                          ),
+                                          onPressed: () {
+                                            setState(() {
+                                              _obscureNewPassword =
+                                                  !_obscureNewPassword;
+                                            });
+                                          },
+                                        ),
+                                        filled: true,
+                                        fillColor: const Color(0xFFF8FAFC),
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                                horizontal: 14, vertical: 12),
+                                        border: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                          borderSide: const BorderSide(
+                                              color: Color(0xFFE2E8F0)),
+                                        ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                          borderSide: const BorderSide(
+                                              color: Color(0xFFE2E8F0)),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                          borderSide: const BorderSide(
+                                              color: Color(0xFF16A34A),
+                                              width: 1.5),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 14),
+
+                                    const Text(
+                                      'Repeat New Password (पासवर्ड दोबारा लिखें)',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.navy,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    TextField(
+                                      controller: _confirmPasswordController,
+                                      obscureText: _obscureConfirmPassword,
+                                      style: const TextStyle(
+                                          color: AppColors.navy,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w500),
+                                      onSubmitted: (_) => _handleResetPassword(),
+                                      decoration: InputDecoration(
+                                        hintText: 'Repeat new password',
+                                        hintStyle: const TextStyle(
+                                            color: Color(0xFF94A3B8),
+                                            fontSize: 13),
+                                        prefixIcon: const Icon(
+                                          Icons.lock_reset_rounded,
+                                          color: Color(0xFF64748B),
+                                          size: 18,
+                                        ),
+                                        suffixIcon: IconButton(
+                                          icon: Icon(
+                                            _obscureConfirmPassword
+                                                ? Icons.visibility_off_outlined
+                                                : Icons.visibility_outlined,
+                                            color: const Color(0xFF64748B),
+                                            size: 18,
+                                          ),
+                                          onPressed: () {
+                                            setState(() {
+                                              _obscureConfirmPassword =
+                                                  !_obscureConfirmPassword;
+                                            });
+                                          },
+                                        ),
+                                        filled: true,
+                                        fillColor: const Color(0xFFF8FAFC),
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                                horizontal: 14, vertical: 12),
+                                        border: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                          borderSide: const BorderSide(
+                                              color: Color(0xFFE2E8F0)),
+                                        ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                          borderSide: const BorderSide(
+                                              color: Color(0xFFE2E8F0)),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                          borderSide: const BorderSide(
+                                              color: Color(0xFF16A34A),
+                                              width: 1.5),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 16),
+                                  ],
+
+                                  // Firebase password input
+                                  if (_isSignUp || (!_useOtpMode && !_isForgotPasswordMode)) ...[
+                                    Text(
+                                      _isSignUp
+                                          ? 'Create Password (नया पासवर्ड)'
+                                          : AppLocalizationService.instance
+                                              .tr('password_label'),
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.navy,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    TextField(
+                                      controller: _passwordController,
+                                      autofillHints: const <String>[],
+                                      obscureText: _obscurePassword,
+                                      style: const TextStyle(
+                                          color: AppColors.navy,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w500),
+                                      onSubmitted: (_) => _isSignUp
+                                          ? _handleRegister()
+                                          : _handleLogin(),
+                                      decoration: InputDecoration(
+                                        hintText: _isSignUp
+                                            ? 'Min. 6 characters'
+                                            : AppLocalizationService.instance
+                                                .tr('enter_password_hint'),
+                                        hintStyle: const TextStyle(
+                                            color: Color(0xFF94A3B8),
+                                            fontSize: 13),
+                                        prefixIcon: const Icon(
+                                          Icons.lock_outline_rounded,
+                                          color: Color(0xFF64748B),
+                                          size: 18,
+                                        ),
+                                        suffixIcon: IconButton(
+                                          icon: Icon(
+                                            _obscurePassword
+                                                ? Icons.visibility_off_outlined
+                                                : Icons.visibility_outlined,
+                                            color: const Color(0xFF64748B),
+                                            size: 18,
+                                          ),
+                                          onPressed: () {
+                                            setState(() {
+                                              _obscurePassword =
+                                                  !_obscurePassword;
+                                            });
+                                          },
+                                        ),
+                                        filled: true,
+                                        fillColor: const Color(0xFFF8FAFC),
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                                horizontal: 14, vertical: 12),
+                                        border: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                          borderSide: const BorderSide(
+                                              color: Color(0xFFE2E8F0)),
+                                        ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                          borderSide: const BorderSide(
+                                              color: Color(0xFFE2E8F0)),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                          borderSide: BorderSide(
+                                              color: _isSignUp
+                                                  ? const Color(0xFF16A34A)
+                                                  : AppColors.blue,
+                                              width: 1.5),
+                                        ),
+                                      ),
+                                    ),
+                                    if (!_isSignUp) ...[
+                                      const SizedBox(height: 10),
+                                      Align(
+                                        alignment: Alignment.centerRight,
+                                        child: GestureDetector(
+                                          onTap: _enterForgotPasswordMode,
+                                          child: const Text(
+                                            'Forgot password?',
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w600,
+                                              color: Color(0xFF2563EB),
+                                              decoration: TextDecoration.underline,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                    const SizedBox(height: 16),
+                                  ],
+
+                                  const SizedBox(height: 6),
+
+                                  // Action Button (Sign In OR Create Account)
+                                  SizedBox(
+                                    height: 48,
+                                    child: FilledButton(
+                                      onPressed: (_isLoading || _isSendingOtp)
+                                          ? null
+                                          : (_isSignUp
+                                              ? _handleRegister
+                                              : _handleLogin),
+                                      style: FilledButton.styleFrom(
+                                        backgroundColor: _isSignUp
+                                            ? const Color(0xFF16A34A)
+                                            : (_useOtpMode
+                                                ? const Color(0xFF059669)
+                                                : AppColors.blue),
+                                        foregroundColor: Colors.white,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                        ),
+                                        elevation: 2,
+                                      ),
+                                      child: (_isLoading || _isSendingOtp)
+                                          ? const SizedBox(
+                                              width: 20,
+                                              height: 20,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                color: Colors.white,
+                                              ),
+                                            )
+                                          : Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                Icon(
+                                                  _isSignUp
+                                                      ? Icons
+                                                          .check_circle_outline_rounded
+                                                      : (_isForgotPasswordMode && _otpVerifiedForReset
+                                                          ? Icons.check_circle_rounded
+                                                          : (_useOtpMode
+                                                              ? (_otpSent
+                                                                  ? Icons
+                                                                      .verified_rounded
+                                                                  : Icons
+                                                                      .chat_rounded)
+                                                              : Icons
+                                                                  .arrow_forward_rounded)),
+                                                  size: 17,
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Flexible(
+                                                  child: Text(
+                                                    _isSignUp
+                                                        ? 'Register & Sign In'
+                                                        : (_isForgotPasswordMode && _otpVerifiedForReset
+                                                            ? 'Save New Password & Login'
+                                                            : (_useOtpMode
+                                                                ? (_otpSent
+                                                                    ? AppLocalizationService
+                                                                        .instance
+                                                                        .tr('verify_and_sign_in')
+                                                                    : AppLocalizationService
+                                                                        .instance
+                                                                        .tr(
+                                                                            'send_otp'))
+                                                                : AppLocalizationService
+                                                                    .instance
+                                                                    .tr('sign_in'))),
+                                                    style: const TextStyle(
+                                                      fontSize: 14,
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                    ),
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    maxLines: 1,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 14),
+
+                                  const SizedBox(height: 6),
+
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(
+                                        Icons.verified_user_rounded,
+                                        size: 13,
+                                        color: Color(0xFF10B981),
+                                      ),
+                                      const SizedBox(width: 5),
+                                      Flexible(
+                                        child: Text(
+                                          AppLocalizationService.instance
+                                              .tr('auto_login_enabled'),
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            color: Color(0xFF64748B),
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                          textAlign: TextAlign.center,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            const SizedBox(height: 16),
+
+                            // ── Register / Login Toggle ──────────────────────
+                            if (!_isSignUp)
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Text(
+                                    'Account nahi hai? ',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Color(0xFF64748B),
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  GestureDetector(
+                                    onTap: () {
+                                      setState(() {
+                                        _isSignUp = true;
+                                        _errorMessage = null;
+                                        _infoMessage = null;
+                                        _nameController.clear();
+                                        _regPhoneController.clear();
+                                        _regVehicleController.clear();
+                                        _phoneController.clear();
+                                        _passwordController.clear();
+                                        _selectedRole = 'driver';
+                                      });
+                                    },
+                                    child: const Text(
+                                      'Sign up',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Color(0xFF16A34A),
+                                        fontWeight: FontWeight.w800,
+                                        decoration: TextDecoration.underline,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              )
+                            else
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Text(
+                                    'Pehle se account hai? ',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Color(0xFF64748B),
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  GestureDetector(
+                                    onTap: () {
+                                      setState(() {
+                                        _isSignUp = false;
+                                        _errorMessage = null;
+                                        _infoMessage = null;
+                                      });
+                                    },
+                                    child: const Text(
+                                      'Sign in',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Color(0xFF2563EB),
+                                        fontWeight: FontWeight.w800,
+                                        decoration: TextDecoration.underline,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                            const SizedBox(height: 20),
+                            // App Version Footer
+                            const Center(
+                              child: Text(
+                                'Transport One Fleet Security & Management Console',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Color(0xFF64748B),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}

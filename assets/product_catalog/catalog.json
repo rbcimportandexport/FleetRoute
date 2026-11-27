@@ -1,0 +1,2306 @@
+﻿[
+    {
+        "id":  "rama-bed-5001-651f3b03",
+        "brand":  "RAMA",
+        "category":  "BED",
+        "code":  "5001",
+        "name":  "RAMA - 5001",
+        "photoAsset":  "assets/product_catalog/rama/bed/5001-651f3b03.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/BED/RAMA - 5001.jpg"
+    },
+    {
+        "id":  "rama-bed-5004-56fc9bd0",
+        "brand":  "RAMA",
+        "category":  "BED",
+        "code":  "5004",
+        "name":  "RAMA - 5004",
+        "photoAsset":  "assets/product_catalog/rama/bed/5004-56fc9bd0.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/BED/RAMA - 5004.jpg"
+    },
+    {
+        "id":  "rama-bed-514-876da653",
+        "brand":  "RAMA",
+        "category":  "BED",
+        "code":  "514",
+        "name":  "RAMA - 514",
+        "photoAsset":  "assets/product_catalog/rama/bed/514-876da653.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/BED/RAMA - 514.jpg"
+    },
+    {
+        "id":  "rama-bed-514-imported-bd98dfa7",
+        "brand":  "RAMA",
+        "category":  "BED",
+        "code":  "514 imported",
+        "name":  "RAMA - 514 imported",
+        "photoAsset":  "assets/product_catalog/rama/bed/514-imported-bd98dfa7.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/BED/RAMA - 514 imported.jpg"
+    },
+    {
+        "id":  "rama-bed-934-739517c7",
+        "brand":  "RAMA",
+        "category":  "BED",
+        "code":  "934",
+        "name":  "RAMA - 934",
+        "photoAsset":  "assets/product_catalog/rama/bed/934-739517c7.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/BED/RAMA - 934.jpg"
+    },
+    {
+        "id":  "rama-bed-935-2bef2762",
+        "brand":  "RAMA",
+        "category":  "BED",
+        "code":  "935",
+        "name":  "RAMA - 935",
+        "photoAsset":  "assets/product_catalog/rama/bed/935-2bef2762.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/BED/RAMA - 935.jpg"
+    },
+    {
+        "id":  "rama-bed-937-e4e70f14",
+        "brand":  "RAMA",
+        "category":  "BED",
+        "code":  "937",
+        "name":  "RAMA - 937",
+        "photoAsset":  "assets/product_catalog/rama/bed/937-e4e70f14.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/BED/RAMA - 937.jpg"
+    },
+    {
+        "id":  "rama-chair-1003-3c058ceb",
+        "brand":  "RAMA",
+        "category":  "CHAIR",
+        "code":  "1003",
+        "name":  "RAMA - 1003",
+        "photoAsset":  "assets/product_catalog/rama/chair/1003-3c058ceb.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/CHAIR/RAMA - 1003.jpg"
+    },
+    {
+        "id":  "rama-chair-2001-58ae9af3",
+        "brand":  "RAMA",
+        "category":  "CHAIR",
+        "code":  "2001",
+        "name":  "RAMA - 2001",
+        "photoAsset":  "assets/product_catalog/rama/chair/2001-58ae9af3.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/CHAIR/RAMA - 2001.jpg"
+    },
+    {
+        "id":  "rama-chair-2002-bc1f9c95",
+        "brand":  "RAMA",
+        "category":  "CHAIR",
+        "code":  "2002",
+        "name":  "RAMA - 2002",
+        "photoAsset":  "assets/product_catalog/rama/chair/2002-bc1f9c95.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/CHAIR/RAMA - 2002.jpg"
+    },
+    {
+        "id":  "rama-chair-2005-golden-87c73048",
+        "brand":  "RAMA",
+        "category":  "CHAIR",
+        "code":  "2005 GOLDEN",
+        "name":  "RAMA - 2005 GOLDEN",
+        "photoAsset":  "assets/product_catalog/rama/chair/2005-golden-87c73048.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/CHAIR/RAMA - 2005 GOLDEN.jpg"
+    },
+    {
+        "id":  "rama-chair-2005-silver-1b78e0f1",
+        "brand":  "RAMA",
+        "category":  "CHAIR",
+        "code":  "2005 SILVER",
+        "name":  "RAMA - 2005 SILVER",
+        "photoAsset":  "assets/product_catalog/rama/chair/2005-silver-1b78e0f1.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/CHAIR/RAMA - 2005 SILVER.jpg"
+    },
+    {
+        "id":  "rama-chair-2011-d0b19c55",
+        "brand":  "RAMA",
+        "category":  "CHAIR",
+        "code":  "2011",
+        "name":  "RAMA - 2011",
+        "photoAsset":  "assets/product_catalog/rama/chair/2011-d0b19c55.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/CHAIR/RAMA - 2011.jpg"
+    },
+    {
+        "id":  "rama-chair-2016-7465232c",
+        "brand":  "RAMA",
+        "category":  "CHAIR",
+        "code":  "2016",
+        "name":  "RAMA - 2016",
+        "photoAsset":  "assets/product_catalog/rama/chair/2016-7465232c.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/CHAIR/RAMA - 2016.jpg"
+    },
+    {
+        "id":  "rama-chair-2018-1ecc87fc",
+        "brand":  "RAMA",
+        "category":  "CHAIR",
+        "code":  "2018",
+        "name":  "RAMA - 2018",
+        "photoAsset":  "assets/product_catalog/rama/chair/2018-1ecc87fc.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/CHAIR/RAMA - 2018.jpg"
+    },
+    {
+        "id":  "rama-chair-202-a-4f805c0c",
+        "brand":  "RAMA",
+        "category":  "CHAIR",
+        "code":  "202 A",
+        "name":  "RAMA - 202 A",
+        "photoAsset":  "assets/product_catalog/rama/chair/202-a-4f805c0c.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/CHAIR/RAMA - 202 A.jpg"
+    },
+    {
+        "id":  "rama-chair-2021-2e2f3ba9",
+        "brand":  "RAMA",
+        "category":  "CHAIR",
+        "code":  "2021",
+        "name":  "RAMA - 2021",
+        "photoAsset":  "assets/product_catalog/rama/chair/2021-2e2f3ba9.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/CHAIR/RAMA - 2021.jpg"
+    },
+    {
+        "id":  "rama-chair-2022-9f6e6536",
+        "brand":  "RAMA",
+        "category":  "CHAIR",
+        "code":  "2022",
+        "name":  "RAMA - 2022",
+        "photoAsset":  "assets/product_catalog/rama/chair/2022-9f6e6536.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/CHAIR/RAMA - 2022.jpg"
+    },
+    {
+        "id":  "rama-chair-2024-8fe71a42",
+        "brand":  "RAMA",
+        "category":  "CHAIR",
+        "code":  "2024",
+        "name":  "RAMA - 2024",
+        "photoAsset":  "assets/product_catalog/rama/chair/2024-8fe71a42.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/CHAIR/RAMA - 2024.jpg"
+    },
+    {
+        "id":  "rama-chair-2024-b-7d7ef63c",
+        "brand":  "RAMA",
+        "category":  "CHAIR",
+        "code":  "2024 B",
+        "name":  "RAMA - 2024 B",
+        "photoAsset":  "assets/product_catalog/rama/chair/2024-b-7d7ef63c.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/CHAIR/RAMA - 2024 B.jpg"
+    },
+    {
+        "id":  "rama-chair-2025-bb2ea1bc",
+        "brand":  "RAMA",
+        "category":  "CHAIR",
+        "code":  "2025",
+        "name":  "RAMA - 2025",
+        "photoAsset":  "assets/product_catalog/rama/chair/2025-bb2ea1bc.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/CHAIR/RAMA - 2025.jpg"
+    },
+    {
+        "id":  "rama-chair-2026-b583e0ec",
+        "brand":  "RAMA",
+        "category":  "CHAIR",
+        "code":  "2026",
+        "name":  "RAMA - 2026",
+        "photoAsset":  "assets/product_catalog/rama/chair/2026-b583e0ec.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/CHAIR/RAMA - 2026.jpg"
+    },
+    {
+        "id":  "rama-chair-2029-80939734",
+        "brand":  "RAMA",
+        "category":  "CHAIR",
+        "code":  "2029",
+        "name":  "RAMA - 2029",
+        "photoAsset":  "assets/product_catalog/rama/chair/2029-80939734.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/CHAIR/RAMA - 2029.jpg"
+    },
+    {
+        "id":  "rama-chair-2030-c115ba53",
+        "brand":  "RAMA",
+        "category":  "CHAIR",
+        "code":  "2030",
+        "name":  "RAMA - 2030",
+        "photoAsset":  "assets/product_catalog/rama/chair/2030-c115ba53.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/CHAIR/RAMA - 2030.jpg"
+    },
+    {
+        "id":  "rama-chair-2035-dfa6eedb",
+        "brand":  "RAMA",
+        "category":  "CHAIR",
+        "code":  "2035",
+        "name":  "RAMA - 2035",
+        "photoAsset":  "assets/product_catalog/rama/chair/2035-dfa6eedb.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/CHAIR/RAMA - 2035.jpg"
+    },
+    {
+        "id":  "rama-chair-2036-f23a1b3d",
+        "brand":  "RAMA",
+        "category":  "CHAIR",
+        "code":  "2036",
+        "name":  "RAMA - 2036",
+        "photoAsset":  "assets/product_catalog/rama/chair/2036-f23a1b3d.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/CHAIR/RAMA - 2036.jpg"
+    },
+    {
+        "id":  "rama-chair-2040-932dd2c8",
+        "brand":  "RAMA",
+        "category":  "CHAIR",
+        "code":  "2040",
+        "name":  "RAMA - 2040",
+        "photoAsset":  "assets/product_catalog/rama/chair/2040-932dd2c8.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/CHAIR/RAMA - 2040.jpg"
+    },
+    {
+        "id":  "rama-chair-2041-1833b526",
+        "brand":  "RAMA",
+        "category":  "CHAIR",
+        "code":  "2041",
+        "name":  "RAMA - 2041",
+        "photoAsset":  "assets/product_catalog/rama/chair/2041-1833b526.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/CHAIR/RAMA - 2041.jpg"
+    },
+    {
+        "id":  "rama-chair-2042-gold-654367e1",
+        "brand":  "RAMA",
+        "category":  "CHAIR",
+        "code":  "2042 GOLD",
+        "name":  "RAMA - 2042 GOLD",
+        "photoAsset":  "assets/product_catalog/rama/chair/2042-gold-654367e1.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/CHAIR/RAMA - 2042 GOLD.jpg"
+    },
+    {
+        "id":  "rama-chair-2042-silver-6a6d9454",
+        "brand":  "RAMA",
+        "category":  "CHAIR",
+        "code":  "2042 SILVER",
+        "name":  "RAMA - 2042 SILVER",
+        "photoAsset":  "assets/product_catalog/rama/chair/2042-silver-6a6d9454.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/CHAIR/RAMA - 2042 SILVER.jpg"
+    },
+    {
+        "id":  "rama-chair-2043-1fecb583",
+        "brand":  "RAMA",
+        "category":  "CHAIR",
+        "code":  "2043",
+        "name":  "RAMA - 2043",
+        "photoAsset":  "assets/product_catalog/rama/chair/2043-1fecb583.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/CHAIR/RAMA - 2043.jpg"
+    },
+    {
+        "id":  "rama-chair-2044-f9f17556",
+        "brand":  "RAMA",
+        "category":  "CHAIR",
+        "code":  "2044",
+        "name":  "RAMA - 2044",
+        "photoAsset":  "assets/product_catalog/rama/chair/2044-f9f17556.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/CHAIR/RAMA - 2044.jpg"
+    },
+    {
+        "id":  "rama-chair-2045-fe81bfac",
+        "brand":  "RAMA",
+        "category":  "CHAIR",
+        "code":  "2045",
+        "name":  "RAMA - 2045",
+        "photoAsset":  "assets/product_catalog/rama/chair/2045-fe81bfac.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/CHAIR/RAMA - 2045.jpg"
+    },
+    {
+        "id":  "rama-chair-2046-1dbb6974",
+        "brand":  "RAMA",
+        "category":  "CHAIR",
+        "code":  "2046",
+        "name":  "RAMA - 2046",
+        "photoAsset":  "assets/product_catalog/rama/chair/2046-1dbb6974.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/CHAIR/RAMA - 2046.jpg"
+    },
+    {
+        "id":  "rama-chair-2047-e293142f",
+        "brand":  "RAMA",
+        "category":  "CHAIR",
+        "code":  "2047",
+        "name":  "RAMA - 2047",
+        "photoAsset":  "assets/product_catalog/rama/chair/2047-e293142f.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/CHAIR/RAMA - 2047.jpg"
+    },
+    {
+        "id":  "rama-mani-pedi-340-e757d211",
+        "brand":  "RAMA",
+        "category":  "MANI PEDI",
+        "code":  "340",
+        "name":  "RAMA - 340",
+        "photoAsset":  "assets/product_catalog/rama/mani-pedi/340-e757d211.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/MANI PEDI/RAMA - 340.jpg"
+    },
+    {
+        "id":  "rama-mani-pedi-341-a3b64919",
+        "brand":  "RAMA",
+        "category":  "MANI PEDI",
+        "code":  "341",
+        "name":  "RAMA - 341",
+        "photoAsset":  "assets/product_catalog/rama/mani-pedi/341-a3b64919.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/MANI PEDI/RAMA - 341.jpg"
+    },
+    {
+        "id":  "rama-mani-pedi-342-febc9fe0",
+        "brand":  "RAMA",
+        "category":  "MANI PEDI",
+        "code":  "342",
+        "name":  "RAMA - 342",
+        "photoAsset":  "assets/product_catalog/rama/mani-pedi/342-febc9fe0.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/MANI PEDI/RAMA - 342.jpg"
+    },
+    {
+        "id":  "rama-mani-pedi-343-c7ee5aa7",
+        "brand":  "RAMA",
+        "category":  "MANI PEDI",
+        "code":  "343",
+        "name":  "RAMA - 343",
+        "photoAsset":  "assets/product_catalog/rama/mani-pedi/343-c7ee5aa7.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/MANI PEDI/RAMA - 343.jpg"
+    },
+    {
+        "id":  "rama-mani-pedi-349-d5261110",
+        "brand":  "RAMA",
+        "category":  "MANI PEDI",
+        "code":  "349",
+        "name":  "RAMA - 349",
+        "photoAsset":  "assets/product_catalog/rama/mani-pedi/349-d5261110.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/MANI PEDI/RAMA - 349.jpg"
+    },
+    {
+        "id":  "rama-mani-pedi-6001-a56d19b1",
+        "brand":  "RAMA",
+        "category":  "MANI PEDI",
+        "code":  "6001",
+        "name":  "RAMA - 6001",
+        "photoAsset":  "assets/product_catalog/rama/mani-pedi/6001-a56d19b1.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/MANI PEDI/RAMA - 6001.jpg"
+    },
+    {
+        "id":  "rama-mani-pedi-602-9f34800d",
+        "brand":  "RAMA",
+        "category":  "MANI PEDI",
+        "code":  "602",
+        "name":  "RAMA - 602",
+        "photoAsset":  "assets/product_catalog/rama/mani-pedi/602-9f34800d.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/MANI PEDI/RAMA - 602.jpg"
+    },
+    {
+        "id":  "rama-mani-pedi-603-d20ccef9",
+        "brand":  "RAMA",
+        "category":  "MANI PEDI",
+        "code":  "603",
+        "name":  "RAMA - 603",
+        "photoAsset":  "assets/product_catalog/rama/mani-pedi/603-d20ccef9.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/MANI PEDI/RAMA - 603.jpg"
+    },
+    {
+        "id":  "rama-mani-pedi-932-7b4c55ea",
+        "brand":  "RAMA",
+        "category":  "MANI PEDI",
+        "code":  "932",
+        "name":  "RAMA - 932",
+        "photoAsset":  "assets/product_catalog/rama/mani-pedi/932-7b4c55ea.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/MANI PEDI/RAMA - 932.jpg"
+    },
+    {
+        "id":  "rama-mani-pedi-932-with-massager-b7a53c32",
+        "brand":  "RAMA",
+        "category":  "MANI PEDI",
+        "code":  "932 with Massager",
+        "name":  "RAMA - 932 with Massager",
+        "photoAsset":  "assets/product_catalog/rama/mani-pedi/932-with-massager-b7a53c32.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/MANI PEDI/RAMA - 932 with Massager.jpg"
+    },
+    {
+        "id":  "rama-massager-907-5d002c1c",
+        "brand":  "RAMA",
+        "category":  "MASSAGER",
+        "code":  "907",
+        "name":  "RAMA - 907",
+        "photoAsset":  "assets/product_catalog/rama/massager/907-5d002c1c.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/MASSAGER/RAMA - 907.jpg"
+    },
+    {
+        "id":  "rama-massager-908-81a2beb8",
+        "brand":  "RAMA",
+        "category":  "MASSAGER",
+        "code":  "908",
+        "name":  "RAMA - 908",
+        "photoAsset":  "assets/product_catalog/rama/massager/908-81a2beb8.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/MASSAGER/RAMA - 908.jpg"
+    },
+    {
+        "id":  "rama-massager-909-6aa3f1e0",
+        "brand":  "RAMA",
+        "category":  "MASSAGER",
+        "code":  "909",
+        "name":  "RAMA - 909",
+        "photoAsset":  "assets/product_catalog/rama/massager/909-6aa3f1e0.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/MASSAGER/RAMA - 909.jpg"
+    },
+    {
+        "id":  "rama-massager-910-50d247b1",
+        "brand":  "RAMA",
+        "category":  "MASSAGER",
+        "code":  "910",
+        "name":  "RAMA - 910",
+        "photoAsset":  "assets/product_catalog/rama/massager/910-50d247b1.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/MASSAGER/RAMA - 910.jpg"
+    },
+    {
+        "id":  "rama-massager-911-7b225ce4",
+        "brand":  "RAMA",
+        "category":  "MASSAGER",
+        "code":  "911",
+        "name":  "RAMA - 911",
+        "photoAsset":  "assets/product_catalog/rama/massager/911-7b225ce4.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/MASSAGER/RAMA - 911.jpg"
+    },
+    {
+        "id":  "rama-massager-912-73571855",
+        "brand":  "RAMA",
+        "category":  "MASSAGER",
+        "code":  "912",
+        "name":  "RAMA - 912",
+        "photoAsset":  "assets/product_catalog/rama/massager/912-73571855.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/MASSAGER/RAMA - 912.jpg"
+    },
+    {
+        "id":  "rama-massager-916-b2c0abf5",
+        "brand":  "RAMA",
+        "category":  "MASSAGER",
+        "code":  "916",
+        "name":  "RAMA - 916",
+        "photoAsset":  "assets/product_catalog/rama/massager/916-b2c0abf5.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/MASSAGER/RAMA - 916.jpg"
+    },
+    {
+        "id":  "rama-massager-917-64d4c493",
+        "brand":  "RAMA",
+        "category":  "MASSAGER",
+        "code":  "917",
+        "name":  "RAMA - 917",
+        "photoAsset":  "assets/product_catalog/rama/massager/917-64d4c493.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/MASSAGER/RAMA - 917.jpg"
+    },
+    {
+        "id":  "rama-massager-918-5f0b431b",
+        "brand":  "RAMA",
+        "category":  "MASSAGER",
+        "code":  "918",
+        "name":  "RAMA - 918",
+        "photoAsset":  "assets/product_catalog/rama/massager/918-5f0b431b.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/MASSAGER/RAMA - 918.jpg"
+    },
+    {
+        "id":  "rama-massager-919-462107bf",
+        "brand":  "RAMA",
+        "category":  "MASSAGER",
+        "code":  "919",
+        "name":  "RAMA - 919",
+        "photoAsset":  "assets/product_catalog/rama/massager/919-462107bf.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/MASSAGER/RAMA - 919.jpg"
+    },
+    {
+        "id":  "rama-massager-933-d6bb8c4c",
+        "brand":  "RAMA",
+        "category":  "MASSAGER",
+        "code":  "933",
+        "name":  "RAMA - 933",
+        "photoAsset":  "assets/product_catalog/rama/massager/933-d6bb8c4c.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/MASSAGER/RAMA - 933.jpg"
+    },
+    {
+        "id":  "rama-massager-f01-f02-02a94e17",
+        "brand":  "RAMA",
+        "category":  "MASSAGER",
+        "code":  "F01 \u0026 F02",
+        "name":  "RAMA - F01 \u0026 F02",
+        "photoAsset":  "assets/product_catalog/rama/massager/f01-f02-02a94e17.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/MASSAGER/RAMA - F01 \u0026 F02.jpg"
+    },
+    {
+        "id":  "rama-shampoo-station-3001-f319ac6e",
+        "brand":  "RAMA",
+        "category":  "SHAMPOO STATION",
+        "code":  "3001",
+        "name":  "RAMA - 3001",
+        "photoAsset":  "assets/product_catalog/rama/shampoo-station/3001-f319ac6e.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/SHAMPOO STATION/RAMA - 3001.jpg"
+    },
+    {
+        "id":  "rama-shampoo-station-3007-8aac2581",
+        "brand":  "RAMA",
+        "category":  "SHAMPOO STATION",
+        "code":  "3007",
+        "name":  "RAMA - 3007",
+        "photoAsset":  "assets/product_catalog/rama/shampoo-station/3007-8aac2581.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/SHAMPOO STATION/RAMA - 3007.jpg"
+    },
+    {
+        "id":  "rama-shampoo-station-3009-57678f07",
+        "brand":  "RAMA",
+        "category":  "SHAMPOO STATION",
+        "code":  "3009",
+        "name":  "RAMA - 3009",
+        "photoAsset":  "assets/product_catalog/rama/shampoo-station/3009-57678f07.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/SHAMPOO STATION/RAMA - 3009.jpg"
+    },
+    {
+        "id":  "rama-shampoo-station-3010-77f52ea4",
+        "brand":  "RAMA",
+        "category":  "SHAMPOO STATION",
+        "code":  "3010",
+        "name":  "RAMA - 3010",
+        "photoAsset":  "assets/product_catalog/rama/shampoo-station/3010-77f52ea4.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/SHAMPOO STATION/RAMA - 3010.jpg"
+    },
+    {
+        "id":  "rama-shampoo-station-3012-fdfbcc36",
+        "brand":  "RAMA",
+        "category":  "SHAMPOO STATION",
+        "code":  "3012",
+        "name":  "RAMA - 3012",
+        "photoAsset":  "assets/product_catalog/rama/shampoo-station/3012-fdfbcc36.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/SHAMPOO STATION/RAMA - 3012.jpg"
+    },
+    {
+        "id":  "rama-shampoo-station-3013-dc8f19ff",
+        "brand":  "RAMA",
+        "category":  "SHAMPOO STATION",
+        "code":  "3013",
+        "name":  "RAMA - 3013",
+        "photoAsset":  "assets/product_catalog/rama/shampoo-station/3013-dc8f19ff.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/SHAMPOO STATION/RAMA - 3013.jpg"
+    },
+    {
+        "id":  "rama-shampoo-station-3014-cc3fc25d",
+        "brand":  "RAMA",
+        "category":  "SHAMPOO STATION",
+        "code":  "3014",
+        "name":  "RAMA - 3014",
+        "photoAsset":  "assets/product_catalog/rama/shampoo-station/3014-cc3fc25d.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/SHAMPOO STATION/RAMA - 3014.jpg"
+    },
+    {
+        "id":  "rama-shampoo-station-3016-a1ff828c",
+        "brand":  "RAMA",
+        "category":  "SHAMPOO STATION",
+        "code":  "3016",
+        "name":  "RAMA - 3016",
+        "photoAsset":  "assets/product_catalog/rama/shampoo-station/3016-a1ff828c.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/SHAMPOO STATION/RAMA - 3016.jpg"
+    },
+    {
+        "id":  "rama-shampoo-station-3017-2876ee07",
+        "brand":  "RAMA",
+        "category":  "SHAMPOO STATION",
+        "code":  "3017",
+        "name":  "RAMA - 3017",
+        "photoAsset":  "assets/product_catalog/rama/shampoo-station/3017-2876ee07.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/SHAMPOO STATION/RAMA - 3017.jpg"
+    },
+    {
+        "id":  "rama-shampoo-station-3020-0030a8c5",
+        "brand":  "RAMA",
+        "category":  "SHAMPOO STATION",
+        "code":  "3020",
+        "name":  "RAMA - 3020",
+        "photoAsset":  "assets/product_catalog/rama/shampoo-station/3020-0030a8c5.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/SHAMPOO STATION/RAMA - 3020.jpg"
+    },
+    {
+        "id":  "rama-shampoo-station-3021-6616c08e",
+        "brand":  "RAMA",
+        "category":  "SHAMPOO STATION",
+        "code":  "3021",
+        "name":  "RAMA - 3021",
+        "photoAsset":  "assets/product_catalog/rama/shampoo-station/3021-6616c08e.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/SHAMPOO STATION/RAMA - 3021.jpg"
+    },
+    {
+        "id":  "rama-shampoo-station-3022-155145fe",
+        "brand":  "RAMA",
+        "category":  "SHAMPOO STATION",
+        "code":  "3022",
+        "name":  "RAMA - 3022",
+        "photoAsset":  "assets/product_catalog/rama/shampoo-station/3022-155145fe.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/SHAMPOO STATION/RAMA - 3022.jpg"
+    },
+    {
+        "id":  "rama-shampoo-station-3023-c93e2bc3",
+        "brand":  "RAMA",
+        "category":  "SHAMPOO STATION",
+        "code":  "3023",
+        "name":  "RAMA - 3023",
+        "photoAsset":  "assets/product_catalog/rama/shampoo-station/3023-c93e2bc3.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/SHAMPOO STATION/RAMA - 3023.jpg"
+    },
+    {
+        "id":  "rama-shampoo-station-3024-884116f0",
+        "brand":  "RAMA",
+        "category":  "SHAMPOO STATION",
+        "code":  "3024",
+        "name":  "RAMA - 3024",
+        "photoAsset":  "assets/product_catalog/rama/shampoo-station/3024-884116f0.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/SHAMPOO STATION/RAMA - 3024.jpg"
+    },
+    {
+        "id":  "rama-shampoo-station-3025-1a746a09",
+        "brand":  "RAMA",
+        "category":  "SHAMPOO STATION",
+        "code":  "3025",
+        "name":  "RAMA - 3025",
+        "photoAsset":  "assets/product_catalog/rama/shampoo-station/3025-1a746a09.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/SHAMPOO STATION/RAMA - 3025.jpg"
+    },
+    {
+        "id":  "rama-stool-127-6b0ef033",
+        "brand":  "RAMA",
+        "category":  "STOOL",
+        "code":  "127",
+        "name":  "RAMA - 127",
+        "photoAsset":  "assets/product_catalog/rama/stool/127-6b0ef033.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/STOOL/RAMA - 127.jpg"
+    },
+    {
+        "id":  "rama-stool-128-8dcb7b01",
+        "brand":  "RAMA",
+        "category":  "STOOL",
+        "code":  "128",
+        "name":  "RAMA - 128",
+        "photoAsset":  "assets/product_catalog/rama/stool/128-8dcb7b01.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/STOOL/RAMA - 128.jpg"
+    },
+    {
+        "id":  "rama-stool-130-01997744",
+        "brand":  "RAMA",
+        "category":  "STOOL",
+        "code":  "130",
+        "name":  "RAMA - 130",
+        "photoAsset":  "assets/product_catalog/rama/stool/130-01997744.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/STOOL/RAMA - 130.jpg"
+    },
+    {
+        "id":  "rama-stool-137-ef9e1b3e",
+        "brand":  "RAMA",
+        "category":  "STOOL",
+        "code":  "137",
+        "name":  "RAMA - 137",
+        "photoAsset":  "assets/product_catalog/rama/stool/137-ef9e1b3e.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/STOOL/RAMA - 137.jpg"
+    },
+    {
+        "id":  "rama-stool-140-b80c5c2c",
+        "brand":  "RAMA",
+        "category":  "STOOL",
+        "code":  "140",
+        "name":  "RAMA - 140",
+        "photoAsset":  "assets/product_catalog/rama/stool/140-b80c5c2c.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/STOOL/RAMA - 140.jpg"
+    },
+    {
+        "id":  "rama-stool-148-1ce40116",
+        "brand":  "RAMA",
+        "category":  "STOOL",
+        "code":  "148",
+        "name":  "RAMA - 148",
+        "photoAsset":  "assets/product_catalog/rama/stool/148-1ce40116.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/STOOL/RAMA - 148.jpg"
+    },
+    {
+        "id":  "rama-stool-149-81dfb065",
+        "brand":  "RAMA",
+        "category":  "STOOL",
+        "code":  "149",
+        "name":  "RAMA - 149",
+        "photoAsset":  "assets/product_catalog/rama/stool/149-81dfb065.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/STOOL/RAMA - 149.jpg"
+    },
+    {
+        "id":  "rama-stool-157-eafc4d79",
+        "brand":  "RAMA",
+        "category":  "STOOL",
+        "code":  "157",
+        "name":  "RAMA - 157",
+        "photoAsset":  "assets/product_catalog/rama/stool/157-eafc4d79.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/STOOL/RAMA - 157.jpg"
+    },
+    {
+        "id":  "rama-stool-158-bd85d0cb",
+        "brand":  "RAMA",
+        "category":  "STOOL",
+        "code":  "158",
+        "name":  "RAMA - 158",
+        "photoAsset":  "assets/product_catalog/rama/stool/158-bd85d0cb.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/STOOL/RAMA - 158.jpg"
+    },
+    {
+        "id":  "rama-stool-163-ed366a56",
+        "brand":  "RAMA",
+        "category":  "STOOL",
+        "code":  "163",
+        "name":  "RAMA - 163",
+        "photoAsset":  "assets/product_catalog/rama/stool/163-ed366a56.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/STOOL/RAMA - 163.jpg"
+    },
+    {
+        "id":  "rama-stool-228-8ff673cc",
+        "brand":  "RAMA",
+        "category":  "STOOL",
+        "code":  "228",
+        "name":  "RAMA - 228",
+        "photoAsset":  "assets/product_catalog/rama/stool/228-8ff673cc.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/STOOL/RAMA - 228.jpg"
+    },
+    {
+        "id":  "rama-stool-98-b28ee72f",
+        "brand":  "RAMA",
+        "category":  "STOOL",
+        "code":  "98",
+        "name":  "RAMA - 98",
+        "photoAsset":  "assets/product_catalog/rama/stool/98-b28ee72f.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/STOOL/RAMA - 98.jpg"
+    },
+    {
+        "id":  "rama-trolley-102-273e294f",
+        "brand":  "RAMA",
+        "category":  "TROLLEY",
+        "code":  "102",
+        "name":  "RAMA - 102",
+        "photoAsset":  "assets/product_catalog/rama/trolley/102-273e294f.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/TROLLEY/RAMA - 102.jpg"
+    },
+    {
+        "id":  "rama-trolley-110-b890858e",
+        "brand":  "RAMA",
+        "category":  "TROLLEY",
+        "code":  "110",
+        "name":  "RAMA - 110",
+        "photoAsset":  "assets/product_catalog/rama/trolley/110-b890858e.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/TROLLEY/RAMA - 110.jpg"
+    },
+    {
+        "id":  "rama-trolley-113-7e177032",
+        "brand":  "RAMA",
+        "category":  "TROLLEY",
+        "code":  "113",
+        "name":  "RAMA - 113",
+        "photoAsset":  "assets/product_catalog/rama/trolley/113-7e177032.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/TROLLEY/RAMA - 113.jpg"
+    },
+    {
+        "id":  "rama-trolley-114-94e947c3",
+        "brand":  "RAMA",
+        "category":  "TROLLEY",
+        "code":  "114",
+        "name":  "RAMA - 114",
+        "photoAsset":  "assets/product_catalog/rama/trolley/114-94e947c3.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/TROLLEY/RAMA - 114.jpg"
+    },
+    {
+        "id":  "rama-trolley-115-5f071d25",
+        "brand":  "RAMA",
+        "category":  "TROLLEY",
+        "code":  "115",
+        "name":  "RAMA - 115",
+        "photoAsset":  "assets/product_catalog/rama/trolley/115-5f071d25.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/TROLLEY/RAMA - 115.jpg"
+    },
+    {
+        "id":  "rama-trolley-117-774a5a94",
+        "brand":  "RAMA",
+        "category":  "TROLLEY",
+        "code":  "117",
+        "name":  "RAMA - 117",
+        "photoAsset":  "assets/product_catalog/rama/trolley/117-774a5a94.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/TROLLEY/RAMA - 117.jpg"
+    },
+    {
+        "id":  "rama-trolley-118-bab0882c",
+        "brand":  "RAMA",
+        "category":  "TROLLEY",
+        "code":  "118",
+        "name":  "RAMA - 118",
+        "photoAsset":  "assets/product_catalog/rama/trolley/118-bab0882c.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/TROLLEY/RAMA - 118.jpg"
+    },
+    {
+        "id":  "rama-trolley-119-c5134486",
+        "brand":  "RAMA",
+        "category":  "TROLLEY",
+        "code":  "119",
+        "name":  "RAMA - 119",
+        "photoAsset":  "assets/product_catalog/rama/trolley/119-c5134486.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/TROLLEY/RAMA - 119.jpg"
+    },
+    {
+        "id":  "rama-trolley-71-f6407188",
+        "brand":  "RAMA",
+        "category":  "TROLLEY",
+        "code":  "71",
+        "name":  "RAMA - 71",
+        "photoAsset":  "assets/product_catalog/rama/trolley/71-f6407188.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/TROLLEY/RAMA - 71.jpg"
+    },
+    {
+        "id":  "rama-trolley-80-a52754c7",
+        "brand":  "RAMA",
+        "category":  "TROLLEY",
+        "code":  "80",
+        "name":  "RAMA - 80",
+        "photoAsset":  "assets/product_catalog/rama/trolley/80-a52754c7.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/TROLLEY/RAMA - 80.jpg"
+    },
+    {
+        "id":  "rama-trolley-81-abcea8e8",
+        "brand":  "RAMA",
+        "category":  "TROLLEY",
+        "code":  "81",
+        "name":  "RAMA - 81",
+        "photoAsset":  "assets/product_catalog/rama/trolley/81-abcea8e8.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/TROLLEY/RAMA - 81.jpg"
+    },
+    {
+        "id":  "rama-trolley-82-7118955e",
+        "brand":  "RAMA",
+        "category":  "TROLLEY",
+        "code":  "82",
+        "name":  "RAMA - 82",
+        "photoAsset":  "assets/product_catalog/rama/trolley/82-7118955e.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/TROLLEY/RAMA - 82.jpg"
+    },
+    {
+        "id":  "rama-trolley-85-1790b7f9",
+        "brand":  "RAMA",
+        "category":  "TROLLEY",
+        "code":  "85",
+        "name":  "RAMA - 85",
+        "photoAsset":  "assets/product_catalog/rama/trolley/85-1790b7f9.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/TROLLEY/RAMA - 85.jpg"
+    },
+    {
+        "id":  "rama-trolley-86-4ba0d4a0",
+        "brand":  "RAMA",
+        "category":  "TROLLEY",
+        "code":  "86",
+        "name":  "RAMA - 86",
+        "photoAsset":  "assets/product_catalog/rama/trolley/86-4ba0d4a0.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/TROLLEY/RAMA - 86.jpg"
+    },
+    {
+        "id":  "rama-trolley-87-281f3b3e",
+        "brand":  "RAMA",
+        "category":  "TROLLEY",
+        "code":  "87",
+        "name":  "RAMA - 87",
+        "photoAsset":  "assets/product_catalog/rama/trolley/87-281f3b3e.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/TROLLEY/RAMA - 87.jpg"
+    },
+    {
+        "id":  "rama-trolley-88-3cfb782d",
+        "brand":  "RAMA",
+        "category":  "TROLLEY",
+        "code":  "88",
+        "name":  "RAMA - 88",
+        "photoAsset":  "assets/product_catalog/rama/trolley/88-3cfb782d.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/TROLLEY/RAMA - 88.jpg"
+    },
+    {
+        "id":  "rama-trolley-trolley-c60378c3",
+        "brand":  "RAMA",
+        "category":  "TROLLEY",
+        "code":  "TROLLEY",
+        "name":  "RAMA - TROLLEY",
+        "photoAsset":  "assets/product_catalog/rama/trolley/trolley-c60378c3.jpg",
+        "originalPath":  "RAMA/CATEGORY WISE/TROLLEY/RAMA - TROLLEY.jpg"
+    },
+    {
+        "id":  "rbc-bed-411-8b047887",
+        "brand":  "RBC",
+        "category":  "BED",
+        "code":  "411",
+        "name":  "RBC - 411",
+        "photoAsset":  "assets/product_catalog/rbc/bed/411-8b047887.jpg",
+        "originalPath":  "RBC/BED/RBC - 411.jpg"
+    },
+    {
+        "id":  "rbc-bed-500-16aca5b7",
+        "brand":  "RBC",
+        "category":  "BED",
+        "code":  "500",
+        "name":  "RBC - 500",
+        "photoAsset":  "assets/product_catalog/rbc/bed/500-16aca5b7.jpg",
+        "originalPath":  "RBC/BED/RBC - 500.jpg"
+    },
+    {
+        "id":  "rbc-bed-501-1f7f0caf",
+        "brand":  "RBC",
+        "category":  "BED",
+        "code":  "501",
+        "name":  "RBC - 501",
+        "photoAsset":  "assets/product_catalog/rbc/bed/501-1f7f0caf.jpg",
+        "originalPath":  "RBC/BED/RBC - 501.jpg"
+    },
+    {
+        "id":  "rbc-bed-502-2202fce4",
+        "brand":  "RBC",
+        "category":  "BED",
+        "code":  "502",
+        "name":  "RBC - 502",
+        "photoAsset":  "assets/product_catalog/rbc/bed/502-2202fce4.jpg",
+        "originalPath":  "RBC/BED/RBC - 502.jpg"
+    },
+    {
+        "id":  "rbc-bed-504-8654ede7",
+        "brand":  "RBC",
+        "category":  "BED",
+        "code":  "504",
+        "name":  "RBC - 504",
+        "photoAsset":  "assets/product_catalog/rbc/bed/504-8654ede7.jpg",
+        "originalPath":  "RBC/BED/RBC - 504.jpg"
+    },
+    {
+        "id":  "rbc-bed-508-0f5450ff",
+        "brand":  "RBC",
+        "category":  "BED",
+        "code":  "508",
+        "name":  "RBC - 508",
+        "photoAsset":  "assets/product_catalog/rbc/bed/508-0f5450ff.jpg",
+        "originalPath":  "RBC/BED/RBC - 508.jpeg"
+    },
+    {
+        "id":  "rbc-bed-510-747126e6",
+        "brand":  "RBC",
+        "category":  "BED",
+        "code":  "510",
+        "name":  "RBC - 510",
+        "photoAsset":  "assets/product_catalog/rbc/bed/510-747126e6.jpg",
+        "originalPath":  "RBC/BED/RBC - 510.jpg"
+    },
+    {
+        "id":  "rbc-bed-512-5039becc",
+        "brand":  "RBC",
+        "category":  "BED",
+        "code":  "512",
+        "name":  "RBC - 512",
+        "photoAsset":  "assets/product_catalog/rbc/bed/512-5039becc.jpg",
+        "originalPath":  "RBC/BED/RBC - 512.jpg"
+    },
+    {
+        "id":  "rbc-bed-513-e5736248",
+        "brand":  "RBC",
+        "category":  "BED",
+        "code":  "513",
+        "name":  "RBC - 513",
+        "photoAsset":  "assets/product_catalog/rbc/bed/513-e5736248.jpg",
+        "originalPath":  "RBC/BED/RBC - 513.jpg"
+    },
+    {
+        "id":  "rbc-bed-514-f9ed1ba5",
+        "brand":  "RBC",
+        "category":  "BED",
+        "code":  "514",
+        "name":  "RBC - 514",
+        "photoAsset":  "assets/product_catalog/rbc/bed/514-f9ed1ba5.jpg",
+        "originalPath":  "RBC/BED/RBC - 514.jpg"
+    },
+    {
+        "id":  "rbc-bed-514-imported-68518080",
+        "brand":  "RBC",
+        "category":  "BED",
+        "code":  "514 IMPORTED",
+        "name":  "RBC - 514 IMPORTED",
+        "photoAsset":  "assets/product_catalog/rbc/bed/514-imported-68518080.jpg",
+        "originalPath":  "RBC/BED/RBC - 514 IMPORTED.jpg"
+    },
+    {
+        "id":  "rbc-bed-933-3e35c7ee",
+        "brand":  "RBC",
+        "category":  "BED",
+        "code":  "933",
+        "name":  "RBC - 933",
+        "photoAsset":  "assets/product_catalog/rbc/bed/933-3e35c7ee.jpg",
+        "originalPath":  "RBC/BED/RBC - 933.jpg"
+    },
+    {
+        "id":  "rbc-bed-934-71762124",
+        "brand":  "RBC",
+        "category":  "BED",
+        "code":  "934",
+        "name":  "RBC - 934",
+        "photoAsset":  "assets/product_catalog/rbc/bed/934-71762124.jpg",
+        "originalPath":  "RBC/BED/RBC - 934.jpg"
+    },
+    {
+        "id":  "rbc-bed-934a-hs-65d96a67",
+        "brand":  "RBC",
+        "category":  "BED",
+        "code":  "934A(HS)",
+        "name":  "RBC - 934A(HS)",
+        "photoAsset":  "assets/product_catalog/rbc/bed/934a-hs-65d96a67.jpg",
+        "originalPath":  "RBC/BED/RBC - 934A(HS).jpg"
+    },
+    {
+        "id":  "rbc-bed-935-c16d09a5",
+        "brand":  "RBC",
+        "category":  "BED",
+        "code":  "935",
+        "name":  "RBC - 935",
+        "photoAsset":  "assets/product_catalog/rbc/bed/935-c16d09a5.jpg",
+        "originalPath":  "RBC/BED/RBC - 935.jpg"
+    },
+    {
+        "id":  "rbc-bed-937-040b54dd",
+        "brand":  "RBC",
+        "category":  "BED",
+        "code":  "937",
+        "name":  "RBC - 937",
+        "photoAsset":  "assets/product_catalog/rbc/bed/937-040b54dd.jpg",
+        "originalPath":  "RBC/BED/RBC - 937.jpg"
+    },
+    {
+        "id":  "rbc-bed-bed-4af8ae69",
+        "brand":  "RBC",
+        "category":  "BED",
+        "code":  "BED",
+        "name":  "BED",
+        "photoAsset":  "assets/product_catalog/rbc/bed/bed-4af8ae69.jpg",
+        "originalPath":  "RBC/BED/BED.jpg"
+    },
+    {
+        "id":  "rbc-chair-202-c1b09039",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "202",
+        "name":  "RBC - 202",
+        "photoAsset":  "assets/product_catalog/rbc/chair/202-c1b09039.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 202.jpg"
+    },
+    {
+        "id":  "rbc-chair-213-7db779aa",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "213",
+        "name":  "RBC - 213",
+        "photoAsset":  "assets/product_catalog/rbc/chair/213-7db779aa.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 213.jpg"
+    },
+    {
+        "id":  "rbc-chair-223-24f217ea",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "223",
+        "name":  "RBC - 223",
+        "photoAsset":  "assets/product_catalog/rbc/chair/223-24f217ea.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 223.jpg"
+    },
+    {
+        "id":  "rbc-chair-225-043ea5b0",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "225",
+        "name":  "RBC - 225",
+        "photoAsset":  "assets/product_catalog/rbc/chair/225-043ea5b0.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 225.jpg"
+    },
+    {
+        "id":  "rbc-chair-232-6dc68578",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "232",
+        "name":  "RBC - 232",
+        "photoAsset":  "assets/product_catalog/rbc/chair/232-6dc68578.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 232.jpg"
+    },
+    {
+        "id":  "rbc-chair-234-774a1e5d",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "234",
+        "name":  "RBC - 234",
+        "photoAsset":  "assets/product_catalog/rbc/chair/234-774a1e5d.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 234.jpg"
+    },
+    {
+        "id":  "rbc-chair-236-8d3d1e7b",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "236",
+        "name":  "RBC - 236",
+        "photoAsset":  "assets/product_catalog/rbc/chair/236-8d3d1e7b.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 236.jpg"
+    },
+    {
+        "id":  "rbc-chair-239-49c73cce",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "239",
+        "name":  "RBC - 239",
+        "photoAsset":  "assets/product_catalog/rbc/chair/239-49c73cce.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 239.jpg"
+    },
+    {
+        "id":  "rbc-chair-249-5e9bccab",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "249",
+        "name":  "RBC - 249",
+        "photoAsset":  "assets/product_catalog/rbc/chair/249-5e9bccab.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 249.jpg"
+    },
+    {
+        "id":  "rbc-chair-251-ed5a5981",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "251",
+        "name":  "RBC - 251",
+        "photoAsset":  "assets/product_catalog/rbc/chair/251-ed5a5981.jpg",
+        "originalPath":  "RBC/CHAIR/RBC HAIR STYLING CHAIR(140426)/RBC - 251.jpg"
+    },
+    {
+        "id":  "rbc-chair-251-imported-e2ca3eda",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "251 (IMPORTED)",
+        "name":  "RBC - 251 (IMPORTED)",
+        "photoAsset":  "assets/product_catalog/rbc/chair/251-imported-e2ca3eda.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 251 (IMPORTED).jpg"
+    },
+    {
+        "id":  "rbc-chair-251a-plain-design-88265cde",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "251A (PLAIN DESIGN)",
+        "name":  "RBC - 251A (PLAIN DESIGN)",
+        "photoAsset":  "assets/product_catalog/rbc/chair/251a-plain-design-88265cde.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 251A (PLAIN DESIGN).jpg"
+    },
+    {
+        "id":  "rbc-chair-251b-cross-design-ae71a4cc",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "251B (CROSS DESIGN)",
+        "name":  "RBC - 251B (CROSS DESIGN)",
+        "photoAsset":  "assets/product_catalog/rbc/chair/251b-cross-design-ae71a4cc.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 251B (CROSS DESIGN).jpg"
+    },
+    {
+        "id":  "rbc-chair-252-89709b75",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "252",
+        "name":  "RBC - 252",
+        "photoAsset":  "assets/product_catalog/rbc/chair/252-89709b75.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 252.jpg"
+    },
+    {
+        "id":  "rbc-chair-253-c-d6ceec7a",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "253 C",
+        "name":  "RBC - 253 C",
+        "photoAsset":  "assets/product_catalog/rbc/chair/253-c-d6ceec7a.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 253 C.jpg"
+    },
+    {
+        "id":  "rbc-chair-253-imported-fa7221ae",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "253 IMPORTED",
+        "name":  "RBC - 253 IMPORTED",
+        "photoAsset":  "assets/product_catalog/rbc/chair/253-imported-fa7221ae.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 253 IMPORTED.jpg"
+    },
+    {
+        "id":  "rbc-chair-253-manufacturing-d6bba371",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "253 MANUFACTURING",
+        "name":  "RBC - 253 MANUFACTURING",
+        "photoAsset":  "assets/product_catalog/rbc/chair/253-manufacturing-d6bba371.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 253 MANUFACTURING.jpg"
+    },
+    {
+        "id":  "rbc-chair-254-ef22cb5c",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "254",
+        "name":  "RBC - 254",
+        "photoAsset":  "assets/product_catalog/rbc/chair/254-ef22cb5c.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 254.jpg"
+    },
+    {
+        "id":  "rbc-chair-255-2628b0a1",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "255",
+        "name":  "RBC - 255",
+        "photoAsset":  "assets/product_catalog/rbc/chair/255-2628b0a1.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 255.jpg"
+    },
+    {
+        "id":  "rbc-chair-259-f3e8afa1",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "259",
+        "name":  "RBC - 259",
+        "photoAsset":  "assets/product_catalog/rbc/chair/259-f3e8afa1.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 259.jpg"
+    },
+    {
+        "id":  "rbc-chair-273-458436cd",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "273",
+        "name":  "RBC - 273",
+        "photoAsset":  "assets/product_catalog/rbc/chair/273-458436cd.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 273.jpg"
+    },
+    {
+        "id":  "rbc-chair-280-black-ee55ef0b",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "280 BLACK",
+        "name":  "RBC - 280 BLACK",
+        "photoAsset":  "assets/product_catalog/rbc/chair/280-black-ee55ef0b.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 280 BLACK.jpg"
+    },
+    {
+        "id":  "rbc-chair-280-golden-1f37d1ab",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "280 GOLDEN",
+        "name":  "RBC - 280 GOLDEN",
+        "photoAsset":  "assets/product_catalog/rbc/chair/280-golden-1f37d1ab.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 280 GOLDEN.jpg"
+    },
+    {
+        "id":  "rbc-chair-280-silver-b50c4b25",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "280 SILVER",
+        "name":  "RBC - 280 SILVER",
+        "photoAsset":  "assets/product_catalog/rbc/chair/280-silver-b50c4b25.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 280 SILVER.jpg"
+    },
+    {
+        "id":  "rbc-chair-285-86c09b7b",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "285",
+        "name":  "RBC - 285",
+        "photoAsset":  "assets/product_catalog/rbc/chair/285-86c09b7b.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 285.jpg"
+    },
+    {
+        "id":  "rbc-chair-286-6121ad1c",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "286",
+        "name":  "RBC - 286",
+        "photoAsset":  "assets/product_catalog/rbc/chair/286-6121ad1c.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 286.jpg"
+    },
+    {
+        "id":  "rbc-chair-291-9d3f4045",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "291",
+        "name":  "RBC - 291",
+        "photoAsset":  "assets/product_catalog/rbc/chair/291-9d3f4045.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 291.jpg"
+    },
+    {
+        "id":  "rbc-chair-292-2c533862",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "292",
+        "name":  "RBC - 292",
+        "photoAsset":  "assets/product_catalog/rbc/chair/292-2c533862.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 292.jpg"
+    },
+    {
+        "id":  "rbc-chair-296-e1695105",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "296",
+        "name":  "RBC - 296",
+        "photoAsset":  "assets/product_catalog/rbc/chair/296-e1695105.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 296.jpg"
+    },
+    {
+        "id":  "rbc-chair-299-b47c6b9e",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "299",
+        "name":  "RBC - 299",
+        "photoAsset":  "assets/product_catalog/rbc/chair/299-b47c6b9e.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 299.jpg"
+    },
+    {
+        "id":  "rbc-chair-401-f0f95ff2",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "401",
+        "name":  "RBC - 401",
+        "photoAsset":  "assets/product_catalog/rbc/chair/401-f0f95ff2.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 401.jpg"
+    },
+    {
+        "id":  "rbc-chair-402-a7a8d2c5",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "402",
+        "name":  "RBC - 402",
+        "photoAsset":  "assets/product_catalog/rbc/chair/402-a7a8d2c5.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 402.jpg"
+    },
+    {
+        "id":  "rbc-chair-403-2016687f",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "403",
+        "name":  "RBC - 403",
+        "photoAsset":  "assets/product_catalog/rbc/chair/403-2016687f.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 403.jpg"
+    },
+    {
+        "id":  "rbc-chair-404-8f233e78",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "404",
+        "name":  "RBC - 404",
+        "photoAsset":  "assets/product_catalog/rbc/chair/404-8f233e78.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 404.jpg"
+    },
+    {
+        "id":  "rbc-chair-410-d2e08a88",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "410",
+        "name":  "RBC - 410",
+        "photoAsset":  "assets/product_catalog/rbc/chair/410-d2e08a88.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 410.jpg"
+    },
+    {
+        "id":  "rbc-chair-414-7849648f",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "414",
+        "name":  "RBC - 414",
+        "photoAsset":  "assets/product_catalog/rbc/chair/414-7849648f.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 414.jpg"
+    },
+    {
+        "id":  "rbc-chair-415-2b46554d",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "415",
+        "name":  "RBC - 415",
+        "photoAsset":  "assets/product_catalog/rbc/chair/415-2b46554d.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 415.jpg"
+    },
+    {
+        "id":  "rbc-chair-418-b-c8482324",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "418 B",
+        "name":  "RBC - 418 B",
+        "photoAsset":  "assets/product_catalog/rbc/chair/418-b-c8482324.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 418 B.jpg"
+    },
+    {
+        "id":  "rbc-chair-418-m-2ae19090",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "418 M",
+        "name":  "RBC - 418 M",
+        "photoAsset":  "assets/product_catalog/rbc/chair/418-m-2ae19090.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 418 M.jpg"
+    },
+    {
+        "id":  "rbc-chair-419-golden-bcfa5cb5",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "419 GOLDEN",
+        "name":  "RBC - 419 GOLDEN",
+        "photoAsset":  "assets/product_catalog/rbc/chair/419-golden-bcfa5cb5.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 419 GOLDEN.jpg"
+    },
+    {
+        "id":  "rbc-chair-419-silver-9d52a6f4",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "419 SILVER",
+        "name":  "RBC - 419 SILVER",
+        "photoAsset":  "assets/product_catalog/rbc/chair/419-silver-9d52a6f4.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 419 SILVER.jpg"
+    },
+    {
+        "id":  "rbc-chair-427-fec85586",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "427",
+        "name":  "RBC - 427",
+        "photoAsset":  "assets/product_catalog/rbc/chair/427-fec85586.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 427.jpg"
+    },
+    {
+        "id":  "rbc-chair-428-8a7873ff",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "428",
+        "name":  "RBC - 428",
+        "photoAsset":  "assets/product_catalog/rbc/chair/428-8a7873ff.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 428.jpg"
+    },
+    {
+        "id":  "rbc-chair-430-2e406f6c",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "430",
+        "name":  "RBC - 430",
+        "photoAsset":  "assets/product_catalog/rbc/chair/430-2e406f6c.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 430.jpg"
+    },
+    {
+        "id":  "rbc-chair-430-1-8a85f97a",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "430 1",
+        "name":  "RBC - 430 1",
+        "photoAsset":  "assets/product_catalog/rbc/chair/430-1-8a85f97a.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 430 1.jpg"
+    },
+    {
+        "id":  "rbc-chair-431-18e85019",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "431",
+        "name":  "RBC - 431",
+        "photoAsset":  "assets/product_catalog/rbc/chair/431-18e85019.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 431.jpg"
+    },
+    {
+        "id":  "rbc-chair-431-electric-10698f96",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "431 ELECTRIC",
+        "name":  "RBC - 431 ELECTRIC",
+        "photoAsset":  "assets/product_catalog/rbc/chair/431-electric-10698f96.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 431 ELECTRIC.jpg"
+    },
+    {
+        "id":  "rbc-chair-432-e13c8d16",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "432",
+        "name":  "RBC - 432",
+        "photoAsset":  "assets/product_catalog/rbc/chair/432-e13c8d16.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 432.jpg"
+    },
+    {
+        "id":  "rbc-chair-433-f18f117f",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "433",
+        "name":  "RBC - 433",
+        "photoAsset":  "assets/product_catalog/rbc/chair/433-f18f117f.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 433.jpg"
+    },
+    {
+        "id":  "rbc-chair-434-f7eb7702",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "434",
+        "name":  "RBC - 434",
+        "photoAsset":  "assets/product_catalog/rbc/chair/434-f7eb7702.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 434.jpg"
+    },
+    {
+        "id":  "rbc-chair-435-golden-a95e62bb",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "435 GOLDEN",
+        "name":  "RBC - 435 GOLDEN",
+        "photoAsset":  "assets/product_catalog/rbc/chair/435-golden-a95e62bb.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 435 GOLDEN.jpg"
+    },
+    {
+        "id":  "rbc-chair-436-silver-2af5d67e",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "436 SILVER",
+        "name":  "RBC - 436 SILVER",
+        "photoAsset":  "assets/product_catalog/rbc/chair/436-silver-2af5d67e.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 436 SILVER.jpg"
+    },
+    {
+        "id":  "rbc-chair-438-c2eb036f",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "438",
+        "name":  "RBC - 438",
+        "photoAsset":  "assets/product_catalog/rbc/chair/438-c2eb036f.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 438.jpg"
+    },
+    {
+        "id":  "rbc-chair-439-71c5043f",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "439",
+        "name":  "RBC - 439",
+        "photoAsset":  "assets/product_catalog/rbc/chair/439-71c5043f.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 439.jpg"
+    },
+    {
+        "id":  "rbc-chair-440-d2d5c0fc",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "440",
+        "name":  "RBC - 440",
+        "photoAsset":  "assets/product_catalog/rbc/chair/440-d2d5c0fc.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 440.jpg"
+    },
+    {
+        "id":  "rbc-chair-442-kids-horse-chair-b8332c92",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "442 KIDS HORSE CHAIR",
+        "name":  "RBC - 442 KIDS HORSE CHAIR",
+        "photoAsset":  "assets/product_catalog/rbc/chair/442-kids-horse-chair-b8332c92.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 442 KIDS HORSE CHAIR.jpg"
+    },
+    {
+        "id":  "rbc-chair-443-kids-car-chair-135131b7",
+        "brand":  "RBC",
+        "category":  "CHAIR",
+        "code":  "443 KIDS CAR CHAIR",
+        "name":  "RBC - 443 KIDS CAR CHAIR",
+        "photoAsset":  "assets/product_catalog/rbc/chair/443-kids-car-chair-135131b7.jpg",
+        "originalPath":  "RBC/CHAIR/RBC - 443 KIDS CAR CHAIR.jpg"
+    },
+    {
+        "id":  "rbc-mani-pedi-340-6bf363af",
+        "brand":  "RBC",
+        "category":  "MANI PEDI",
+        "code":  "340",
+        "name":  "RBC - 340",
+        "photoAsset":  "assets/product_catalog/rbc/mani-pedi/340-6bf363af.jpg",
+        "originalPath":  "RBC/MANI PEDI/RBC - 340.jpg"
+    },
+    {
+        "id":  "rbc-mani-pedi-341-33cb4b65",
+        "brand":  "RBC",
+        "category":  "MANI PEDI",
+        "code":  "341",
+        "name":  "RBC - 341",
+        "photoAsset":  "assets/product_catalog/rbc/mani-pedi/341-33cb4b65.jpg",
+        "originalPath":  "RBC/MANI PEDI/RBC - 341.jpg"
+    },
+    {
+        "id":  "rbc-mani-pedi-342-924e1b81",
+        "brand":  "RBC",
+        "category":  "MANI PEDI",
+        "code":  "342",
+        "name":  "RBC - 342",
+        "photoAsset":  "assets/product_catalog/rbc/mani-pedi/342-924e1b81.jpg",
+        "originalPath":  "RBC/MANI PEDI/RBC - 342.jpg"
+    },
+    {
+        "id":  "rbc-mani-pedi-343-5d1dbd13",
+        "brand":  "RBC",
+        "category":  "MANI PEDI",
+        "code":  "343",
+        "name":  "RBC - 343",
+        "photoAsset":  "assets/product_catalog/rbc/mani-pedi/343-5d1dbd13.jpg",
+        "originalPath":  "RBC/MANI PEDI/RBC - 343.jpg"
+    },
+    {
+        "id":  "rbc-mani-pedi-349-f38b16d7",
+        "brand":  "RBC",
+        "category":  "MANI PEDI",
+        "code":  "349",
+        "name":  "RBC - 349",
+        "photoAsset":  "assets/product_catalog/rbc/mani-pedi/349-f38b16d7.jpg",
+        "originalPath":  "RBC/MANI PEDI/RBC - 349.jpg"
+    },
+    {
+        "id":  "rbc-mani-pedi-601-4d2674c8",
+        "brand":  "RBC",
+        "category":  "MANI PEDI",
+        "code":  "601",
+        "name":  "RBC - 601",
+        "photoAsset":  "assets/product_catalog/rbc/mani-pedi/601-4d2674c8.jpg",
+        "originalPath":  "RBC/MANI PEDI/RBC - 601.jpg"
+    },
+    {
+        "id":  "rbc-mani-pedi-602-603-de94db30",
+        "brand":  "RBC",
+        "category":  "MANI PEDI",
+        "code":  "602 \u0026 603",
+        "name":  "RBC - 602 \u0026 603",
+        "photoAsset":  "assets/product_catalog/rbc/mani-pedi/602-603-de94db30.jpg",
+        "originalPath":  "RBC/MANI PEDI/RBC - 602 \u0026 603.jpg"
+    },
+    {
+        "id":  "rbc-mani-pedi-932-fe6c2c25",
+        "brand":  "RBC",
+        "category":  "MANI PEDI",
+        "code":  "932",
+        "name":  "RBC - 932",
+        "photoAsset":  "assets/product_catalog/rbc/mani-pedi/932-fe6c2c25.jpg",
+        "originalPath":  "RBC/MANI PEDI/RBC - 932.jpg"
+    },
+    {
+        "id":  "rbc-mani-pedi-932-with-massager-2d12dc90",
+        "brand":  "RBC",
+        "category":  "MANI PEDI",
+        "code":  "932 WITH MASSAGER",
+        "name":  "RBC - 932 WITH MASSAGER",
+        "photoAsset":  "assets/product_catalog/rbc/mani-pedi/932-with-massager-2d12dc90.jpg",
+        "originalPath":  "RBC/MANI PEDI/RBC - 932 WITH MASSAGER.jpg"
+    },
+    {
+        "id":  "rbc-mani-pedi-932-without-massager-1dacc697",
+        "brand":  "RBC",
+        "category":  "MANI PEDI",
+        "code":  "932 WITHOUT MASSAGER",
+        "name":  "RBC - 932 WITHOUT MASSAGER",
+        "photoAsset":  "assets/product_catalog/rbc/mani-pedi/932-without-massager-1dacc697.jpg",
+        "originalPath":  "RBC/MANI PEDI/RBC - 932 WITHOUT MASSAGER.jpg"
+    },
+    {
+        "id":  "rbc-mani-pedi-manipedi-ffd2142e",
+        "brand":  "RBC",
+        "category":  "MANI PEDI",
+        "code":  "MANIPEDI",
+        "name":  "RBC - MANIPEDI",
+        "photoAsset":  "assets/product_catalog/rbc/mani-pedi/manipedi-ffd2142e.jpg",
+        "originalPath":  "RBC/MANI PEDI/RBC - MANIPEDI.jpg"
+    },
+    {
+        "id":  "rbc-massager-907-aedb859e",
+        "brand":  "RBC",
+        "category":  "MASSAGER",
+        "code":  "907",
+        "name":  "RBC - 907",
+        "photoAsset":  "assets/product_catalog/rbc/massager/907-aedb859e.jpg",
+        "originalPath":  "RBC/MASSAGER/RBC - 907.jpg"
+    },
+    {
+        "id":  "rbc-massager-908-ce7a5eac",
+        "brand":  "RBC",
+        "category":  "MASSAGER",
+        "code":  "908",
+        "name":  "RBC - 908",
+        "photoAsset":  "assets/product_catalog/rbc/massager/908-ce7a5eac.jpg",
+        "originalPath":  "RBC/MASSAGER/RBC - 908.jpg"
+    },
+    {
+        "id":  "rbc-massager-909-d24af778",
+        "brand":  "RBC",
+        "category":  "MASSAGER",
+        "code":  "909",
+        "name":  "RBC - 909",
+        "photoAsset":  "assets/product_catalog/rbc/massager/909-d24af778.jpg",
+        "originalPath":  "RBC/MASSAGER/RBC - 909.jpg"
+    },
+    {
+        "id":  "rbc-massager-911-997395ce",
+        "brand":  "RBC",
+        "category":  "MASSAGER",
+        "code":  "911",
+        "name":  "RBC - 911",
+        "photoAsset":  "assets/product_catalog/rbc/massager/911-997395ce.jpg",
+        "originalPath":  "RBC/MASSAGER/RBC - 911.jpg"
+    },
+    {
+        "id":  "rbc-massager-912-b667aab1",
+        "brand":  "RBC",
+        "category":  "MASSAGER",
+        "code":  "912",
+        "name":  "RBC - 912",
+        "photoAsset":  "assets/product_catalog/rbc/massager/912-b667aab1.jpg",
+        "originalPath":  "RBC/MASSAGER/RBC - 912.jpg"
+    },
+    {
+        "id":  "rbc-massager-916-97ab91fd",
+        "brand":  "RBC",
+        "category":  "MASSAGER",
+        "code":  "916",
+        "name":  "RBC - 916",
+        "photoAsset":  "assets/product_catalog/rbc/massager/916-97ab91fd.jpg",
+        "originalPath":  "RBC/MASSAGER/RBC - 916.jpg"
+    },
+    {
+        "id":  "rbc-massager-917-9a90a409",
+        "brand":  "RBC",
+        "category":  "MASSAGER",
+        "code":  "917",
+        "name":  "RBC - 917",
+        "photoAsset":  "assets/product_catalog/rbc/massager/917-9a90a409.jpg",
+        "originalPath":  "RBC/MASSAGER/RBC - 917.jpg"
+    },
+    {
+        "id":  "rbc-massager-918-e8c83060",
+        "brand":  "RBC",
+        "category":  "MASSAGER",
+        "code":  "918",
+        "name":  "RBC - 918",
+        "photoAsset":  "assets/product_catalog/rbc/massager/918-e8c83060.jpg",
+        "originalPath":  "RBC/MASSAGER/RBC - 918.jpg"
+    },
+    {
+        "id":  "rbc-massager-919-7f781b01",
+        "brand":  "RBC",
+        "category":  "MASSAGER",
+        "code":  "919",
+        "name":  "RBC - 919",
+        "photoAsset":  "assets/product_catalog/rbc/massager/919-7f781b01.jpg",
+        "originalPath":  "RBC/MASSAGER/RBC - 919.jpg"
+    },
+    {
+        "id":  "rbc-massager-919-1-d54a36c2",
+        "brand":  "RBC",
+        "category":  "MASSAGER",
+        "code":  "919 (1)",
+        "name":  "RBC - 919 (1)",
+        "photoAsset":  "assets/product_catalog/rbc/massager/919-1-d54a36c2.jpg",
+        "originalPath":  "RBC/MASSAGER/RBC - 919 (1).jpg"
+    },
+    {
+        "id":  "rbc-massager-f-01-f-02-85def6e8",
+        "brand":  "RBC",
+        "category":  "MASSAGER",
+        "code":  "F 01 \u0026 F 02",
+        "name":  "RBC - F 01 \u0026 F 02",
+        "photoAsset":  "assets/product_catalog/rbc/massager/f-01-f-02-85def6e8.jpg",
+        "originalPath":  "RBC/MASSAGER/RBC - F 01 \u0026 F 02.jpg"
+    },
+    {
+        "id":  "rbc-massager-massager-18bcad29",
+        "brand":  "RBC",
+        "category":  "MASSAGER",
+        "code":  "MASSAGER",
+        "name":  "RBC - MASSAGER",
+        "photoAsset":  "assets/product_catalog/rbc/massager/massager-18bcad29.jpg",
+        "originalPath":  "RBC/MASSAGER/RBC - MASSAGER.jpg"
+    },
+    {
+        "id":  "rbc-shampoo-chair-305-4a34b94a",
+        "brand":  "RBC",
+        "category":  "SHAMPOO CHAIR",
+        "code":  "305",
+        "name":  "RBC - 305",
+        "photoAsset":  "assets/product_catalog/rbc/shampoo-chair/305-4a34b94a.jpg",
+        "originalPath":  "RBC/SHAMPOO CHAIR/RBC - 305.jpg"
+    },
+    {
+        "id":  "rbc-shampoo-chair-306-a92f1db6",
+        "brand":  "RBC",
+        "category":  "SHAMPOO CHAIR",
+        "code":  "306",
+        "name":  "RBC - 306",
+        "photoAsset":  "assets/product_catalog/rbc/shampoo-chair/306-a92f1db6.jpg",
+        "originalPath":  "RBC/SHAMPOO CHAIR/RBC - 306.jpg"
+    },
+    {
+        "id":  "rbc-shampoo-chair-310-a434b49e",
+        "brand":  "RBC",
+        "category":  "SHAMPOO CHAIR",
+        "code":  "310",
+        "name":  "RBC - 310",
+        "photoAsset":  "assets/product_catalog/rbc/shampoo-chair/310-a434b49e.jpg",
+        "originalPath":  "RBC/SHAMPOO CHAIR/RBC - 310.jpg"
+    },
+    {
+        "id":  "rbc-shampoo-chair-320-63347bc9",
+        "brand":  "RBC",
+        "category":  "SHAMPOO CHAIR",
+        "code":  "320",
+        "name":  "RBC - 320",
+        "photoAsset":  "assets/product_catalog/rbc/shampoo-chair/320-63347bc9.jpg",
+        "originalPath":  "RBC/SHAMPOO CHAIR/RBC - 320.jpg"
+    },
+    {
+        "id":  "rbc-shampoo-chair-324-1d710a0c",
+        "brand":  "RBC",
+        "category":  "SHAMPOO CHAIR",
+        "code":  "324",
+        "name":  "RBC - 324",
+        "photoAsset":  "assets/product_catalog/rbc/shampoo-chair/324-1d710a0c.jpg",
+        "originalPath":  "RBC/SHAMPOO CHAIR/RBC - 324.jpg"
+    },
+    {
+        "id":  "rbc-shampoo-chair-325-9f5702eb",
+        "brand":  "RBC",
+        "category":  "SHAMPOO CHAIR",
+        "code":  "325",
+        "name":  "RBC - 325",
+        "photoAsset":  "assets/product_catalog/rbc/shampoo-chair/325-9f5702eb.jpg",
+        "originalPath":  "RBC/SHAMPOO CHAIR/RBC - 325.jpg"
+    },
+    {
+        "id":  "rbc-shampoo-chair-326-54dd3bf1",
+        "brand":  "RBC",
+        "category":  "SHAMPOO CHAIR",
+        "code":  "326",
+        "name":  "RBC - 326",
+        "photoAsset":  "assets/product_catalog/rbc/shampoo-chair/326-54dd3bf1.jpg",
+        "originalPath":  "RBC/SHAMPOO CHAIR/RBC - 326.jpg"
+    },
+    {
+        "id":  "rbc-shampoo-chair-331-7e61bc84",
+        "brand":  "RBC",
+        "category":  "SHAMPOO CHAIR",
+        "code":  "331",
+        "name":  "RBC - 331",
+        "photoAsset":  "assets/product_catalog/rbc/shampoo-chair/331-7e61bc84.jpg",
+        "originalPath":  "RBC/SHAMPOO CHAIR/RBC - 331.jpg"
+    },
+    {
+        "id":  "rbc-shampoo-chair-334-08409cc6",
+        "brand":  "RBC",
+        "category":  "SHAMPOO CHAIR",
+        "code":  "334",
+        "name":  "RBC - 334",
+        "photoAsset":  "assets/product_catalog/rbc/shampoo-chair/334-08409cc6.jpg",
+        "originalPath":  "RBC/SHAMPOO CHAIR/RBC - 334.jpg"
+    },
+    {
+        "id":  "rbc-shampoo-chair-344-836510cb",
+        "brand":  "RBC",
+        "category":  "SHAMPOO CHAIR",
+        "code":  "344",
+        "name":  "RBC - 344",
+        "photoAsset":  "assets/product_catalog/rbc/shampoo-chair/344-836510cb.jpg",
+        "originalPath":  "RBC/SHAMPOO CHAIR/RBC - 344.jpg"
+    },
+    {
+        "id":  "rbc-shampoo-chair-347-975aadf5",
+        "brand":  "RBC",
+        "category":  "SHAMPOO CHAIR",
+        "code":  "347",
+        "name":  "RBC - 347",
+        "photoAsset":  "assets/product_catalog/rbc/shampoo-chair/347-975aadf5.jpg",
+        "originalPath":  "RBC/SHAMPOO CHAIR/RBC - 347.jpg"
+    },
+    {
+        "id":  "rbc-shampoo-chair-348-14b0c486",
+        "brand":  "RBC",
+        "category":  "SHAMPOO CHAIR",
+        "code":  "348",
+        "name":  "RBC - 348",
+        "photoAsset":  "assets/product_catalog/rbc/shampoo-chair/348-14b0c486.jpg",
+        "originalPath":  "RBC/SHAMPOO CHAIR/RBC - 348.jpg"
+    },
+    {
+        "id":  "rbc-shampoo-chair-350-60fcdb07",
+        "brand":  "RBC",
+        "category":  "SHAMPOO CHAIR",
+        "code":  "350",
+        "name":  "RBC - 350",
+        "photoAsset":  "assets/product_catalog/rbc/shampoo-chair/350-60fcdb07.jpg",
+        "originalPath":  "RBC/SHAMPOO CHAIR/RBC - 350.jpg"
+    },
+    {
+        "id":  "rbc-shampoo-chair-shampoo-station-e56ba819",
+        "brand":  "RBC",
+        "category":  "SHAMPOO CHAIR",
+        "code":  "SHAMPOO STATION",
+        "name":  "SHAMPOO STATION",
+        "photoAsset":  "assets/product_catalog/rbc/shampoo-chair/shampoo-station-e56ba819.jpg",
+        "originalPath":  "RBC/SHAMPOO CHAIR/SHAMPOO STATION.jpg"
+    },
+    {
+        "id":  "rbc-stool-124-822c5826",
+        "brand":  "RBC",
+        "category":  "STOOL",
+        "code":  "124",
+        "name":  "RBC - 124",
+        "photoAsset":  "assets/product_catalog/rbc/stool/124-822c5826.jpg",
+        "originalPath":  "RBC/STOOL/RBC - 124.jpg"
+    },
+    {
+        "id":  "rbc-stool-127-08f252be",
+        "brand":  "RBC",
+        "category":  "STOOL",
+        "code":  "127",
+        "name":  "RBC - 127",
+        "photoAsset":  "assets/product_catalog/rbc/stool/127-08f252be.jpg",
+        "originalPath":  "RBC/STOOL/RBC - 127.jpg"
+    },
+    {
+        "id":  "rbc-stool-128-c3b6a013",
+        "brand":  "RBC",
+        "category":  "STOOL",
+        "code":  "128",
+        "name":  "RBC - 128",
+        "photoAsset":  "assets/product_catalog/rbc/stool/128-c3b6a013.jpg",
+        "originalPath":  "RBC/STOOL/RBC - 128.jpg"
+    },
+    {
+        "id":  "rbc-stool-129-e0262b0d",
+        "brand":  "RBC",
+        "category":  "STOOL",
+        "code":  "129",
+        "name":  "RBC - 129",
+        "photoAsset":  "assets/product_catalog/rbc/stool/129-e0262b0d.jpg",
+        "originalPath":  "RBC/STOOL/RBC - 129.jpg"
+    },
+    {
+        "id":  "rbc-stool-130-54fc58be",
+        "brand":  "RBC",
+        "category":  "STOOL",
+        "code":  "130",
+        "name":  "RBC - 130",
+        "photoAsset":  "assets/product_catalog/rbc/stool/130-54fc58be.jpg",
+        "originalPath":  "RBC/STOOL/RBC - 130.jpg"
+    },
+    {
+        "id":  "rbc-stool-132-0f2ac997",
+        "brand":  "RBC",
+        "category":  "STOOL",
+        "code":  "132",
+        "name":  "RBC - 132",
+        "photoAsset":  "assets/product_catalog/rbc/stool/132-0f2ac997.jpg",
+        "originalPath":  "RBC/STOOL/RBC - 132.jpg"
+    },
+    {
+        "id":  "rbc-stool-137-ccc15445",
+        "brand":  "RBC",
+        "category":  "STOOL",
+        "code":  "137",
+        "name":  "RBC - 137",
+        "photoAsset":  "assets/product_catalog/rbc/stool/137-ccc15445.jpg",
+        "originalPath":  "RBC/STOOL/RBC - 137.jpg"
+    },
+    {
+        "id":  "rbc-stool-140-017145c3",
+        "brand":  "RBC",
+        "category":  "STOOL",
+        "code":  "140",
+        "name":  "RBC - 140",
+        "photoAsset":  "assets/product_catalog/rbc/stool/140-017145c3.jpg",
+        "originalPath":  "RBC/STOOL/RBC - 140.jpg"
+    },
+    {
+        "id":  "rbc-stool-148-380f90f1",
+        "brand":  "RBC",
+        "category":  "STOOL",
+        "code":  "148",
+        "name":  "RBC - 148",
+        "photoAsset":  "assets/product_catalog/rbc/stool/148-380f90f1.jpg",
+        "originalPath":  "RBC/STOOL/RBC - 148.jpg"
+    },
+    {
+        "id":  "rbc-stool-149-e6cc35ce",
+        "brand":  "RBC",
+        "category":  "STOOL",
+        "code":  "149",
+        "name":  "RBC - 149",
+        "photoAsset":  "assets/product_catalog/rbc/stool/149-e6cc35ce.jpg",
+        "originalPath":  "RBC/STOOL/RBC - 149.jpg"
+    },
+    {
+        "id":  "rbc-stool-156-f6095a27",
+        "brand":  "RBC",
+        "category":  "STOOL",
+        "code":  "156",
+        "name":  "RBC - 156",
+        "photoAsset":  "assets/product_catalog/rbc/stool/156-f6095a27.jpg",
+        "originalPath":  "RBC/STOOL/RBC - 156.jpg"
+    },
+    {
+        "id":  "rbc-stool-157-40ed1f8a",
+        "brand":  "RBC",
+        "category":  "STOOL",
+        "code":  "157",
+        "name":  "RBC - 157",
+        "photoAsset":  "assets/product_catalog/rbc/stool/157-40ed1f8a.jpg",
+        "originalPath":  "RBC/STOOL/RBC - 157.jpg"
+    },
+    {
+        "id":  "rbc-stool-158-e712e273",
+        "brand":  "RBC",
+        "category":  "STOOL",
+        "code":  "158",
+        "name":  "RBC - 158",
+        "photoAsset":  "assets/product_catalog/rbc/stool/158-e712e273.jpg",
+        "originalPath":  "RBC/STOOL/RBC - 158.jpg"
+    },
+    {
+        "id":  "rbc-stool-159-4baf1505",
+        "brand":  "RBC",
+        "category":  "STOOL",
+        "code":  "159",
+        "name":  "RBC - 159",
+        "photoAsset":  "assets/product_catalog/rbc/stool/159-4baf1505.jpg",
+        "originalPath":  "RBC/STOOL/RBC - 159.jpg"
+    },
+    {
+        "id":  "rbc-stool-160-5a00e11e",
+        "brand":  "RBC",
+        "category":  "STOOL",
+        "code":  "160",
+        "name":  "RBC - 160",
+        "photoAsset":  "assets/product_catalog/rbc/stool/160-5a00e11e.jpg",
+        "originalPath":  "RBC/STOOL/RBC - 160.jpg"
+    },
+    {
+        "id":  "rbc-stool-161-7835c731",
+        "brand":  "RBC",
+        "category":  "STOOL",
+        "code":  "161",
+        "name":  "RBC - 161",
+        "photoAsset":  "assets/product_catalog/rbc/stool/161-7835c731.jpg",
+        "originalPath":  "RBC/STOOL/RBC - 161.jpg"
+    },
+    {
+        "id":  "rbc-stool-163-c5e6c4cc",
+        "brand":  "RBC",
+        "category":  "STOOL",
+        "code":  "163",
+        "name":  "RBC - 163",
+        "photoAsset":  "assets/product_catalog/rbc/stool/163-c5e6c4cc.jpg",
+        "originalPath":  "RBC/STOOL/RBC - 163.jpg"
+    },
+    {
+        "id":  "rbc-stool-228-d94af5b2",
+        "brand":  "RBC",
+        "category":  "STOOL",
+        "code":  "228",
+        "name":  "RBC - 228",
+        "photoAsset":  "assets/product_catalog/rbc/stool/228-d94af5b2.jpg",
+        "originalPath":  "RBC/STOOL/RBC - 228.jpg"
+    },
+    {
+        "id":  "rbc-stool-barber-sign-pole-1a9574e8",
+        "brand":  "RBC",
+        "category":  "STOOL",
+        "code":  "BARBER SIGN POLE",
+        "name":  "RBC - BARBER SIGN POLE",
+        "photoAsset":  "assets/product_catalog/rbc/stool/barber-sign-pole-1a9574e8.jpg",
+        "originalPath":  "RBC/STOOL/RBC - BARBER SIGN POLE.jpg"
+    },
+    {
+        "id":  "rbc-stool-stylish-salon-stool-0d24f2e7",
+        "brand":  "RBC",
+        "category":  "STOOL",
+        "code":  "STYLISH SALON STOOL",
+        "name":  "RBC STYLISH SALON STOOL",
+        "photoAsset":  "assets/product_catalog/rbc/stool/stylish-salon-stool-0d24f2e7.jpg",
+        "originalPath":  "RBC/STOOL/RBC STYLISH SALON STOOL.jpg"
+    },
+    {
+        "id":  "rbc-trolley-101-c11f8e77",
+        "brand":  "RBC",
+        "category":  "TROLLEY",
+        "code":  "101",
+        "name":  "RBC - 101",
+        "photoAsset":  "assets/product_catalog/rbc/trolley/101-c11f8e77.jpg",
+        "originalPath":  "RBC/TROLLEY/RBC - 101.jpg"
+    },
+    {
+        "id":  "rbc-trolley-102-639e28f8",
+        "brand":  "RBC",
+        "category":  "TROLLEY",
+        "code":  "102",
+        "name":  "RBC - 102",
+        "photoAsset":  "assets/product_catalog/rbc/trolley/102-639e28f8.jpg",
+        "originalPath":  "RBC/TROLLEY/RBC - 102.jpg"
+    },
+    {
+        "id":  "rbc-trolley-107-22d29551",
+        "brand":  "RBC",
+        "category":  "TROLLEY",
+        "code":  "107",
+        "name":  "RBC - 107",
+        "photoAsset":  "assets/product_catalog/rbc/trolley/107-22d29551.jpg",
+        "originalPath":  "RBC/TROLLEY/RBC - 107.jpg"
+    },
+    {
+        "id":  "rbc-trolley-108-63849146",
+        "brand":  "RBC",
+        "category":  "TROLLEY",
+        "code":  "108",
+        "name":  "RBC - 108",
+        "photoAsset":  "assets/product_catalog/rbc/trolley/108-63849146.jpg",
+        "originalPath":  "RBC/TROLLEY/RBC - 108.jpg"
+    },
+    {
+        "id":  "rbc-trolley-110-5ebb326c",
+        "brand":  "RBC",
+        "category":  "TROLLEY",
+        "code":  "110",
+        "name":  "RBC - 110",
+        "photoAsset":  "assets/product_catalog/rbc/trolley/110-5ebb326c.jpg",
+        "originalPath":  "RBC/TROLLEY/RBC - 110.jpg"
+    },
+    {
+        "id":  "rbc-trolley-114-9ebfeab8",
+        "brand":  "RBC",
+        "category":  "TROLLEY",
+        "code":  "114",
+        "name":  "RBC - 114",
+        "photoAsset":  "assets/product_catalog/rbc/trolley/114-9ebfeab8.jpg",
+        "originalPath":  "RBC/TROLLEY/RBC - 114.jpg"
+    },
+    {
+        "id":  "rbc-trolley-115-c55d53d6",
+        "brand":  "RBC",
+        "category":  "TROLLEY",
+        "code":  "115",
+        "name":  "RBC - 115",
+        "photoAsset":  "assets/product_catalog/rbc/trolley/115-c55d53d6.jpg",
+        "originalPath":  "RBC/TROLLEY/RBC - 115.jpg"
+    },
+    {
+        "id":  "rbc-trolley-117-d58e0f44",
+        "brand":  "RBC",
+        "category":  "TROLLEY",
+        "code":  "117",
+        "name":  "RBC - 117",
+        "photoAsset":  "assets/product_catalog/rbc/trolley/117-d58e0f44.jpg",
+        "originalPath":  "RBC/TROLLEY/RBC - 117.jpg"
+    },
+    {
+        "id":  "rbc-trolley-118-6ca07bad",
+        "brand":  "RBC",
+        "category":  "TROLLEY",
+        "code":  "118",
+        "name":  "RBC - 118",
+        "photoAsset":  "assets/product_catalog/rbc/trolley/118-6ca07bad.jpg",
+        "originalPath":  "RBC/TROLLEY/RBC - 118.jpg"
+    },
+    {
+        "id":  "rbc-trolley-119-d4de5730",
+        "brand":  "RBC",
+        "category":  "TROLLEY",
+        "code":  "119",
+        "name":  "RBC - 119",
+        "photoAsset":  "assets/product_catalog/rbc/trolley/119-d4de5730.jpg",
+        "originalPath":  "RBC/TROLLEY/RBC - 119.jpg"
+    },
+    {
+        "id":  "rbc-trolley-69-83f8428b",
+        "brand":  "RBC",
+        "category":  "TROLLEY",
+        "code":  "69",
+        "name":  "RBC - 69",
+        "photoAsset":  "assets/product_catalog/rbc/trolley/69-83f8428b.jpg",
+        "originalPath":  "RBC/TROLLEY/RBC - 69.jpg"
+    },
+    {
+        "id":  "rbc-trolley-70-673896ea",
+        "brand":  "RBC",
+        "category":  "TROLLEY",
+        "code":  "70",
+        "name":  "RBC - 70",
+        "photoAsset":  "assets/product_catalog/rbc/trolley/70-673896ea.jpg",
+        "originalPath":  "RBC/TROLLEY/RBC - 70.jpg"
+    },
+    {
+        "id":  "rbc-trolley-71-ff119822",
+        "brand":  "RBC",
+        "category":  "TROLLEY",
+        "code":  "71",
+        "name":  "RBC - 71",
+        "photoAsset":  "assets/product_catalog/rbc/trolley/71-ff119822.jpg",
+        "originalPath":  "RBC/TROLLEY/RBC - 71.jpg"
+    },
+    {
+        "id":  "rbc-trolley-72-7eac3769",
+        "brand":  "RBC",
+        "category":  "TROLLEY",
+        "code":  "72",
+        "name":  "RBC - 72",
+        "photoAsset":  "assets/product_catalog/rbc/trolley/72-7eac3769.jpg",
+        "originalPath":  "RBC/TROLLEY/RBC - 72.jpg"
+    },
+    {
+        "id":  "rbc-trolley-80-bf13864d",
+        "brand":  "RBC",
+        "category":  "TROLLEY",
+        "code":  "80",
+        "name":  "RBC - 80",
+        "photoAsset":  "assets/product_catalog/rbc/trolley/80-bf13864d.jpg",
+        "originalPath":  "RBC/TROLLEY/RBC - 80.jpg"
+    },
+    {
+        "id":  "rbc-trolley-81-a3e3e28a",
+        "brand":  "RBC",
+        "category":  "TROLLEY",
+        "code":  "81",
+        "name":  "RBC - 81",
+        "photoAsset":  "assets/product_catalog/rbc/trolley/81-a3e3e28a.jpg",
+        "originalPath":  "RBC/TROLLEY/RBC - 81.jpg"
+    },
+    {
+        "id":  "rbc-trolley-82-480d3860",
+        "brand":  "RBC",
+        "category":  "TROLLEY",
+        "code":  "82",
+        "name":  "RBC - 82",
+        "photoAsset":  "assets/product_catalog/rbc/trolley/82-480d3860.jpg",
+        "originalPath":  "RBC/TROLLEY/RBC - 82.jpg"
+    },
+    {
+        "id":  "rbc-trolley-84-642d77e0",
+        "brand":  "RBC",
+        "category":  "TROLLEY",
+        "code":  "84",
+        "name":  "RBC - 84",
+        "photoAsset":  "assets/product_catalog/rbc/trolley/84-642d77e0.jpg",
+        "originalPath":  "RBC/TROLLEY/RBC - 84.jpg"
+    },
+    {
+        "id":  "rbc-trolley-85-15894574",
+        "brand":  "RBC",
+        "category":  "TROLLEY",
+        "code":  "85",
+        "name":  "RBC - 85",
+        "photoAsset":  "assets/product_catalog/rbc/trolley/85-15894574.jpg",
+        "originalPath":  "RBC/TROLLEY/RBC - 85.jpg"
+    },
+    {
+        "id":  "rbc-trolley-86-b7c8ce6f",
+        "brand":  "RBC",
+        "category":  "TROLLEY",
+        "code":  "86",
+        "name":  "RBC - 86",
+        "photoAsset":  "assets/product_catalog/rbc/trolley/86-b7c8ce6f.jpg",
+        "originalPath":  "RBC/TROLLEY/RBC - 86.jpg"
+    },
+    {
+        "id":  "rbc-trolley-87-e0fe24a7",
+        "brand":  "RBC",
+        "category":  "TROLLEY",
+        "code":  "87",
+        "name":  "RBC - 87",
+        "photoAsset":  "assets/product_catalog/rbc/trolley/87-e0fe24a7.jpg",
+        "originalPath":  "RBC/TROLLEY/RBC - 87.jpg"
+    },
+    {
+        "id":  "rbc-trolley-88-296f8e71",
+        "brand":  "RBC",
+        "category":  "TROLLEY",
+        "code":  "88",
+        "name":  "RBC - 88",
+        "photoAsset":  "assets/product_catalog/rbc/trolley/88-296f8e71.jpg",
+        "originalPath":  "RBC/TROLLEY/RBC - 88.jpg"
+    },
+    {
+        "id":  "rbc-trolley-90-44e53b5a",
+        "brand":  "RBC",
+        "category":  "TROLLEY",
+        "code":  "90",
+        "name":  "RBC - 90",
+        "photoAsset":  "assets/product_catalog/rbc/trolley/90-44e53b5a.jpg",
+        "originalPath":  "RBC/TROLLEY/RBC - 90.jpg"
+    },
+    {
+        "id":  "rbc-trolley-trolley-feacd7c3",
+        "brand":  "RBC",
+        "category":  "TROLLEY",
+        "code":  "TROLLEY",
+        "name":  "RBC TROLLEY",
+        "photoAsset":  "assets/product_catalog/rbc/trolley/trolley-feacd7c3.jpg",
+        "originalPath":  "RBC/TROLLEY/RBC TROLLEY.jpg"
+    }
+]

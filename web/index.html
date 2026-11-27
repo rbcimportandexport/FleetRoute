@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script>
+window.TransportBattery = {
+  level: 100,
+  charging: false,
+  init: function() {
+    if (navigator.getBattery) {
+      navigator.getBattery().then(function(battery) {
+        window.TransportBattery.level = Math.round(battery.level * 100);
+        window.TransportBattery.charging = battery.charging;
+        battery.addEventListener('levelchange', function() {
+          window.TransportBattery.level = Math.round(battery.level * 100);
+        });
+        battery.addEventListener('chargingchange', function() {
+          window.TransportBattery.charging = battery.charging;
+        });
+      }).catch(function(){});
+    }
+  },
+  getLevel: function() { return window.TransportBattery.level; },
+  isCharging: function() { return window.TransportBattery.charging ? 1 : 0; }
+};
+window.TransportBattery.init();
+</script>
+<script>
+// Polyfill Intl.v8BreakIterator using Intl.Segmenter to avoid Chrome deprecation warning
+if (typeof Intl !== 'undefined' && !Intl.v8BreakIterator && typeof Intl.Segmenter !== 'undefined') {
+  Intl.v8BreakIterator = function(locale, type) {
+    var granularity = (type && type.type === 'line') ? 'line' : 'word';
+    var segmenter = new Intl.Segmenter(locale || 'en', { granularity: granularity });
+    var text = '';
+    var segments = [];
+    var currentIndex = 0;
+    return {
+      adoptText: function(t) {
+        text = t;
+        segments = Array.from(segmenter.segment(t)).map(function(s) { return s.index; });
+        segments.push(text.length);
+        currentIndex = 0;
+      },
+      first: function() { currentIndex = 0; return segments[0] || 0; },
+      next: function() {
+        currentIndex++;
+        return currentIndex < segments.length ? segments[currentIndex] : -1;
+      },
+      current: function() { return segments[currentIndex] || 0; }
+    };
+  };
+}
+</script>
+  <base href="$FLUTTER_BASE_HREF">
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="Transport One fleet route planner">
+  <meta name="theme-color" content="#1769e8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="manifest.json">
+  <title>Transport 1 Driver Portal</title>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="dns-prefetch" href="https://fonts.gstatic.com">
+  <link rel="dns-prefetch" href="https://tile.openstreetmap.org">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overscroll-behavior-y: none;
+      overscroll-behavior-x: none;
+      touch-action: manipulation;
+      scroll-behavior: smooth;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+/* Suppress Google Maps warning banner, billing popup, and development watermark */
+    .gm-err-container,
+    .gm-err-content,
+    .gm-err-message,
+    .gm-err-autocomplete,
+    .dismissButton,
+    button[class*="dismissButton"] {
+      display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+
+    /* Remove gray dimming / dark filter from Google Maps tiles */
+    .gm-style div[style*="background-color: rgba(0, 0, 0, 0.5)"],
+    .gm-style div[style*="background-color:rgba(0, 0, 0, 0.5)"],
+    .gm-style div[style*="background-color: rgba(0,0,0,0.5)"],
+    .gm-style div[style*="rgba(0, 0, 0, 0.5)"],
+    .gm-style div[style*="z-index: 100"],
+    .gm-style div[style*="z-index:100"] {
+      display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+
+    /* Keep tiles bright and unfiltered */
+    .gm-style img {
+      filter: none !important;
+      -webkit-filter: none !important;
+    }
+  </style>
+  <script src="google_maps_clean.js" defer async></script>
+  <script>
+    // Global Google Places & Geocoder service helper for fast and CORS-free place searches
+    window.TransportGoogleSearch = {
+      search: function(query, callback) {
+        if (!query || !query.trim()) {
+          callback(JSON.stringify([]));
+          return;
+        }
+        var q = query.trim();
+        // 1. If geocoder is available, try forward geocoding
+        if (window.google && window.google.maps && window.google.maps.Geocoder) {
+          var geocoder = new window.google.maps.Geocoder();
+          geocoder.geocode({ address: q, componentRestrictions: { country: 'in' } }, function(results, status) {
+            if (status === 'OK' && results && results.length > 0) {
+              var out = [];
+              for (var i = 0; i < Math.min(results.length, 6); i++) {
+                var r = results[i];
+                var lat = r.geometry.location.lat();
+                var lng = r.geometry.location.lng();
+                var shortName = (r.address_components && r.address_components[0]) ? r.address_components[0].long_name : r.formatted_address.split(',')[0];
+                out.push({
+                  lat: lat,
+                  lng: lng,
+                  displayName: r.formatted_address,
+                  shortName: shortName
+                });
+              }
+              callback(JSON.stringify(out));
+            } else {
+              callback(JSON.stringify([]));
+            }
+          });
+        } else {
+          callback(JSON.stringify([]));
+        }
+      }
+    };
+
+    // Suppress Google Maps development / billing error modal and watermarks completely via efficient MutationObserver
+    (function setupMapErrorSuppressor() {
+      function cleanNodes() {
+        try {
+          var btns = document.querySelectorAll('.dismissButton');
+          for (var i = 0; i < btns.length; i++) {
+            var box = btns[i].closest('div[style*="padding"]');
+            if (box) box.remove();
+          }
+          var errs = document.querySelectorAll('.gm-err-container, .gm-err-content, [class*="gm-err"]');
+          for (var k = 0; k < errs.length; k++) {
+            errs[k].remove();
+          }
+          var darkDivs = document.querySelectorAll('.gm-style div[style*="rgba(0, 0, 0, 0.5)"], .gm-style div[style*="rgba(0,0,0,0.5)"]');
+          for (var m = 0; m < darkDivs.length; m++) {
+            darkDivs[m].remove();
+          }
+        } catch (_) {}
+      }
+
+      if (window.MutationObserver) {
+        var observer = new MutationObserver(function() {
+          cleanNodes();
+        });
+        observer.observe(document.body || document.documentElement, {
+          childList: true,
+          subtree: true
+        });
+      }
+      setInterval(cleanNodes, 1500);
+    })();
+
+    // Intercept Google Maps constructor so gestureHandling is greedy by default.
+    // Also isolate touch/wheel events on the map element so scrolling/dragging inside the map
+    // never bubbles up or drags the outer browser page.
+    (function() {
+      if (window.google && window.google.maps && window.google.maps.Map) {
+        var OriginalMap = window.google.maps.Map;
+        window.google.maps.Map = function(element, options) {
+          options = options || {};
+          options.gestureHandling = 'greedy';
+          var mapInstance = new OriginalMap(element, options);
+          if (element && element.addEventListener) {
+            var stopProp = function(e) {
+              e.stopPropagation();
+            };
+            element.addEventListener('wheel', stopProp, { passive: false });
+            element.addEventListener('touchmove', stopProp, { passive: false });
+          }
+          return mapInstance;
+        };
+        window.google.maps.Map.prototype = OriginalMap.prototype;
+      }
+    })();
+  </script>
+</head>
+<body>
+  <script>
+    // Pre-Trip Safety & Driver Verification External Notification Engine
+    window.TransportSafety = {
+      requestPermission: async function() {
+        if ('Notification' in window) {
+          try {
+            return await Notification.requestPermission();
+          } catch(e) {}
+        }
+        return 'denied';
+      },
+      showNotification: function(title, body, isRejected) {
+        if ('Notification' in window) {
+          if (Notification.permission === 'granted') {
+            try {
+              new Notification(title, {
+                body: body,
+                icon: 'favicon.png',
+                tag: 'safety-alert-' + Date.now(),
+                requireInteraction: isRejected ? true : false
+              });
+            } catch (e) {
+              console.warn('Notification error:', e);
+            }
+          } else if (Notification.permission !== 'denied') {
+            Notification.requestPermission().then(function(perm) {
+              if (perm === 'granted') {
+                new Notification(title, {
+                  body: body,
+                  icon: 'favicon.png'
+                });
+              }
+            });
+          }
+        }
+        try {
+          var AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) {
+            var ctx = new AudioCtx();
+            var osc = ctx.createOscillator();
+            var gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            if (isRejected) {
+              osc.type = 'sawtooth';
+              osc.frequency.setValueAtTime(660, ctx.currentTime);
+              osc.frequency.setValueAtTime(440, ctx.currentTime + 0.16);
+              osc.frequency.setValueAtTime(660, ctx.currentTime + 0.32);
+              gain.gain.setValueAtTime(0.3, ctx.currentTime);
+              gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.6);
+              osc.start(ctx.currentTime);
+              osc.stop(ctx.currentTime + 0.6);
+            } else {
+              osc.type = 'sine';
+              osc.frequency.setValueAtTime(523.25, ctx.currentTime);
+              osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.1);
+              osc.frequency.setValueAtTime(783.99, ctx.currentTime + 0.22);
+              gain.gain.setValueAtTime(0.25, ctx.currentTime);
+              gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.45);
+              osc.start(ctx.currentTime);
+              osc.stop(ctx.currentTime + 0.45);
+            }
+          }
+        } catch(err) {
+          console.warn('Audio buzzer error:', err);
+        }
+      },
+      pickDriverPhoto: function(useCamera, callback) {
+        var input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        if (useCamera) {
+          input.setAttribute('capture', 'user');
+        }
+        input.onchange = function(e) {
+          if (!e.target.files || !e.target.files[0]) return;
+          var file = e.target.files[0];
+          var reader = new FileReader();
+          reader.onload = function(evt) {
+            var original = evt.target.result;
+            var image = new Image();
+            image.onload = function() {
+              try {
+                var maxSide = 960;
+                var scale = Math.min(1, maxSide / Math.max(image.width, image.height));
+                var canvas = document.createElement('canvas');
+                canvas.width = Math.max(1, Math.round(image.width * scale));
+                canvas.height = Math.max(1, Math.round(image.height * scale));
+                var context = canvas.getContext('2d');
+                context.drawImage(image, 0, 0, canvas.width, canvas.height);
+                var compressed = canvas.toDataURL('image/jpeg', 0.72);
+                if (typeof callback === 'function') callback(compressed);
+              } catch (_) {
+                if (typeof callback === 'function') callback(original);
+              }
+            };
+            image.onerror = function() {
+              if (typeof callback === 'function') callback(original);
+            };
+            image.src = original;
+          };
+          reader.readAsDataURL(file);
+        };
+        input.click();
+      }
+    };
+  </script>
+  <script>
+    // Register Offline Service Worker for Seamless Offline & Low-Connectivity Operation
+    (function initOfflinePwa() {
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('sw.js').then(function(reg) {
+            console.log('[PWA] Transport One Offline ServiceWorker registered successfully.');
+          }).catch(function(err) {
+            console.warn('[PWA] ServiceWorker registration error:', err);
+          });
+        });
+      }
+      var s = document.createElement('script');
+      s.src = 'flutter_bootstrap.js?v=' + Date.now();
+      s.async = true;
+      document.body.appendChild(s);
+    })();
+  </script>
+</body>
+</html>

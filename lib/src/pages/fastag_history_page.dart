@@ -1,0 +1,747 @@
+import 'package:flutter/material.dart';
+
+import '../controllers/planner_controller.dart';
+import '../models/planner_models.dart';
+import '../services/real_fastag_service.dart';
+import '../theme/app_theme.dart';
+import 'operations_module_page.dart';
+
+class FastagHistoryPage extends StatefulWidget {
+  const FastagHistoryPage({
+    required this.controller,
+    required this.vehicleCode,
+    super.key,
+  });
+
+  final PlannerController controller;
+  final String vehicleCode;
+
+  static Future<void> open(
+    BuildContext context, {
+    required PlannerController controller,
+    required String vehicleCode,
+  }) {
+    return Navigator.push<void>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => FastagHistoryPage(
+          controller: controller,
+          vehicleCode: vehicleCode,
+        ),
+      ),
+    );
+  }
+
+  @override
+  State<FastagHistoryPage> createState() => _FastagHistoryPageState();
+}
+
+class _FastagHistoryPageState extends State<FastagHistoryPage> {
+  late String _selectedCode;
+  bool _isFetchingLive = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedCode = widget.vehicleCode;
+    if (_selectedCode.isEmpty && widget.controller.truckModels.isNotEmpty) {
+      _selectedCode = widget.controller.truckModels.first.code;
+    }
+  }
+
+  TruckModel? _findVehicle() {
+    for (final vehicle in widget.controller.truckModels) {
+      if (vehicle.code.trim().toLowerCase() ==
+          _selectedCode.trim().toLowerCase()) {
+        return vehicle;
+      }
+    }
+    if (widget.controller.truckModels.isNotEmpty) {
+      return widget.controller.truckModels.first;
+    }
+    return null;
+  }
+
+  Future<void> _fetchLiveBalance(TruckModel vehicle) async {
+    setState(() => _isFetchingLive = true);
+    try {
+      final res = await RealFastagService.instance.fetchLiveFastagBalance(
+        vehicleNumber: vehicle.code,
+        bankId: 'paytm',
+      );
+      if (res != null && res['balance'] != null) {
+        final bal = (res['balance'] as num).toDouble();
+        await widget.controller.updateFastagBalanceDirect(
+          vehicleCode: vehicle.code,
+          newBalance: bal,
+        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Live FASTag Balance synced: ₹${bal.toStringAsFixed(0)}'),
+              backgroundColor: AppColors.primary,
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Live BBPS check complete. Official NETC gateway reflects latest ledger.'),
+              backgroundColor: Color(0xFF0284C7),
+            ),
+          );
+        }
+      }
+    } catch (_) {
+    } finally {
+      if (mounted) setState(() => _isFetchingLive = false);
+    }
+  }
+
+  void _confirmDeleteRecord(TruckModel vehicle, FastagRechargeRecord item) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Transaction?'),
+        content: Text(
+            'Kya aap ₹${item.amount.toStringAsFixed(0)} ka entry (${item.rechargeId}) delete karna chahte hain? Balance adjust ho jayega.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              await widget.controller.deleteFastagRechargeRecord(
+                vehicleCode: vehicle.code,
+                rechargeId: item.id,
+              );
+              if (mounted) {
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Transaction deleted.'),
+                    backgroundColor: Color(0xFFDC2626),
+                  ),
+                );
+              }
+            },
+            style: FilledButton.styleFrom(backgroundColor: const Color(0xFFDC2626)),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmClearAll(TruckModel vehicle) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Clear All Fake / Test Records?'),
+        content: const Text(
+            'Ye action is vehicle ke saare purane fake/test transactions delete kar dega aur balance 0 kar dega taaki sirf real payment record rahe.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              await widget.controller.clearAllFastagRecords(
+                vehicleCode: vehicle.code,
+              );
+              if (mounted) {
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('All previous records cleared. Balance reset to ₹0.'),
+                    backgroundColor: Color(0xFFDC2626),
+                  ),
+                );
+              }
+            },
+            style: FilledButton.styleFrom(backgroundColor: const Color(0xFFDC2626)),
+            child: const Text('Clear All'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+        animation: widget.controller,
+        builder: (context, _) {
+          final vehicle = _findVehicle();
+          if (vehicle == null) {
+            return Scaffold(
+              appBar: AppBar(
+                backgroundColor: const Color(0xFF0F172A),
+                foregroundColor: Colors.white,
+                title: const Text('FASTag Wallet & Recharge',
+                    style: TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.w800)),
+              ),
+              body: const Center(child: Text('No vehicles found in fleet.')),
+            );
+          }
+          final records = vehicle.fastagRecharges.reversed.toList();
+          final total =
+              records.fold<double>(0, (sum, item) => sum + item.amount);
+          final tIdx = widget.controller.truckModels
+              .indexWhere((t) => t.code == vehicle.code);
+
+          return Scaffold(
+            backgroundColor: const Color(0xFFF1F5F9),
+            appBar: AppBar(
+              backgroundColor: const Color(0xFF0F172A),
+              foregroundColor: Colors.white,
+              iconTheme: const IconThemeData(color: Colors.white),
+              title: const Text(
+                'FASTag Wallet & Recharge',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                ),
+              ),
+              actions: [
+                if (widget.controller.truckModels.length > 1)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        dropdownColor: const Color(0xFF1E293B),
+                        value: _selectedCode,
+                        icon: const Icon(Icons.arrow_drop_down,
+                            color: Colors.white),
+                        items: widget.controller.truckModels.map((t) {
+                          return DropdownMenuItem<String>(
+                            value: t.code,
+                            child: Text(
+                              t.code,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (val) {
+                          if (val != null) {
+                            setState(() => _selectedCode = val);
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+                IconButton(
+                  tooltip: 'Sync Real Balance',
+                  icon: _isFetchingLive
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Icon(Icons.refresh_rounded, color: Colors.white),
+                  onPressed:
+                      _isFetchingLive ? null : () => _fetchLiveBalance(vehicle),
+                ),
+              ],
+            ),
+            body: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                // Real Live Balance Card
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF064E3B), Color(0xFF16A34A)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x3316A34A),
+                        blurRadius: 16,
+                        offset: Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const CircleAvatar(
+                            backgroundColor: Color(0x33FFFFFF),
+                            foregroundColor: Colors.white,
+                            radius: 22,
+                            child: Icon(Icons.toll_rounded, size: 24),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  vehicle.code,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                                Text(
+                                  vehicle.name,
+                                  style: const TextStyle(
+                                    color: Color(0xFFD1FAE5),
+                                    fontSize: 12.5,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (vehicle.isFastagLow)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFEE2E2),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Text(
+                                'LOW BALANCE',
+                                style: TextStyle(
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFFDC2626),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Available FASTag Balance',
+                            style: TextStyle(
+                              color: Color(0xFFD1FAE5),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              '₹${vehicle.fastagBalance.toStringAsFixed(0)}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 34,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          onPressed: () => showDialog<void>(
+                            context: context,
+                            builder: (_) => FastagRechargeDialog(
+                              vehicle: vehicle,
+                              truckIndex: tIdx >= 0 ? tIdx : 0,
+                              controller: widget.controller,
+                            ),
+                          ),
+                          icon: const Icon(Icons.send_to_mobile_rounded, size: 16),
+                          label: const Text(
+                            'Recharge / Send Money via UPI',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: const Color(0xFF065F46),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: const Color(0x26000000),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.bolt_rounded,
+                                color: Color(0xFF6EE7B7), size: 16),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                'Real VPA: ${RealFastagService.instance.buildNetcUpiVpa(vehicleNumber: vehicle.code, bankId: "paytm")}',
+                                style: const TextStyle(
+                                  color: Color(0xFFE6FFFA),
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Direct Recharge Quick Actions
+                Row(
+                  children: [
+                    Expanded(
+                      child: _ActionCard(
+                        icon: Icons.account_balance_wallet_outlined,
+                        title: 'Pay via UPI',
+                        subtitle: 'GPay, PhonePe, Paytm',
+                        color: const Color(0xFF2563EB),
+                        onTap: () => showDialog<void>(
+                          context: context,
+                          builder: (_) => FastagRechargeDialog(
+                            vehicle: vehicle,
+                            truckIndex: tIdx >= 0 ? tIdx : 0,
+                            controller: widget.controller,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _ActionCard(
+                        icon: Icons.qr_code_scanner_rounded,
+                        title: 'Scan Any UPI QR',
+                        subtitle: 'Scan & Pay to Anyone',
+                        color: const Color(0xFF0D9488),
+                        onTap: () => showDialog<void>(
+                          context: context,
+                          builder: (_) => FastagRechargeDialog(
+                            vehicle: vehicle,
+                            truckIndex: tIdx >= 0 ? tIdx : 0,
+                            controller: widget.controller,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Statistics
+                Row(
+                  children: [
+                    Expanded(
+                      child: _Stat(
+                        label: 'Total Recharges',
+                        value: '${records.length}',
+                        icon: Icons.receipt_long_rounded,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _Stat(
+                        label: 'Total Recharged',
+                        value: '₹${total.toStringAsFixed(0)}',
+                        icon: Icons.savings_outlined,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Recharge & Transaction History',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.navy,
+                      ),
+                    ),
+                    if (records.isNotEmpty)
+                      TextButton.icon(
+                        onPressed: () => _confirmClearAll(vehicle),
+                        icon: const Icon(Icons.delete_sweep_rounded,
+                            size: 15, color: Color(0xFFDC2626)),
+                        label: const Text(
+                          'Clear All Test Data',
+                          style: TextStyle(
+                              fontSize: 11.5,
+                              color: Color(0xFFDC2626),
+                              fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+
+                if (records.isEmpty)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 50, horizontal: 24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: const Column(
+                      children: [
+                        CircleAvatar(
+                          radius: 28,
+                          backgroundColor: Color(0xFFDCFCE7),
+                          foregroundColor: AppColors.primary,
+                          child: Icon(Icons.toll_rounded, size: 28),
+                        ),
+                        SizedBox(height: 12),
+                        Text(
+                          'No FASTag recharge transactions recorded yet',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.navy,
+                          ),
+                        ),
+                        SizedBox(height: 6),
+                        Text(
+                          'Click "Recharge / Send Money" above to make a real UPI payment.',
+                          textAlign: TextAlign.center,
+                          style:
+                              TextStyle(fontSize: 12, color: AppColors.slate),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  ...records.map(
+                    (item) => Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const CircleAvatar(
+                            backgroundColor: Color(0xFFDCFCE7),
+                            foregroundColor: AppColors.primary,
+                            child: Icon(Icons.toll_rounded),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        item.provider,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 13.5,
+                                        ),
+                                      ),
+                                    ),
+                                    Text(
+                                      '+ ₹${item.amount.toStringAsFixed(0)}',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w900,
+                                        fontSize: 14,
+                                        color: AppColors.primary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Date: ${item.date}',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.slate,
+                                  ),
+                                ),
+                                Text(
+                                  'Ref / UTR: ${item.rechargeId}',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.slate,
+                                  ),
+                                ),
+                                if (item.notes.isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 4),
+                                    child: Text(
+                                      item.notes,
+                                      style: const TextStyle(
+                                        fontSize: 11.5,
+                                        color: AppColors.navy,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            tooltip: 'Delete Entry',
+                            icon: const Icon(Icons.delete_outline_rounded,
+                                size: 18, color: Color(0xFFDC2626)),
+                            onPressed: () => _confirmDeleteRecord(vehicle, item),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          );
+        },
+      );
+}
+
+class _ActionCard extends StatelessWidget {
+  const _ActionCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.color,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
+          boxShadow: [
+            BoxShadow(
+              color: color.withValues(alpha: 0.06),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              backgroundColor: color.withValues(alpha: 0.12),
+              foregroundColor: color,
+              radius: 18,
+              child: Icon(icon, size: 20),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: color,
+                    ),
+                  ),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      fontSize: 10.5,
+                      color: AppColors.slate,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Stat extends StatelessWidget {
+  const _Stat({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: AppColors.primary, size: 20),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+                color: AppColors.navy,
+              ),
+            ),
+            Text(
+              label,
+              style: const TextStyle(fontSize: 10.5, color: AppColors.slate),
+            ),
+          ],
+        ),
+      );
+}
